@@ -65,11 +65,27 @@ def shopify_request(endpoint, method='GET', data=None):
 
 
 def get_all_products():
-    """Récupère tous les produits"""
-    result = shopify_request('products.json?limit=250')
-    if result:
-        return result.get('products', [])
-    return []
+    """Récupère tous les produits (avec pagination)"""
+    all_products = []
+    endpoint = 'products.json?limit=250'
+    
+    while endpoint:
+        result = shopify_request(endpoint)
+        if result and 'products' in result:
+            all_products.extend(result['products'])
+            
+            # Vérifier s'il y a une page suivante via le lien "next"
+            # Shopify utilise cursor-based pagination
+            if len(result['products']) == 250:
+                # Récupérer le dernier ID pour la pagination
+                last_id = result['products'][-1]['id']
+                endpoint = f'products.json?limit=250&since_id={last_id}'
+            else:
+                endpoint = None
+        else:
+            break
+    
+    return all_products
 
 
 def add_tag_to_product(product_id, tag):
