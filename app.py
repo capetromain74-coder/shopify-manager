@@ -412,33 +412,16 @@ def api_get_products():
 
 @app.route('/api/products/seo')
 def api_get_products_seo():
-    """Récupère les produits avec leurs metafields SEO"""
+    """Récupère les produits - les metafields seront chargés à la demande"""
     products = get_all_products()
-    
-    # Récupérer les metafields pour chaque produit (avec progression)
-    global task_progress
-    task_progress = {
-        'running': True,
-        'current': 0,
-        'total': len(products),
-        'message': 'Chargement des données SEO...',
-        'type': 'load_seo'
-    }
-    
-    for i, product in enumerate(products):
-        metafields = get_product_metafields(product['id'])
-        product['seo_meta_title'] = metafields.get('meta_title', '')
-        product['seo_meta_description'] = metafields.get('meta_description', '')
-        
-        task_progress['current'] = i + 1
-        task_progress['message'] = f'Chargement SEO: {i+1}/{len(products)}'
-        
-        time.sleep(0.2)  # Éviter rate limit
-    
-    task_progress['running'] = False
-    task_progress['message'] = 'Chargement terminé'
-    
     return jsonify({'products': products})
+
+
+@app.route('/api/product/<int:product_id>/seo')
+def api_get_product_seo(product_id):
+    """Récupère les metafields SEO d'un seul produit"""
+    metafields = get_product_metafields(product_id)
+    return jsonify(metafields)
 
 
 @app.route('/api/progress')
@@ -1192,6 +1175,7 @@ SEO_TEMPLATE = '''
         .seo-field.missing { color: #ff4757; font-style: italic; }
         .seo-field.ok { color: #888; }
         .seo-field.long { color: #ffa502; }
+        .seo-field.loading-seo { color: #666; font-style: italic; }
         
         .char-count { font-size: 10px; color: #666; }
         .char-count.warning { color: #ffa502; }
@@ -1377,15 +1361,49 @@ SEO_TEMPLATE = '''
         }
         
         async function loadProducts() {
-            document.getElementById('products-list').innerHTML = '<tr><td colspan="6" class="loading"><div class="spinner"></div><p>Chargement des produits et données SEO...<br><small>Cela peut prendre quelques minutes</small></p></td></tr>';
+            document.getElementById('products-list').innerHTML = '<tr><td colspan="6" class="loading"><div class="spinner"></div><p>Chargement des produits...</p></td></tr>';
             
             try {
                 const response = await fetch('/api/products/seo');
                 const data = await response.json();
                 products = data.products || [];
+                
+                // Initialiser les champs SEO vides
+                products.forEach(p => {
+                    p.seo_meta_title = '';
+                    p.seo_meta_description = '';
+                    p.seo_loaded = false;
+                });
+                
                 filterProducts();
+                
+                // Charger les metafields en arrière-plan pour les premiers 50 produits visibles
+                loadMetafieldsBackground();
             } catch (error) {
                 document.getElementById('products-list').innerHTML = '<tr><td colspan="6">Erreur de chargement</td></tr>';
+            }
+        }
+        
+        async function loadMetafieldsBackground() {
+            const toLoad = filteredProducts.filter(p => !p.seo_loaded).slice(0, 50);
+            
+            for (const product of toLoad) {
+                try {
+                    const response = await fetch(`/api/product/${product.id}/seo`);
+                    const seoData = await response.json();
+                    
+                    product.seo_meta_title = seoData.meta_title || '';
+                    product.seo_meta_description = seoData.meta_description || '';
+                    product.seo_loaded = true;
+                    
+                    // Mettre à jour l'affichage
+                    renderProducts();
+                    
+                    // Petite pause pour éviter rate limit
+                    await new Promise(r => setTimeout(r, 200));
+                } catch (e) {
+                    console.error('Erreur chargement SEO:', e);
+                }
             }
         }
         
@@ -1428,9 +1446,10 @@ SEO_TEMPLATE = '''
                 const metaTitle = p.seo_meta_title || '';
                 const metaDesc = p.seo_meta_description || '';
                 const handle = p.handle || '';
+                const isLoading = !p.seo_loaded;
                 
-                const titleClass = !metaTitle ? 'missing' : metaTitle.length > 60 ? 'long' : 'ok';
-                const descClass = !metaDesc ? 'missing' : metaDesc.length > 160 ? 'long' : 'ok';
+                const titleClass = isLoading ? 'loading-seo' : (!metaTitle ? 'missing' : metaTitle.length > 60 ? 'long' : 'ok');
+                const descClass = isLoading ? 'loading-seo' : (!metaDesc ? 'missing' : metaDesc.length > 160 ? 'long' : 'ok');
                 
                 return `
                     <tr>
@@ -1445,15 +1464,15 @@ SEO_TEMPLATE = '''
                             </div>
                         </td>
                         <td>
-                            <div class="seo-field ${titleClass}">${metaTitle || '⚠️ Non défini'}</div>
-                            ${metaTitle ? `<div class="char-count ${metaTitle.length > 60 ? 'error' : ''}">${metaTitle.length}/60</div>` : ''}
+                            <div class="seo-field ${titleClass}">${isLoading ? '⏳ Chargement...' : (metaTitle || '⚠️ Non défini')}</div>
+                            ${!isLoading && metaTitle ? `<div class="char-count ${metaTitle.length > 60 ? 'error' : ''}">${metaTitle.length}/60</div>` : ''}
                         </td>
                         <td>
-                            <div class="seo-field ${descClass}">${metaDesc ? metaDesc.substring(0, 80) + '...' : '⚠️ Non défini'}</div>
-                            ${metaDesc ? `<div class="char-count ${metaDesc.length > 160 ? 'error' : ''}">${metaDesc.length}/160</div>` : ''}
+                            <div class="seo-field ${descClass}">${isLoading ? '⏳ Chargement...' : (metaDesc ? metaDesc.substring(0, 80) + '...' : '⚠️ Non défini')}</div>
+                            ${!isLoading && metaDesc ? `<div class="char-count ${metaDesc.length > 160 ? 'error' : ''}">${metaDesc.length}/160</div>` : ''}
                         </td>
                         <td><div class="seo-field ok">/products/${handle}</div></td>
-                        <td><button class="btn btn-secondary" style="padding:8px 12px;font-size:12px;" onclick='openEditModal(${JSON.stringify(p).replace(/'/g, "\\'")})'>✏️</button></td>
+                        <td><button class="btn btn-secondary" style="padding:8px 12px;font-size:12px;" onclick='loadAndEditProduct(${p.id})'>✏️</button></td>
                     </tr>
                 `;
             }).join('');
@@ -1539,6 +1558,28 @@ SEO_TEMPLATE = '''
             document.getElementById('edit-handle').value = product.handle || '';
             updateCharCount();
             document.getElementById('edit-modal').classList.add('show');
+        }
+        
+        async function loadAndEditProduct(productId) {
+            // Trouver le produit
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+            
+            // Si les metafields ne sont pas chargés, les charger
+            if (!product.seo_loaded) {
+                showToast('Chargement des données SEO...', 'success');
+                try {
+                    const response = await fetch(`/api/product/${productId}/seo`);
+                    const seoData = await response.json();
+                    product.seo_meta_title = seoData.meta_title || '';
+                    product.seo_meta_description = seoData.meta_description || '';
+                    product.seo_loaded = true;
+                } catch (e) {
+                    console.error('Erreur:', e);
+                }
+            }
+            
+            openEditModal(product);
         }
         
         function closeEditModal() {
