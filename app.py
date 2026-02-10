@@ -124,58 +124,40 @@ def get_product_metafields(product_id):
             key = mf.get('key', '')
             value = mf.get('value', '')
             
-            # Shopify stocke les SEO tags dans différents namespaces possibles
-            if key == 'title_tag' or key == 'seo_title':
+            # Shopify stocke les SEO tags dans le namespace 'global'
+            if namespace == 'global' and key == 'title_tag':
                 metafields['meta_title'] = value
-            elif key == 'description_tag' or key == 'seo_description':
+            elif namespace == 'global' and key == 'description_tag':
                 metafields['meta_description'] = value
-            
-            # Debug
-            print(f"[METAFIELD] {product_id}: {namespace}.{key} = {value[:50] if value else 'empty'}...")
     
     return metafields
 
 
-def get_product_with_seo_graphql(product_id):
-    """Récupère un produit avec ses données SEO via GraphQL"""
-    query = '''
-    {
-        product(id: "gid://shopify/Product/%s") {
-            id
-            title
-            handle
-            seo {
-                title
-                description
-            }
-        }
+def get_product_seo_direct(product_id):
+    """Récupère les données SEO via l'endpoint produit avec tous les champs"""
+    # Récupérer le produit
+    product = shopify_request(f'products/{product_id}.json')
+    
+    if not product or 'product' not in product:
+        return {'meta_title': '', 'meta_description': ''}
+    
+    # Récupérer les metafields séparément
+    metafields_result = shopify_request(f'products/{product_id}/metafields.json?namespace=global')
+    
+    meta_title = ''
+    meta_description = ''
+    
+    if metafields_result and 'metafields' in metafields_result:
+        for mf in metafields_result['metafields']:
+            if mf.get('key') == 'title_tag':
+                meta_title = mf.get('value', '')
+            elif mf.get('key') == 'description_tag':
+                meta_description = mf.get('value', '')
+    
+    return {
+        'meta_title': meta_title,
+        'meta_description': meta_description
     }
-    ''' % product_id
-    
-    url = f"https://{SHOP}/admin/api/{API_VERSION}/graphql.json"
-    headers = {
-        'X-Shopify-Access-Token': ACCESS_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    
-    try:
-        req = Request(url, data=json.dumps({'query': query}).encode('utf-8'), headers=headers, method='POST')
-        context = ssl.create_default_context()
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
-        
-        with urlopen(req, context=context, timeout=30) as response:
-            result = json.loads(response.read().decode('utf-8'))
-            if result.get('data', {}).get('product'):
-                seo = result['data']['product'].get('seo', {})
-                return {
-                    'meta_title': seo.get('title', '') or '',
-                    'meta_description': seo.get('description', '') or ''
-                }
-    except Exception as e:
-        print(f"[GraphQL Error] {e}")
-    
-    return {'meta_title': '', 'meta_description': ''}
 
 
 def get_products_with_seo(limit=100):
@@ -469,19 +451,22 @@ def api_get_products_seo():
 
 @app.route('/api/product/<int:product_id>/seo')
 def api_get_product_seo(product_id):
-    """Récupère les metafields SEO d'un seul produit via GraphQL"""
-    seo_data = get_product_with_seo_graphql(product_id)
+    """Récupère les metafields SEO d'un seul produit"""
+    seo_data = get_product_seo_direct(product_id)
     return jsonify(seo_data)
 
 
 @app.route('/api/debug/product/<int:product_id>')
 def api_debug_product(product_id):
     """Debug: voir tous les metafields d'un produit"""
-    result = shopify_request(f'products/{product_id}/metafields.json')
-    graphql_seo = get_product_with_seo_graphql(product_id)
+    # Récupérer TOUS les metafields sans filtre
+    all_metafields = shopify_request(f'products/{product_id}/metafields.json')
+    # Récupérer avec filtre namespace global
+    global_metafields = shopify_request(f'products/{product_id}/metafields.json?namespace=global')
+    
     return jsonify({
-        'metafields': result,
-        'graphql_seo': graphql_seo
+        'all_metafields': all_metafields,
+        'global_metafields': global_metafields
     })
 
 
@@ -1438,34 +1423,52 @@ SEO_TEMPLATE = '''
                 
                 filterProducts();
                 
-                // Charger les metafields en arrière-plan pour les premiers 50 produits visibles
-                loadMetafieldsBackground();
+                // Charger les metafields en arrière-plan
+                loadAllMetafieldsBackground();
             } catch (error) {
                 document.getElementById('products-list').innerHTML = '<tr><td colspan="6">Erreur de chargement</td></tr>';
             }
         }
         
-        async function loadMetafieldsBackground() {
-            const toLoad = filteredProducts.filter(p => !p.seo_loaded).slice(0, 50);
+        let isLoadingMetafields = false;
+        let loadedCount = 0;
+        
+        async function loadAllMetafieldsBackground() {
+            if (isLoadingMetafields) return;
+            isLoadingMetafields = true;
+            loadedCount = 0;
+            
+            const toLoad = products.filter(p => !p.seo_loaded);
             
             for (const product of toLoad) {
                 try {
                     const response = await fetch(`/api/product/${product.id}/seo`);
-                    const seoData = await response.json();
-                    
-                    product.seo_meta_title = seoData.meta_title || '';
-                    product.seo_meta_description = seoData.meta_description || '';
+                    if (response.ok) {
+                        const seoData = await response.json();
+                        product.seo_meta_title = seoData.meta_title || '';
+                        product.seo_meta_description = seoData.meta_description || '';
+                    }
                     product.seo_loaded = true;
+                    loadedCount++;
                     
-                    // Mettre à jour l'affichage
-                    renderProducts();
+                    // Mettre à jour l'affichage tous les 10 produits
+                    if (loadedCount % 10 === 0) {
+                        renderProducts();
+                        console.log(`SEO chargé: ${loadedCount}/${toLoad.length}`);
+                    }
                     
-                    // Petite pause pour éviter rate limit
-                    await new Promise(r => setTimeout(r, 200));
+                    // Pause pour éviter rate limit (Shopify limite à 2 req/sec)
+                    await new Promise(r => setTimeout(r, 550));
                 } catch (e) {
                     console.error('Erreur chargement SEO:', e);
+                    product.seo_loaded = true; // Marquer comme chargé pour ne pas réessayer
                 }
             }
+            
+            // Affichage final
+            renderProducts();
+            isLoadingMetafields = false;
+            console.log(`SEO chargé: ${loadedCount}/${toLoad.length} - Terminé!`);
         }
         
         function filterProducts() {
