@@ -463,10 +463,48 @@ def api_debug_product(product_id):
     all_metafields = shopify_request(f'products/{product_id}/metafields.json')
     # Récupérer avec filtre namespace global
     global_metafields = shopify_request(f'products/{product_id}/metafields.json?namespace=global')
+    # Récupérer le produit lui-même
+    product_data = shopify_request(f'products/{product_id}.json')
+    
+    # Test GraphQL pour SEO
+    graphql_seo = None
+    try:
+        query = '''
+        {
+            product(id: "gid://shopify/Product/%s") {
+                id
+                title
+                handle
+                descriptionHtml
+                seo {
+                    title
+                    description
+                }
+            }
+        }
+        ''' % product_id
+        
+        url = f"https://{SHOP}/admin/api/{API_VERSION}/graphql.json"
+        headers = {
+            'X-Shopify-Access-Token': ACCESS_TOKEN,
+            'Content-Type': 'application/json'
+        }
+        
+        req = Request(url, data=json.dumps({'query': query}).encode('utf-8'), headers=headers, method='POST')
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        
+        with urlopen(req, context=context, timeout=30) as response:
+            graphql_seo = json.loads(response.read().decode('utf-8'))
+    except Exception as e:
+        graphql_seo = {'error': str(e)}
     
     return jsonify({
         'all_metafields': all_metafields,
-        'global_metafields': global_metafields
+        'global_metafields': global_metafields,
+        'product': product_data,
+        'graphql_seo': graphql_seo
     })
 
 
