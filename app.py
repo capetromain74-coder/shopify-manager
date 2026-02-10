@@ -447,33 +447,45 @@ def api_generate_seo_batch():
             'running': True,
             'current': 0,
             'total': len(product_ids),
-            'message': 'Démarrage...',
+            'message': 'Démarrage de la génération SEO...',
             'type': 'seo_batch',
-            'results': []
+            'success_count': 0,
+            'error_count': 0
         }
         
         for i, pid in enumerate(product_ids):
             task_progress['current'] = i + 1
-            task_progress['message'] = f'Traitement produit {i+1}/{len(product_ids)}'
             
             # Récupérer le produit
             result = shopify_request(f'products/{pid}.json')
             if result and 'product' in result:
                 product = result['product']
+                product_title = product.get('title', 'Produit inconnu')
+                
+                # Mettre à jour le message avec le nom du produit
+                task_progress['message'] = f'<span class="current-product">#{i+1}</span> {product_title[:40]}{"..." if len(product_title) > 40 else ""}'
+                
+                # Générer le SEO
                 all_seo = generate_all_seo(product)
                 seo_data = {k: v for k, v in all_seo.items() if k in fields}
                 
+                # Appliquer
                 success = update_product_seo(pid, seo_data)
-                task_progress['results'].append({
-                    'id': pid,
-                    'title': product.get('title'),
-                    'success': success
-                })
+                
+                if success:
+                    task_progress['success_count'] += 1
+                else:
+                    task_progress['error_count'] += 1
+            else:
+                task_progress['error_count'] += 1
             
-            time.sleep(0.5)  # Rate limit
+            # Rate limit : 1 seconde entre chaque produit pour être safe
+            time.sleep(1.0)
         
         task_progress['running'] = False
-        task_progress['message'] = f'Terminé ! {len(product_ids)} produits mis à jour.'
+        success_count = task_progress['success_count']
+        error_count = task_progress['error_count']
+        task_progress['message'] = f'✅ Terminé ! {success_count} produits optimisés' + (f', {error_count} erreurs' if error_count > 0 else '')
     
     thread = Thread(target=process_batch)
     thread.start()
@@ -853,11 +865,16 @@ SEO_TEMPLATE = '''
         .char-count.warning { color: #ffa502; }
         .char-count.error { color: #ff4757; }
         
-        .progress-bar { position: fixed; top: 0; left: 0; right: 0; background: #1a1a2e; padding: 20px; z-index: 1000; border-bottom: 1px solid #333; display: none; }
+        .progress-bar { position: fixed; top: 0; left: 0; right: 0; background: #1a1a2e; padding: 25px 40px; z-index: 1000; border-bottom: 2px solid #8b5cf6; display: none; }
         .progress-bar.show { display: block; }
-        .progress-track { height: 10px; background: #333; border-radius: 5px; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #6d28d9); transition: width 0.3s; }
-        .progress-text { margin-top: 10px; font-size: 14px; color: #888; }
+        .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .progress-header h3 { color: #fff; font-size: 16px; }
+        .progress-stats { display: flex; gap: 20px; font-size: 13px; color: #888; }
+        .progress-stats span { color: #00ff88; font-weight: bold; }
+        .progress-track { height: 12px; background: #333; border-radius: 6px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #00ff88); transition: width 0.3s; border-radius: 6px; }
+        .progress-text { margin-top: 12px; font-size: 14px; color: #888; }
+        .progress-text .current-product { color: #a78bfa; }
         
         .loading { text-align: center; padding: 60px; }
         .spinner { width: 40px; height: 40px; border: 3px solid #333; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
@@ -893,6 +910,13 @@ SEO_TEMPLATE = '''
 </head>
 <body>
     <div class="progress-bar" id="progress-bar">
+        <div class="progress-header">
+            <h3>🔄 Génération SEO en cours...</h3>
+            <div class="progress-stats">
+                <div>Traités : <span id="progress-current">0</span> / <span id="progress-total">0</span></div>
+                <div>Temps restant : <span id="progress-eta">-</span></div>
+            </div>
+        </div>
         <div class="progress-track">
             <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
         </div>
@@ -928,9 +952,10 @@ SEO_TEMPLATE = '''
                 </select>
             </div>
             <button class="btn btn-secondary" onclick="loadProducts()">🔄 Actualiser</button>
-            <button class="btn btn-ai" onclick="openGenerateModal()">🤖 Générer SEO en masse</button>
+            <button class="btn btn-ai" onclick="openGenerateModal()">🤖 Générer SEO (sélection)</button>
+            <button class="btn btn-primary" onclick="openGenerateAllModal()" style="background: linear-gradient(135deg, #00ff88, #00cc6a); color: #000;">🚀 Générer TOUT le SEO</button>
             <div class="selected-info">
-                <strong id="selection-count">0</strong> sélectionné(s)
+                <strong id="selection-count">0</strong> sélectionné(s) / <strong id="total-count">0</strong> total
             </div>
         </div>
         
@@ -979,6 +1004,42 @@ SEO_TEMPLATE = '''
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeModal('generate-modal')">Annuler</button>
                 <button class="btn btn-ai" onclick="generateBatch()">🚀 Générer et appliquer</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="generate-all-modal">
+        <div class="modal">
+            <h2>🚀 Générer le SEO pour TOUS les produits</h2>
+            <p class="subtitle">Cette opération va optimiser le SEO de <strong id="modal-all-count">0</strong> produits.<br>
+            <span style="color: #ffa502;">⚠️ Cela peut prendre plusieurs minutes (~1 seconde par produit).</span></p>
+            
+            <div class="control-group">
+                <label>Champs à générer et appliquer</label>
+                <div class="checkbox-group" id="fields-checkboxes-all">
+                    <label class="checkbox-label checked" data-field="meta_title">
+                        <input type="checkbox" checked> Meta Title
+                    </label>
+                    <label class="checkbox-label checked" data-field="meta_description">
+                        <input type="checkbox" checked> Meta Description
+                    </label>
+                    <label class="checkbox-label" data-field="handle">
+                        <input type="checkbox"> Handle (URL)
+                    </label>
+                    <label class="checkbox-label" data-field="body_html">
+                        <input type="checkbox"> Description produit
+                    </label>
+                </div>
+            </div>
+            
+            <div class="time-estimate" style="background: #0a0a0f; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                <p style="color: #888; font-size: 13px;">⏱️ Temps estimé : <strong id="time-estimate" style="color: #00ff88;">-</strong></p>
+                <p style="color: #666; font-size: 12px; margin-top: 5px;">Le traitement continue même si tu fermes cette page.</p>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('generate-all-modal')">Annuler</button>
+                <button class="btn btn-primary" onclick="generateAll()">🚀 Lancer pour TOUS</button>
             </div>
         </div>
     </div>
@@ -1054,6 +1115,7 @@ SEO_TEMPLATE = '''
                 const data = await response.json();
                 products = data.products || [];
                 filterProducts();
+                document.getElementById('total-count').textContent = products.length;
             } catch (error) {
                 document.getElementById('products-list').innerHTML = '<tr><td colspan="6">Erreur de chargement</td></tr>';
             }
@@ -1195,7 +1257,7 @@ SEO_TEMPLATE = '''
             }
         }
         
-        // Modal génération en masse
+        // Modal génération en masse (sélection)
         function openGenerateModal() {
             if (selectedIds.size === 0) {
                 showToast('Sélectionnez au moins un produit', 'error');
@@ -1205,10 +1267,26 @@ SEO_TEMPLATE = '''
             document.getElementById('generate-modal').classList.add('show');
         }
         
+        // Modal génération TOUS les produits
+        function openGenerateAllModal() {
+            const total = products.length;
+            document.getElementById('modal-all-count').textContent = total;
+            
+            // Estimer le temps (1.2 sec par produit)
+            const seconds = Math.ceil(total * 1.2);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSecs = seconds % 60;
+            document.getElementById('time-estimate').textContent = 
+                minutes > 0 ? `${minutes} min ${remainingSecs} sec` : `${seconds} secondes`;
+            
+            document.getElementById('generate-all-modal').classList.add('show');
+        }
+        
         function closeModal(id) {
             document.getElementById(id).classList.remove('show');
         }
         
+        // Générer pour la sélection
         async function generateBatch() {
             const checkboxes = document.querySelectorAll('#fields-checkboxes .checkbox-label.checked');
             const fields = Array.from(checkboxes).map(cb => cb.dataset.field);
@@ -1219,10 +1297,10 @@ SEO_TEMPLATE = '''
             }
             
             closeModal('generate-modal');
-            showProgress();
+            startProgressMonitor(selectedIds.size);
             
             try {
-                const response = await fetch('/api/seo/generate-batch', {
+                await fetch('/api/seo/generate-batch', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -1230,25 +1308,88 @@ SEO_TEMPLATE = '''
                         fields: fields
                     })
                 });
-                
-                // Suivre la progression
-                const progressInterval = setInterval(async () => {
+            } catch (error) {
+                showToast('Erreur: ' + error.message, 'error');
+            }
+        }
+        
+        // Générer pour TOUS les produits
+        async function generateAll() {
+            const checkboxes = document.querySelectorAll('#fields-checkboxes-all .checkbox-label.checked');
+            const fields = Array.from(checkboxes).map(cb => cb.dataset.field);
+            
+            if (fields.length === 0) {
+                showToast('Sélectionnez au moins un champ', 'error');
+                return;
+            }
+            
+            closeModal('generate-all-modal');
+            
+            // Récupérer tous les IDs
+            const allIds = products.map(p => p.id);
+            startProgressMonitor(allIds.length);
+            
+            try {
+                await fetch('/api/seo/generate-batch', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        product_ids: allIds,
+                        fields: fields
+                    })
+                });
+            } catch (error) {
+                showToast('Erreur: ' + error.message, 'error');
+            }
+        }
+        
+        // Moniteur de progression amélioré
+        let progressStartTime = null;
+        
+        function startProgressMonitor(total) {
+            showProgress();
+            progressStartTime = Date.now();
+            document.getElementById('progress-total').textContent = total;
+            
+            const progressInterval = setInterval(async () => {
+                try {
                     const prog = await fetch('/api/progress').then(r => r.json());
-                    updateProgress(prog.current, prog.total, prog.message);
+                    updateProgressUI(prog);
                     
                     if (!prog.running) {
                         clearInterval(progressInterval);
                         hideProgress();
-                        showToast(prog.message, 'success');
+                        showToast(`✅ ${prog.current} produits optimisés !`, 'success');
                         selectedIds.clear();
                         updateSelectionUI();
                         loadProducts();
                     }
-                }, 500);
+                } catch (e) {
+                    console.error('Progress error:', e);
+                }
+            }, 800);
+        }
+        
+        function updateProgressUI(prog) {
+            const pct = prog.total > 0 ? (prog.current / prog.total * 100) : 0;
+            document.getElementById('progress-fill').style.width = pct + '%';
+            document.getElementById('progress-current').textContent = prog.current;
+            document.getElementById('progress-total').textContent = prog.total;
+            document.getElementById('progress-text').innerHTML = prog.message;
+            
+            // Calculer ETA
+            if (prog.current > 0 && progressStartTime) {
+                const elapsed = (Date.now() - progressStartTime) / 1000;
+                const perItem = elapsed / prog.current;
+                const remaining = (prog.total - prog.current) * perItem;
                 
-            } catch (error) {
-                hideProgress();
-                showToast('Erreur: ' + error.message, 'error');
+                if (remaining > 60) {
+                    const mins = Math.floor(remaining / 60);
+                    const secs = Math.floor(remaining % 60);
+                    document.getElementById('progress-eta').textContent = `~${mins}m ${secs}s`;
+                } else {
+                    document.getElementById('progress-eta').textContent = `~${Math.floor(remaining)}s`;
+                }
             }
         }
         
@@ -1308,24 +1449,19 @@ SEO_TEMPLATE = '''
             }
         }
         
-        // Checkbox toggle
+        // Checkbox toggle for modals
         document.querySelectorAll('.checkbox-label').forEach(label => {
             label.addEventListener('click', () => {
                 label.classList.toggle('checked');
             });
         });
         
-        // Progress
+        // Progress bar functions
         function showProgress() {
             document.getElementById('progress-bar').classList.add('show');
         }
         function hideProgress() {
             document.getElementById('progress-bar').classList.remove('show');
-        }
-        function updateProgress(current, total, message) {
-            const pct = total > 0 ? (current / total * 100) : 0;
-            document.getElementById('progress-fill').style.width = pct + '%';
-            document.getElementById('progress-text').textContent = message;
         }
         
         // Toast
