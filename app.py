@@ -1,35 +1,39 @@
 """
-============================================
-🛍️ SHOPIFY MANAGER V2 - Gestion Site + SEO + IA
-============================================
+Shopify Manager V3 - SEO Pro Edition
+Basé sur l'analyse SEO de WetTheNew et Limited Resell
 """
 
-from flask import Flask, render_template_string, jsonify, request
-from datetime import datetime
+from flask import Flask, jsonify, request, Response
 import json
-import ssl
-import threading
-import time
 import os
+import time
 import re
-
-try:
-    from urllib.request import Request, urlopen
-    from urllib.error import HTTPError
-except ImportError:
-    pass
+import ssl
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from datetime import datetime, timedelta
+from threading import Thread
 
 app = Flask(__name__)
 
-# ============================================
-# CONFIGURATION
-# ============================================
+# Configuration
 SHOP = os.environ.get('SHOPIFY_SHOP', 'capet-shop.myshopify.com')
 ACCESS_TOKEN = os.environ.get('SHOPIFY_ACCESS_TOKEN', '')
 API_VERSION = '2024-01'
-SITE_NAME = os.environ.get('SITE_NAME', 'Capet Shop')
 
-# État des tâches en cours
+# Configuration SEO - Personnalise ces valeurs !
+SITE_NAME = os.environ.get('SITE_NAME', 'KP SHOES')
+SITE_DOMAIN = os.environ.get('SITE_DOMAIN', 'kpshoes.fr')
+
+# Bénéfices pour les meta descriptions
+BENEFITS = [
+    "100% Authentique",
+    "Livraison rapide", 
+    "Paiement 3x sans frais"
+]
+
+# Progress tracking
 task_progress = {
     'running': False,
     'current': 0,
@@ -38,56 +42,39 @@ task_progress = {
     'type': ''
 }
 
-# Tâches planifiées
-scheduled_tasks = []
-task_id_counter = 1
 
-# ============================================
-# API SHOPIFY
-# ============================================
-
-def shopify_request(endpoint, method='GET', data=None, retries=3):
-    """Fait une requête à l'API Shopify avec retry"""
+def shopify_request(endpoint, method='GET', data=None):
+    """Fait une requête à l'API Shopify"""
     url = f"https://{SHOP}/admin/api/{API_VERSION}/{endpoint}"
-    
     headers = {
         'X-Shopify-Access-Token': ACCESS_TOKEN,
         'Content-Type': 'application/json'
     }
     
-    body = json.dumps(data).encode('utf-8') if data else None
-    
-    for attempt in range(retries):
-        try:
-            req = Request(url, data=body, headers=headers, method=method)
-            context = ssl.create_default_context()
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
-            
-            with urlopen(req, context=context, timeout=30) as response:
-                if response.status in [200, 201]:
-                    return json.loads(response.read().decode('utf-8'))
-                elif response.status == 204:
-                    return {'success': True}
-                return None
-        except HTTPError as e:
-            if e.code == 429:  # Rate limit
-                time.sleep(2)
-                continue
-            print(f"Erreur API {e.code}: {e.read().decode()}")
-            return None
-        except Exception as e:
-            print(f"Erreur: {e}")
-            if attempt < retries - 1:
-                time.sleep(1)
-                continue
-            return None
-    return None
+    try:
+        if data:
+            req = Request(url, data=json.dumps(data).encode('utf-8'), headers=headers, method=method)
+        else:
+            req = Request(url, headers=headers, method=method)
+        
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        
+        with urlopen(req, context=context, timeout=30) as response:
+            if method == 'DELETE':
+                return True
+            return json.loads(response.read().decode('utf-8'))
+    except HTTPError as e:
+        print(f"[API Error] {e.code}: {e.reason}")
+        return None
+    except Exception as e:
+        print(f"[Error] {e}")
+        return None
 
 
-def get_all_products(include_metafields=False):
+def get_all_products():
     """Récupère TOUS les produits avec pagination"""
-    global task_progress
     all_products = []
     since_id = 0
     
@@ -103,338 +90,280 @@ def get_all_products(include_metafields=False):
             
             if len(products) < 250:
                 break
-            
-            # Pause pour éviter rate limit
             time.sleep(0.5)
         else:
             break
     
-    print(f"[API] Total: {len(all_products)} produits")
     return all_products
 
 
-def get_product_metafields(product_id):
-    """Récupère les metafields SEO d'un produit"""
-    result = shopify_request(f'products/{product_id}/metafields.json')
-    metafields = {'meta_title': '', 'meta_description': ''}
-    
-    if result and 'metafields' in result:
-        for mf in result['metafields']:
-            namespace = mf.get('namespace', '')
-            key = mf.get('key', '')
-            value = mf.get('value', '')
-            
-            # Shopify stocke les SEO tags dans le namespace 'global'
-            if namespace == 'global' and key == 'title_tag':
-                metafields['meta_title'] = value
-            elif namespace == 'global' and key == 'description_tag':
-                metafields['meta_description'] = value
-    
-    return metafields
+def slugify(text):
+    """Convertit un texte en slug URL"""
+    if not text:
+        return ''
+    # Minuscules
+    text = text.lower()
+    # Remplacer les accents
+    accents = {'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e', 'à': 'a', 'â': 'a', 'ä': 'a',
+               'ù': 'u', 'û': 'u', 'ü': 'u', 'ô': 'o', 'ö': 'o', 'î': 'i', 'ï': 'i',
+               'ç': 'c', 'ñ': 'n'}
+    for acc, rep in accents.items():
+        text = text.replace(acc, rep)
+    # Garder uniquement lettres, chiffres, tirets
+    text = re.sub(r'[^a-z0-9\-]', '-', text)
+    # Supprimer tirets multiples
+    text = re.sub(r'-+', '-', text)
+    # Supprimer tirets début/fin
+    text = text.strip('-')
+    return text
 
 
-def get_product_seo_direct(product_id):
-    """Récupère les données SEO via l'endpoint produit avec tous les champs"""
-    # Récupérer le produit
-    product = shopify_request(f'products/{product_id}.json')
+def extract_sku(product):
+    """Extrait le SKU du produit"""
+    if product.get('variants') and len(product['variants']) > 0:
+        return product['variants'][0].get('sku', '')
+    return ''
+
+
+def extract_brand(product):
+    """Extrait la marque du titre du produit"""
+    title = product.get('title', '')
+    # Marques courantes
+    brands = ['Adidas', 'Nike', 'Air Jordan', 'Jordan', 'New Balance', 'Puma', 
+              'Asics', 'Converse', 'Vans', 'Reebok', 'UGG', 'Yeezy', 'Salomon',
+              'On Running', 'Hoka', 'Crocs', 'Birkenstock', 'Dr. Martens']
     
-    if not product or 'product' not in product:
-        return {'meta_title': '', 'meta_description': ''}
+    title_lower = title.lower()
+    for brand in brands:
+        if brand.lower() in title_lower:
+            return brand
     
-    # Récupérer les metafields séparément
-    metafields_result = shopify_request(f'products/{product_id}/metafields.json?namespace=global')
+    # Sinon prendre le vendor ou le premier mot
+    return product.get('vendor', title.split()[0] if title else '')
+
+
+def extract_colorway(product):
+    """Extrait le colorway du titre"""
+    title = product.get('title', '')
+    # Chercher entre parenthèses
+    match = re.search(r'\(([^)]+)\)', title)
+    if match:
+        return match.group(1)
+    # Sinon chercher après le dernier tiret ou espace
+    parts = title.split(' - ')
+    if len(parts) > 1:
+        return parts[-1]
+    return ''
+
+
+def strip_html(html):
+    """Supprime les balises HTML"""
+    if not html:
+        return ''
+    clean = re.sub(r'<[^>]+>', ' ', html)
+    clean = re.sub(r'\s+', ' ', clean)
+    return clean.strip()
+
+
+# ============================================
+# GÉNÉRATION SEO PROFESSIONNELLE
+# ============================================
+
+def generate_meta_title(product):
+    """
+    Génère un Meta Title optimisé SEO
+    Format: {Nom Produit} | {Site} (max 60 car.)
+    """
+    title = product.get('title', '')
+    meta_title = f"{title} | {SITE_NAME}"
     
-    meta_title = ''
-    meta_description = ''
+    # Tronquer si > 60 caractères
+    if len(meta_title) > 60:
+        # Garder le nom du site, tronquer le titre
+        max_title_len = 60 - len(f" | {SITE_NAME}") - 3  # -3 pour "..."
+        meta_title = f"{title[:max_title_len]}... | {SITE_NAME}"
     
-    if metafields_result and 'metafields' in metafields_result:
-        for mf in metafields_result['metafields']:
-            if mf.get('key') == 'title_tag':
-                meta_title = mf.get('value', '')
-            elif mf.get('key') == 'description_tag':
-                meta_description = mf.get('value', '')
+    return meta_title
+
+
+def generate_meta_description(product):
+    """
+    Génère une Meta Description optimisée SEO
+    Format: Achetez la {Nom} (SKU: {SKU}) sur {Site} ✓ Bénéfice1 ✓ Bénéfice2 ✓ Bénéfice3.
+    Max 155 caractères
+    """
+    title = product.get('title', '')
+    sku = extract_sku(product)
     
+    # Format avec SKU si disponible
+    if sku:
+        base = f"Achetez la {title} (SKU: {sku}) sur {SITE_NAME}"
+    else:
+        base = f"Achetez la {title} sur {SITE_NAME}"
+    
+    # Ajouter les bénéfices
+    benefits_str = " ✓ ".join(BENEFITS)
+    meta_desc = f"{base} ✓ {benefits_str}."
+    
+    # Tronquer si > 155 caractères
+    if len(meta_desc) > 155:
+        # Version courte sans tous les bénéfices
+        if sku:
+            meta_desc = f"Achetez la {title} (SKU: {sku}) ✓ {BENEFITS[0]} ✓ {BENEFITS[1]} - {SITE_NAME}"
+        else:
+            meta_desc = f"Achetez la {title} ✓ {BENEFITS[0]} ✓ {BENEFITS[1]} ✓ {BENEFITS[2]} - {SITE_NAME}"
+        
+        if len(meta_desc) > 155:
+            meta_desc = meta_desc[:152] + "..."
+    
+    return meta_desc
+
+
+def generate_product_description(product):
+    """
+    Génère une description produit optimisée SEO
+    Inclut: nom, marque, SKU, colorway, description
+    """
+    title = product.get('title', '')
+    brand = extract_brand(product)
+    sku = extract_sku(product)
+    colorway = extract_colorway(product)
+    current_desc = strip_html(product.get('body_html', ''))
+    
+    # Construction de la description
+    lines = []
+    
+    # Paragraphe 1: Présentation
+    if current_desc and len(current_desc) > 50:
+        # Utiliser la description existante si elle est bonne
+        lines.append(f"<p>{current_desc}</p>")
+    else:
+        # Générer une description basique
+        lines.append(f"<p>Découvrez la <strong>{title}</strong>, une sneaker iconique de la marque {brand}.</p>")
+    
+    # Paragraphe 2: Données techniques
+    tech_lines = []
+    if sku:
+        tech_lines.append(f"<strong>SKU</strong> : {sku}")
+    if colorway:
+        tech_lines.append(f"<strong>Colorway</strong> : {colorway}")
+    tech_lines.append(f"<strong>Marque</strong> : {brand}")
+    
+    if tech_lines:
+        lines.append("<p>" + "<br>".join(tech_lines) + "</p>")
+    
+    # Paragraphe 3: Authenticité
+    lines.append(f"<p>Chez <strong>{SITE_NAME}</strong>, toutes nos sneakers sont <strong>100% authentiques</strong> et livrées dans leur boîte d'origine avec un certificat d'authenticité.</p>")
+    
+    return "\n".join(lines)
+
+
+def generate_handle(product):
+    """Génère un handle/URL optimisé"""
+    title = product.get('title', '')
+    return slugify(title)
+
+
+def generate_all_seo(product):
+    """Génère toutes les données SEO pour un produit"""
     return {
-        'meta_title': meta_title,
-        'meta_description': meta_description
+        'meta_title': generate_meta_title(product),
+        'meta_description': generate_meta_description(product),
+        'handle': generate_handle(product),
+        'body_html': generate_product_description(product)
     }
 
 
-def get_products_with_seo(limit=100):
-    """Récupère les produits avec leurs données SEO (metafields)"""
-    products = get_all_products()
-    
-    # Pour la page SEO, on récupère les metafields des premiers produits
-    # (pour éviter trop de requêtes API)
-    for i, product in enumerate(products[:limit]):
-        metafields = get_product_metafields(product['id'])
-        product['seo_meta_title'] = metafields.get('meta_title', '')
-        product['seo_meta_description'] = metafields.get('meta_description', '')
-        
-        if i % 10 == 0:
-            print(f"[SEO] Récupéré metafields pour {i+1}/{min(len(products), limit)} produits...")
-        
-        time.sleep(0.3)  # Éviter rate limit
-    
-    return products
-
-
-def add_tag_to_product(product_id, tag):
-    """Ajoute une balise à un produit"""
-    product_data = shopify_request(f'products/{product_id}.json')
-    if product_data:
-        current_tags = product_data['product'].get('tags', '')
-        tags_list = [t.strip() for t in current_tags.split(',') if t.strip()]
-        if tag not in tags_list:
-            tags_list.append(tag)
-        new_tags = ', '.join(tags_list)
-        return shopify_request(f'products/{product_id}.json', 'PUT', {
-            'product': {'id': product_id, 'tags': new_tags}
-        })
-    return None
-
-
-def delete_product(product_id):
-    """Supprime un produit"""
-    url = f"https://{SHOP}/admin/api/{API_VERSION}/products/{product_id}.json"
-    headers = {
-        'X-Shopify-Access-Token': ACCESS_TOKEN,
-        'Content-Type': 'application/json'
-    }
-    req = Request(url, headers=headers, method='DELETE')
-    context = ssl.create_default_context()
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
-    try:
-        with urlopen(req, context=context, timeout=30) as response:
-            return True
-    except Exception as e:
-        print(f"Erreur suppression {product_id}: {e}")
-        return False
-
-
-def delete_products_batch(product_ids):
-    """Supprime des produits avec progression"""
-    global task_progress
-    
-    task_progress = {
-        'running': True,
-        'current': 0,
-        'total': len(product_ids),
-        'message': 'Suppression en cours...',
-        'type': 'delete'
-    }
-    
-    deleted = 0
-    for i, pid in enumerate(product_ids):
-        if delete_product(pid):
-            deleted += 1
-        
-        task_progress['current'] = i + 1
-        task_progress['message'] = f'Supprimé {deleted}/{i+1} produits...'
-        
-        # Pause entre chaque suppression pour éviter rate limit
-        time.sleep(0.6)
-    
-    task_progress['running'] = False
-    task_progress['message'] = f'Terminé ! {deleted} produits supprimés.'
-    
-    return deleted
-
+# ============================================
+# MISE À JOUR SHOPIFY
+# ============================================
 
 def update_product_seo(product_id, seo_data):
-    """Met à jour les données SEO d'un produit via metafields"""
+    """Met à jour les données SEO d'un produit"""
     success = True
     
-    # Mettre à jour le titre du produit si fourni
-    if 'title' in seo_data:
-        result = shopify_request(f'products/{product_id}.json', 'PUT', {
-            'product': {'id': product_id, 'title': seo_data['title']}
-        })
-        if not result:
-            success = False
+    # Mise à jour des champs produit (handle, body_html)
+    product_update = {'product': {'id': product_id}}
     
-    # Mettre à jour le handle si fourni
     if 'handle' in seo_data:
-        result = shopify_request(f'products/{product_id}.json', 'PUT', {
-            'product': {'id': product_id, 'handle': seo_data['handle']}
-        })
-        if not result:
-            success = False
+        product_update['product']['handle'] = seo_data['handle']
     
-    # Mettre à jour la description HTML si fournie
     if 'body_html' in seo_data:
-        result = shopify_request(f'products/{product_id}.json', 'PUT', {
-            'product': {'id': product_id, 'body_html': seo_data['body_html']}
-        })
+        product_update['product']['body_html'] = seo_data['body_html']
+    
+    if len(product_update['product']) > 1:
+        result = shopify_request(f'products/{product_id}.json', 'PUT', product_update)
         if not result:
             success = False
+        time.sleep(0.3)
     
-    # Mettre à jour le Meta Title via metafield
-    if 'meta_title' in seo_data or 'metafields_global_title_tag' in seo_data:
-        meta_title = seo_data.get('meta_title') or seo_data.get('metafields_global_title_tag')
+    # Mise à jour du Meta Title via metafield
+    if 'meta_title' in seo_data:
+        # D'abord essayer de créer
         result = shopify_request(f'products/{product_id}/metafields.json', 'POST', {
             'metafield': {
                 'namespace': 'global',
                 'key': 'title_tag',
-                'value': meta_title,
+                'value': seo_data['meta_title'],
                 'type': 'single_line_text_field'
             }
         })
+        
         if not result:
-            # Essayer de mettre à jour si le metafield existe déjà
+            # Si échec, chercher et mettre à jour l'existant
             metafields = shopify_request(f'products/{product_id}/metafields.json')
             if metafields and 'metafields' in metafields:
                 for mf in metafields['metafields']:
                     if mf.get('namespace') == 'global' and mf.get('key') == 'title_tag':
-                        shopify_request(f'products/{product_id}/metafields/{mf["id"]}.json', 'PUT', {
-                            'metafield': {'id': mf['id'], 'value': meta_title}
+                        shopify_request(f'metafields/{mf["id"]}.json', 'PUT', {
+                            'metafield': {'id': mf['id'], 'value': seo_data['meta_title']}
                         })
                         break
+        time.sleep(0.3)
     
-    # Mettre à jour la Meta Description via metafield
-    if 'meta_description' in seo_data or 'metafields_global_description_tag' in seo_data:
-        meta_desc = seo_data.get('meta_description') or seo_data.get('metafields_global_description_tag')
+    # Mise à jour de la Meta Description via metafield
+    if 'meta_description' in seo_data:
         result = shopify_request(f'products/{product_id}/metafields.json', 'POST', {
             'metafield': {
                 'namespace': 'global',
                 'key': 'description_tag',
-                'value': meta_desc,
+                'value': seo_data['meta_description'],
                 'type': 'single_line_text_field'
             }
         })
+        
         if not result:
-            # Essayer de mettre à jour si le metafield existe déjà
             metafields = shopify_request(f'products/{product_id}/metafields.json')
             if metafields and 'metafields' in metafields:
                 for mf in metafields['metafields']:
                     if mf.get('namespace') == 'global' and mf.get('key') == 'description_tag':
-                        shopify_request(f'products/{product_id}/metafields/{mf["id"]}.json', 'PUT', {
-                            'metafield': {'id': mf['id'], 'value': meta_desc}
+                        shopify_request(f'metafields/{mf["id"]}.json', 'PUT', {
+                            'metafield': {'id': mf['id'], 'value': seo_data['meta_description']}
                         })
                         break
+        time.sleep(0.3)
     
     return success
-
-
-def update_products_seo_batch(updates):
-    """Met à jour le SEO de plusieurs produits avec progression"""
-    global task_progress
-    
-    task_progress = {
-        'running': True,
-        'current': 0,
-        'total': len(updates),
-        'message': 'Mise à jour SEO en cours...',
-        'type': 'seo'
-    }
-    
-    updated = 0
-    for i, update in enumerate(updates):
-        product_id = update['id']
-        seo_data = update['seo']
-        
-        if update_product_seo(product_id, seo_data):
-            updated += 1
-        
-        task_progress['current'] = i + 1
-        task_progress['message'] = f'Mis à jour {updated}/{i+1} produits...'
-        
-        time.sleep(0.6)
-    
-    task_progress['running'] = False
-    task_progress['message'] = f'Terminé ! {updated} produits mis à jour.'
-    
-    return updated
-
-
-# ============================================
-# GÉNÉRATION SEO AVEC IA (via API Anthropic intégrée)
-# ============================================
-
-def generate_seo_content(product, content_type):
-    """Génère du contenu SEO pour un produit"""
-    
-    title = product.get('title', '')
-    vendor = product.get('vendor', '')
-    product_type = product.get('product_type', '')
-    tags = product.get('tags', '')
-    
-    # Extraire SKU du premier variant
-    sku = ''
-    if product.get('variants'):
-        sku = product['variants'][0].get('sku', '')
-    
-    # Générer selon le type
-    if content_type == 'meta_title':
-        # Format: {product_name} | {site_name}
-        meta_title = f"{title} | {SITE_NAME}"
-        if len(meta_title) > 60:
-            meta_title = f"{title[:50]}... | {SITE_NAME}"
-        return meta_title
-    
-    elif content_type == 'meta_description':
-        # Format avec SKU et bénéfices
-        desc = f"Achetez la {title}"
-        if sku:
-            desc += f" (SKU: {sku})"
-        desc += f" ✓ 100% Authentique ✓ Livraison rapide ✓ Paiement sécurisé. Disponible sur {SITE_NAME}."
-        if len(desc) > 160:
-            desc = desc[:157] + "..."
-        return desc
-    
-    elif content_type == 'handle':
-        # Générer un slug propre
-        handle = title.lower()
-        handle = re.sub(r'[^a-z0-9\s-]', '', handle)
-        handle = re.sub(r'\s+', '-', handle)
-        handle = re.sub(r'-+', '-', handle)
-        return handle.strip('-')
-    
-    elif content_type == 'description_short':
-        desc = f"La {title} est une pièce incontournable"
-        if vendor:
-            desc += f" de la collection {vendor}"
-        desc += "."
-        if sku:
-            desc += f" Référence : {sku}."
-        return desc
-    
-    elif content_type == 'description_long':
-        desc = f"""<h2>{title}</h2>
-<p>La {title} est une pièce emblématique qui combine style et qualité. """
-        if vendor:
-            desc += f"Créée par {vendor}, cette sneaker "
-        else:
-            desc += "Cette sneaker "
-        desc += """s'inscrit dans la lignée des modèles les plus recherchés.</p>
-
-<h3>Caractéristiques</h3>
-<ul>
-<li>Design premium et authentique</li>
-<li>Matériaux de haute qualité</li>
-<li>Confort optimal pour un usage quotidien</li>
-</ul>
-"""
-        if sku:
-            desc += f"\n<p><strong>SKU :</strong> {sku}</p>"
-        
-        desc += f"""
-<h3>Pourquoi acheter sur {SITE_NAME} ?</h3>
-<ul>
-<li>✓ 100% Authentique - Garantie d'authenticité</li>
-<li>✓ Livraison rapide et sécurisée</li>
-<li>✓ Service client disponible</li>
-</ul>
-"""
-        return desc
-    
-    return ''
 
 
 # ============================================
 # ROUTES API
 # ============================================
+
+@app.route('/')
+def home():
+    return HOME_TEMPLATE
+
+
+@app.route('/site')
+def site_management():
+    return SITE_TEMPLATE
+
+
+@app.route('/seo')
+def seo_management():
+    return SEO_TEMPLATE
+
 
 @app.route('/api/products')
 def api_get_products():
@@ -442,241 +371,238 @@ def api_get_products():
     return jsonify({'products': products})
 
 
-@app.route('/api/products/seo')
-def api_get_products_seo():
-    """Récupère les produits - les metafields seront chargés à la demande"""
-    products = get_all_products()
-    return jsonify({'products': products})
-
-
-@app.route('/api/product/<int:product_id>/seo')
-def api_get_product_seo(product_id):
-    """Récupère les metafields SEO d'un seul produit"""
-    seo_data = get_product_seo_direct(product_id)
-    return jsonify(seo_data)
-
-
-@app.route('/api/debug/product/<int:product_id>')
-def api_debug_product(product_id):
-    """Debug: voir tous les metafields d'un produit"""
-    # Récupérer TOUS les metafields sans filtre
-    all_metafields = shopify_request(f'products/{product_id}/metafields.json')
-    # Récupérer avec filtre namespace global
-    global_metafields = shopify_request(f'products/{product_id}/metafields.json?namespace=global')
-    # Récupérer le produit lui-même
-    product_data = shopify_request(f'products/{product_id}.json')
-    
-    # Test GraphQL pour SEO
-    graphql_seo = None
-    try:
-        query = '''
-        {
-            product(id: "gid://shopify/Product/%s") {
-                id
-                title
-                handle
-                descriptionHtml
-                seo {
-                    title
-                    description
-                }
-            }
-        }
-        ''' % product_id
-        
-        url = f"https://{SHOP}/admin/api/{API_VERSION}/graphql.json"
-        headers = {
-            'X-Shopify-Access-Token': ACCESS_TOKEN,
-            'Content-Type': 'application/json'
-        }
-        
-        req = Request(url, data=json.dumps({'query': query}).encode('utf-8'), headers=headers, method='POST')
-        context = ssl.create_default_context()
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
-        
-        with urlopen(req, context=context, timeout=30) as response:
-            graphql_seo = json.loads(response.read().decode('utf-8'))
-    except Exception as e:
-        graphql_seo = {'error': str(e)}
-    
-    return jsonify({
-        'all_metafields': all_metafields,
-        'global_metafields': global_metafields,
-        'product': product_data,
-        'graphql_seo': graphql_seo
-    })
+@app.route('/api/products/<int:product_id>')
+def api_get_product(product_id):
+    result = shopify_request(f'products/{product_id}.json')
+    if result and 'product' in result:
+        return jsonify(result['product'])
+    return jsonify({'error': 'Product not found'}), 404
 
 
 @app.route('/api/progress')
-def api_get_progress():
+def api_progress():
     return jsonify(task_progress)
 
 
-@app.route('/api/products/add-tag', methods=['POST'])
-def api_add_tag():
-    data = request.json
-    product_ids = data.get('product_ids', [])
-    tag = data.get('tag', '')
-    
-    global task_progress
-    task_progress = {
-        'running': True,
-        'current': 0,
-        'total': len(product_ids),
-        'message': 'Ajout de balise en cours...',
-        'type': 'tag'
-    }
-    
-    count = 0
-    for i, pid in enumerate(product_ids):
-        if add_tag_to_product(pid, tag):
-            count += 1
-        task_progress['current'] = i + 1
-        task_progress['message'] = f'Ajouté à {count}/{i+1} produits...'
-        time.sleep(0.5)
-    
-    task_progress['running'] = False
-    task_progress['message'] = f'Terminé ! Balise ajoutée à {count} produits.'
-    
-    return jsonify({'success': True, 'count': count})
-
-
-@app.route('/api/products/delete', methods=['POST'])
-def api_delete_products():
-    data = request.json
-    product_ids = data.get('product_ids', [])
-    
-    # Lancer en arrière-plan
-    def delete_task():
-        delete_products_batch(product_ids)
-    
-    thread = threading.Thread(target=delete_task)
-    thread.start()
-    
-    return jsonify({'success': True, 'message': 'Suppression lancée'})
-
-
-@app.route('/api/products/update-seo', methods=['POST'])
-def api_update_seo():
-    data = request.json
-    updates = data.get('updates', [])
-    
-    def update_task():
-        update_products_seo_batch(updates)
-    
-    thread = threading.Thread(target=update_task)
-    thread.start()
-    
-    return jsonify({'success': True, 'message': 'Mise à jour SEO lancée'})
+@app.route('/api/seo/preview/<int:product_id>')
+def api_seo_preview(product_id):
+    """Prévisualise les données SEO générées pour un produit"""
+    result = shopify_request(f'products/{product_id}.json')
+    if result and 'product' in result:
+        product = result['product']
+        seo = generate_all_seo(product)
+        return jsonify({
+            'product': product,
+            'generated_seo': seo,
+            'current_seo': {
+                'title': product.get('title'),
+                'handle': product.get('handle'),
+                'body_html': product.get('body_html')
+            }
+        })
+    return jsonify({'error': 'Product not found'}), 404
 
 
 @app.route('/api/seo/generate', methods=['POST'])
-def api_generate_seo():
+def api_generate_seo_single():
+    """Génère et applique le SEO pour un seul produit"""
     data = request.json
-    product = data.get('product', {})
-    content_type = data.get('type', 'meta_title')
+    product_id = data.get('product_id')
+    fields = data.get('fields', ['meta_title', 'meta_description', 'handle', 'body_html'])
     
-    content = generate_seo_content(product, content_type)
-    return jsonify({'content': content})
+    result = shopify_request(f'products/{product_id}.json')
+    if not result or 'product' not in result:
+        return jsonify({'error': 'Product not found'}), 404
+    
+    product = result['product']
+    all_seo = generate_all_seo(product)
+    
+    # Filtrer les champs demandés
+    seo_data = {k: v for k, v in all_seo.items() if k in fields}
+    
+    # Appliquer
+    success = update_product_seo(product_id, seo_data)
+    
+    return jsonify({
+        'success': success,
+        'applied_seo': seo_data
+    })
 
 
 @app.route('/api/seo/generate-batch', methods=['POST'])
 def api_generate_seo_batch():
+    """Génère et applique le SEO pour plusieurs produits"""
+    global task_progress
+    
     data = request.json
     product_ids = data.get('product_ids', [])
     fields = data.get('fields', ['meta_title', 'meta_description'])
     
-    global task_progress
-    task_progress = {
-        'running': True,
-        'current': 0,
-        'total': len(product_ids),
-        'message': 'Génération SEO en cours...',
-        'type': 'generate'
-    }
+    if not product_ids:
+        return jsonify({'error': 'No products selected'}), 400
     
-    # Récupérer tous les produits
-    all_products = get_all_products()
-    products_dict = {p['id']: p for p in all_products}
-    
-    updates = []
-    for i, pid in enumerate(product_ids):
-        if pid in products_dict:
-            product = products_dict[pid]
-            seo_data = {}
-            
-            if 'meta_title' in fields:
-                seo_data['meta_title'] = generate_seo_content(product, 'meta_title')
-            
-            if 'meta_description' in fields:
-                seo_data['meta_description'] = generate_seo_content(product, 'meta_description')
-            
-            if 'handle' in fields:
-                seo_data['handle'] = generate_seo_content(product, 'handle')
-            
-            if 'description' in fields:
-                seo_data['body_html'] = generate_seo_content(product, 'description_long')
-            
-            # Appliquer la mise à jour
-            if update_product_seo(pid, seo_data):
-                updates.append(pid)
+    def process_batch():
+        global task_progress
+        task_progress = {
+            'running': True,
+            'current': 0,
+            'total': len(product_ids),
+            'message': 'Démarrage...',
+            'type': 'seo_batch',
+            'results': []
+        }
         
-        task_progress['current'] = i + 1
-        task_progress['message'] = f'Généré pour {len(updates)}/{i+1} produits...'
-        time.sleep(0.6)
+        for i, pid in enumerate(product_ids):
+            task_progress['current'] = i + 1
+            task_progress['message'] = f'Traitement produit {i+1}/{len(product_ids)}'
+            
+            # Récupérer le produit
+            result = shopify_request(f'products/{pid}.json')
+            if result and 'product' in result:
+                product = result['product']
+                all_seo = generate_all_seo(product)
+                seo_data = {k: v for k, v in all_seo.items() if k in fields}
+                
+                success = update_product_seo(pid, seo_data)
+                task_progress['results'].append({
+                    'id': pid,
+                    'title': product.get('title'),
+                    'success': success
+                })
+            
+            time.sleep(0.5)  # Rate limit
+        
+        task_progress['running'] = False
+        task_progress['message'] = f'Terminé ! {len(product_ids)} produits mis à jour.'
     
-    task_progress['running'] = False
-    task_progress['message'] = f'Terminé ! SEO généré pour {len(updates)} produits.'
+    thread = Thread(target=process_batch)
+    thread.start()
     
-    return jsonify({'success': True, 'updated': len(updates)})
+    return jsonify({'status': 'started', 'total': len(product_ids)})
 
 
-@app.route('/api/tasks')
-def api_get_tasks():
-    return jsonify({'tasks': scheduled_tasks})
-
-
-@app.route('/api/tasks/schedule', methods=['POST'])
-def api_schedule_task():
-    global task_id_counter
+@app.route('/api/seo/update', methods=['POST'])
+def api_update_seo():
+    """Met à jour manuellement les données SEO d'un produit"""
     data = request.json
-    task = {
-        'id': task_id_counter,
-        'action': data.get('action'),
-        'tag': data.get('tag'),
-        'scheduled_at': data.get('scheduled_at'),
-        'created_at': datetime.now().isoformat()
+    product_id = data.get('product_id')
+    seo_data = {
+        'meta_title': data.get('meta_title'),
+        'meta_description': data.get('meta_description'),
+        'handle': data.get('handle')
     }
-    task_id_counter += 1
-    scheduled_tasks.append(task)
-    return jsonify({'success': True, 'task': task})
-
-
-@app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
-def api_delete_task(task_id):
-    global scheduled_tasks
-    scheduled_tasks = [t for t in scheduled_tasks if t['id'] != task_id]
-    return jsonify({'success': True})
+    
+    # Filtrer les valeurs None
+    seo_data = {k: v for k, v in seo_data.items() if v is not None}
+    
+    success = update_product_seo(product_id, seo_data)
+    return jsonify({'success': success})
 
 
 # ============================================
-# PAGES
+# Routes pour la gestion du site (V2)
 # ============================================
 
-@app.route('/')
-def index():
-    return render_template_string(HOME_TEMPLATE)
+@app.route('/api/tags')
+def api_get_tags():
+    products = get_all_products()
+    tags = {}
+    for p in products:
+        for tag in (p.get('tags') or '').split(', '):
+            tag = tag.strip()
+            if tag:
+                tags[tag] = tags.get(tag, 0) + 1
+    return jsonify({'tags': tags})
 
 
-@app.route('/site')
-def site_management():
-    return render_template_string(SITE_TEMPLATE)
+@app.route('/api/products/add-tags', methods=['POST'])
+def api_add_tags():
+    global task_progress
+    data = request.json
+    product_ids = data.get('product_ids', [])
+    new_tags = data.get('tags', [])
+    
+    if not product_ids or not new_tags:
+        return jsonify({'error': 'Missing data'}), 400
+    
+    def process():
+        global task_progress
+        task_progress = {'running': True, 'current': 0, 'total': len(product_ids), 'message': 'Ajout des balises...', 'type': 'add_tags'}
+        
+        for i, pid in enumerate(product_ids):
+            task_progress['current'] = i + 1
+            task_progress['message'] = f'Traitement {i+1}/{len(product_ids)}'
+            
+            result = shopify_request(f'products/{pid}.json')
+            if result and 'product' in result:
+                current_tags = result['product'].get('tags', '')
+                all_tags = set(t.strip() for t in current_tags.split(',') if t.strip())
+                all_tags.update(new_tags)
+                
+                shopify_request(f'products/{pid}.json', 'PUT', {
+                    'product': {'id': pid, 'tags': ', '.join(all_tags)}
+                })
+            time.sleep(0.5)
+        
+        task_progress['running'] = False
+        task_progress['message'] = 'Terminé !'
+    
+    Thread(target=process).start()
+    return jsonify({'status': 'started'})
 
 
-@app.route('/seo')
-def seo_management():
-    return render_template_string(SEO_TEMPLATE)
+@app.route('/api/products/remove-tags', methods=['POST'])
+def api_remove_tags():
+    global task_progress
+    data = request.json
+    product_ids = data.get('product_ids', [])
+    tags_to_remove = data.get('tags', [])
+    
+    def process():
+        global task_progress
+        task_progress = {'running': True, 'current': 0, 'total': len(product_ids), 'message': 'Suppression des balises...', 'type': 'remove_tags'}
+        
+        for i, pid in enumerate(product_ids):
+            task_progress['current'] = i + 1
+            
+            result = shopify_request(f'products/{pid}.json')
+            if result and 'product' in result:
+                current_tags = result['product'].get('tags', '')
+                tags = set(t.strip() for t in current_tags.split(',') if t.strip())
+                tags -= set(tags_to_remove)
+                
+                shopify_request(f'products/{pid}.json', 'PUT', {
+                    'product': {'id': pid, 'tags': ', '.join(tags)}
+                })
+            time.sleep(0.5)
+        
+        task_progress['running'] = False
+    
+    Thread(target=process).start()
+    return jsonify({'status': 'started'})
+
+
+@app.route('/api/products/delete', methods=['POST'])
+def api_delete_products():
+    global task_progress
+    data = request.json
+    product_ids = data.get('product_ids', [])
+    
+    def process():
+        global task_progress
+        task_progress = {'running': True, 'current': 0, 'total': len(product_ids), 'message': 'Suppression...', 'type': 'delete'}
+        
+        for i, pid in enumerate(product_ids):
+            task_progress['current'] = i + 1
+            task_progress['message'] = f'Suppression {i+1}/{len(product_ids)}'
+            shopify_request(f'products/{pid}.json', 'DELETE')
+            time.sleep(0.6)
+        
+        task_progress['running'] = False
+        task_progress['message'] = f'{len(product_ids)} produits supprimés'
+    
+    Thread(target=process).start()
+    return jsonify({'status': 'started'})
 
 
 # ============================================
@@ -689,67 +615,116 @@ HOME_TEMPLATE = '''
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🛍️ Shopify Manager</title>
+    <title>Shopify Manager V3 - SEO Pro</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
             min-height: 100vh;
-            color: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
+            color: #fff;
         }
         .container {
             text-align: center;
             padding: 40px;
         }
-        .logo { font-size: 64px; margin-bottom: 20px; }
-        h1 { font-size: 48px; margin-bottom: 10px; }
-        h1 span { color: #00ff88; }
-        .subtitle { color: #888; font-size: 18px; margin-bottom: 50px; }
-        .buttons { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; }
-        .btn-card {
-            background: #1a1a2e;
-            border: 2px solid #333;
+        .logo {
+            font-size: 60px;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        h1 {
+            font-size: 42px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00ff88, #00cc6a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        h1 span { color: #fff; -webkit-text-fill-color: #fff; }
+        .version {
+            display: inline-block;
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            padding: 4px 12px;
             border-radius: 20px;
-            padding: 40px 50px;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 18px;
+            margin-bottom: 50px;
+        }
+        .buttons {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #333;
+            border-radius: 20px;
+            padding: 40px;
+            width: 280px;
             text-decoration: none;
             color: #fff;
             transition: all 0.3s;
-            min-width: 250px;
         }
         .btn-card:hover {
-            border-color: #00ff88;
             transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0,255,136,0.2);
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.05);
         }
-        .btn-card .icon { font-size: 48px; margin-bottom: 15px; }
-        .btn-card h2 { font-size: 24px; margin-bottom: 10px; }
-        .btn-card p { color: #888; font-size: 14px; }
+        .btn-card.seo {
+            border-color: #8b5cf6;
+        }
+        .btn-card.seo:hover {
+            border-color: #a78bfa;
+            background: rgba(139,92,246,0.1);
+        }
+        .btn-card .icon {
+            font-size: 50px;
+            margin-bottom: 20px;
+        }
+        .btn-card h2 {
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+        .btn-card p {
+            color: #888;
+            font-size: 14px;
+        }
         .status {
             margin-top: 50px;
-            padding: 15px 30px;
-            background: rgba(0,255,136,0.1);
-            border-radius: 30px;
-            display: inline-flex;
+            display: flex;
             align-items: center;
+            justify-content: center;
             gap: 10px;
+            font-size: 14px;
+            color: #888;
         }
         .status-dot {
-            width: 10px; height: 10px;
+            width: 10px;
+            height: 10px;
             background: #00ff88;
             border-radius: 50%;
-            box-shadow: 0 0 10px #00ff88;
+            box-shadow: 0 0 15px #00ff88;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="logo">🛍️</div>
+        <div class="logo">🚀</div>
         <h1>Shopify<span>Manager</span></h1>
-        <p class="subtitle">Gestion complète de ta boutique</p>
+        <div class="version">V3 - SEO Pro Edition</div>
+        <p class="subtitle">Optimisation SEO basée sur WetTheNew & Limited Resell</p>
         
         <div class="buttons">
             <a href="/site" class="btn-card">
@@ -757,10 +732,10 @@ HOME_TEMPLATE = '''
                 <h2>Gestion Site</h2>
                 <p>Balises, suppression, filtres</p>
             </a>
-            <a href="/seo" class="btn-card">
+            <a href="/seo" class="btn-card seo">
                 <div class="icon">🔍</div>
-                <h2>Gestion SEO</h2>
-                <p>Meta titles, descriptions, URLs</p>
+                <h2>Gestion SEO Pro</h2>
+                <p>Meta titles, descriptions, URLs optimisés</p>
             </a>
         </div>
         
@@ -773,13 +748,13 @@ HOME_TEMPLATE = '''
 </html>
 '''
 
-SITE_TEMPLATE = '''
+SEO_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏷️ Gestion Site | Shopify Manager</title>
+    <title>🔍 Gestion SEO Pro | Shopify Manager V3</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -808,428 +783,39 @@ SITE_TEMPLATE = '''
         }
         .back-btn:hover { background: #444; }
         .logo { font-size: 20px; font-weight: bold; }
-        .logo span { color: #00ff88; }
-        .status { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(0,255,136,0.1); border-radius: 20px; font-size: 14px; }
-        .status-dot { width: 8px; height: 8px; background: #00ff88; border-radius: 50%; box-shadow: 0 0 10px #00ff88; }
-        
-        .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
-        
-        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: #1a1a2e; padding: 24px; border-radius: 12px; border: 1px solid #333; }
-        .stat-label { color: #888; font-size: 13px; margin-bottom: 8px; }
-        .stat-value { font-size: 32px; font-weight: bold; }
-        .stat-value.green { color: #00ff88; }
-        
-        .controls { background: #1a1a2e; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; }
-        .control-group { display: flex; flex-direction: column; gap: 6px; }
-        .control-group label { font-size: 12px; color: #888; text-transform: uppercase; }
-        
-        input, select { padding: 12px 16px; background: #0a0a0f; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; min-width: 180px; }
-        input:focus, select:focus { outline: none; border-color: #00ff88; }
-        
-        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
-        .btn-primary { background: linear-gradient(135deg, #00ff88, #00cc6a); color: #000; }
-        .btn-danger { background: #ff4757; color: #fff; }
-        .btn-secondary { background: #333; color: #fff; }
-        .btn:hover { transform: translateY(-1px); opacity: 0.9; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        
-        .selected-info { padding: 8px 16px; background: #0a0a0f; border-radius: 8px; font-size: 13px; color: #888; }
-        .selected-info strong { color: #00ff88; }
-        
-        .products-table { background: #1a1a2e; border-radius: 12px; overflow: hidden; border: 1px solid #333; }
-        .table-header { display: grid; grid-template-columns: 50px 70px 1fr 250px 100px; gap: 16px; padding: 16px 24px; background: #0a0a0f; font-size: 12px; text-transform: uppercase; color: #888; font-weight: 600; }
-        .table-row { display: grid; grid-template-columns: 50px 70px 1fr 250px 100px; gap: 16px; padding: 16px 24px; border-bottom: 1px solid #2a2a3a; align-items: center; transition: background 0.2s; }
-        .table-row:hover { background: rgba(255,255,255,0.02); }
-        
-        .checkbox { width: 22px; height: 22px; border: 2px solid #444; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-        .checkbox:hover { border-color: #00ff88; }
-        .checkbox.checked { background: #00ff88; border-color: #00ff88; }
-        .checkbox.checked::after { content: '✓'; color: #000; font-size: 14px; font-weight: bold; }
-        
-        .product-image { width: 50px; height: 50px; background: #333; border-radius: 8px; object-fit: cover; }
-        .product-title { font-weight: 500; margin-bottom: 4px; }
-        .product-vendor { font-size: 13px; color: #666; }
-        
-        .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-        .tag { padding: 4px 10px; background: #0a0a0f; border: 1px solid #333; border-radius: 6px; font-size: 12px; color: #888; }
-        .tag.highlight { background: rgba(0,255,136,0.15); border-color: #00ff88; color: #00ff88; }
-        .no-tags { color: #555; font-style: italic; font-size: 13px; }
-        .price { font-family: 'SF Mono', Monaco, monospace; font-weight: 500; color: #00ff88; }
-        
-        .empty-state { text-align: center; padding: 60px; color: #666; }
-        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
-        .empty-state h3 { color: #fff; margin-bottom: 8px; }
-        
-        .loading { text-align: center; padding: 60px; }
-        .spinner { width: 40px; height: 40px; border: 3px solid #333; border-top-color: #00ff88; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        
-        .progress-bar { position: fixed; top: 0; left: 0; right: 0; background: #1a1a2e; padding: 20px; z-index: 1000; border-bottom: 1px solid #333; display: none; }
-        .progress-bar.show { display: block; }
-        .progress-bar h3 { margin-bottom: 10px; }
-        .progress-track { height: 10px; background: #333; border-radius: 5px; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #00ff88, #00cc6a); transition: width 0.3s; }
-        .progress-text { margin-top: 10px; font-size: 14px; color: #888; }
-        
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-overlay.show { display: flex; }
-        .modal { background: #1a1a2e; padding: 32px; border-radius: 16px; width: 100%; max-width: 450px; border: 1px solid #333; }
-        .modal h2 { margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
-        .modal .control-group { margin-bottom: 20px; }
-        .modal input, .modal select { width: 100%; }
-        .modal-actions { display: flex; gap: 12px; margin-top: 28px; }
-        .modal-actions .btn { flex: 1; justify-content: center; }
-        
-        .toast { position: fixed; bottom: 24px; right: 24px; padding: 16px 24px; border-radius: 10px; font-weight: 500; z-index: 2000; animation: slideIn 0.3s ease; }
-        .toast.success { background: #00ff88; color: #000; }
-        .toast.error { background: #ff4757; color: #fff; }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
-    </style>
-</head>
-<body>
-    <div class="progress-bar" id="progress-bar">
-        <h3 id="progress-title">⏳ Traitement en cours...</h3>
-        <div class="progress-track">
-            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
-        </div>
-        <p class="progress-text" id="progress-text">Initialisation...</p>
-    </div>
-
-    <header class="header">
-        <div class="header-left">
-            <a href="/" class="back-btn">← Retour</a>
-            <div class="logo">🏷️ Gestion <span>Site</span></div>
-        </div>
-        <div class="status">
-            <div class="status-dot"></div>
-            Connecté
-        </div>
-    </header>
-    
-    <main class="container">
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-label">Total produits</div>
-                <div class="stat-value" id="total-products">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Produits filtrés</div>
-                <div class="stat-value green" id="filtered-products">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Sélectionnés</div>
-                <div class="stat-value" id="selected-products">0</div>
-            </div>
-        </div>
-        
-        <div class="controls">
-            <div class="control-group">
-                <label>Rechercher par balise</label>
-                <input type="text" id="search-tag" placeholder="Entrez une balise...">
-            </div>
-            <div class="control-group">
-                <label>Filtrer</label>
-                <select id="filter-mode">
-                    <option value="all">Tous les produits</option>
-                    <option value="with">Avec cette balise</option>
-                    <option value="without">Sans cette balise</option>
-                </select>
-            </div>
-            <button class="btn btn-secondary" onclick="loadProducts()">🔄 Actualiser</button>
-        </div>
-        
-        <div class="controls">
-            <div class="control-group">
-                <label>Nouvelle balise</label>
-                <input type="text" id="new-tag" placeholder="Nom de la balise...">
-            </div>
-            <button class="btn btn-primary" onclick="addTagToSelected()">🏷️ Ajouter balise</button>
-            <button class="btn btn-danger" onclick="deleteSelected()">🗑️ Supprimer</button>
-            <button class="btn btn-secondary" onclick="openScheduler()">📅 Planifier</button>
-            <div class="selected-info">
-                <strong id="selection-count">0</strong> sélectionné(s)
-            </div>
-        </div>
-        
-        <div class="products-table">
-            <div class="table-header">
-                <div class="checkbox" id="select-all" onclick="toggleSelectAll()"></div>
-                <div>Image</div>
-                <div>Produit</div>
-                <div>Balises</div>
-                <div>Prix</div>
-            </div>
-            <div id="products-list">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Chargement des produits...</p>
-                </div>
-            </div>
-        </div>
-    </main>
-    
-    <div class="modal-overlay" id="scheduler-modal">
-        <div class="modal">
-            <h2>📅 Planifier une tâche</h2>
-            <div class="control-group">
-                <label>Action</label>
-                <select id="schedule-action">
-                    <option value="delete-without-tag">Supprimer produits sans balise</option>
-                    <option value="add-tag-all">Ajouter balise à tous les produits</option>
-                </select>
-            </div>
-            <div class="control-group">
-                <label>Balise concernée</label>
-                <input type="text" id="schedule-tag" placeholder="Nom de la balise">
-            </div>
-            <div class="control-group">
-                <label>Date</label>
-                <input type="date" id="schedule-date">
-            </div>
-            <div class="control-group">
-                <label>Heure</label>
-                <input type="time" id="schedule-time">
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeScheduler()">Annuler</button>
-                <button class="btn btn-primary" onclick="scheduleTask()">Planifier</button>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-        let products = [];
-        let filteredProducts = [];
-        let selectedIds = new Set();
-        let progressInterval = null;
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            loadProducts();
-            document.getElementById('search-tag').addEventListener('input', filterProducts);
-            document.getElementById('filter-mode').addEventListener('change', filterProducts);
-        });
-        
-        async function loadProducts() {
-            document.getElementById('products-list').innerHTML = '<div class="loading"><div class="spinner"></div><p>Chargement des produits...</p></div>';
-            
-            try {
-                const response = await fetch('/api/products');
-                const data = await response.json();
-                products = data.products || [];
-                filterProducts();
-                document.getElementById('total-products').textContent = products.length;
-            } catch (error) {
-                document.getElementById('products-list').innerHTML = '<div class="empty-state"><div class="icon">❌</div><h3>Erreur de chargement</h3></div>';
-            }
-        }
-        
-        function filterProducts() {
-            const searchTag = document.getElementById('search-tag').value.toLowerCase();
-            const filterMode = document.getElementById('filter-mode').value;
-            
-            if (filterMode === 'all' || !searchTag) {
-                filteredProducts = products;
-            } else if (filterMode === 'with') {
-                filteredProducts = products.filter(p => (p.tags || '').toLowerCase().includes(searchTag));
-            } else if (filterMode === 'without') {
-                filteredProducts = products.filter(p => !(p.tags || '').toLowerCase().includes(searchTag));
-            }
-            
-            document.getElementById('filtered-products').textContent = filteredProducts.length;
-            renderProducts();
-        }
-        
-        function renderProducts() {
-            const container = document.getElementById('products-list');
-            const searchTag = document.getElementById('search-tag').value.toLowerCase();
-            
-            if (filteredProducts.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>Aucun produit trouvé</h3></div>';
-                return;
-            }
-            
-            container.innerHTML = filteredProducts.map(product => {
-                const isSelected = selectedIds.has(product.id);
-                const tags = product.tags ? product.tags.split(', ').filter(t => t) : [];
-                const imageUrl = product.image?.src || product.images?.[0]?.src || '';
-                const price = product.variants?.[0]?.price || '0.00';
-                
-                return `
-                    <div class="table-row">
-                        <div class="checkbox ${isSelected ? 'checked' : ''}" onclick="toggleProduct(${product.id})"></div>
-                        <img class="product-image" src="${imageUrl}" alt="" onerror="this.style.display='none'">
-                        <div>
-                            <div class="product-title">${product.title}</div>
-                            <div class="product-vendor">${product.vendor || ''}</div>
-                        </div>
-                        <div class="tags">
-                            ${tags.length > 0 
-                                ? tags.map(tag => `<span class="tag ${searchTag && tag.toLowerCase().includes(searchTag) ? 'highlight' : ''}">${tag}</span>`).join('')
-                                : '<span class="no-tags">Aucune balise</span>'}
-                        </div>
-                        <div class="price">${price} €</div>
-                    </div>
-                `;
-            }).join('');
-            
-            updateSelectionUI();
-        }
-        
-        function toggleProduct(id) {
-            if (selectedIds.has(id)) selectedIds.delete(id);
-            else selectedIds.add(id);
-            renderProducts();
-        }
-        
-        function toggleSelectAll() {
-            if (selectedIds.size === filteredProducts.length) selectedIds.clear();
-            else filteredProducts.forEach(p => selectedIds.add(p.id));
-            renderProducts();
-        }
-        
-        function updateSelectionUI() {
-            document.getElementById('selected-products').textContent = selectedIds.size;
-            document.getElementById('selection-count').textContent = selectedIds.size;
-            const selectAll = document.getElementById('select-all');
-            if (selectedIds.size === filteredProducts.length && filteredProducts.length > 0) selectAll.classList.add('checked');
-            else selectAll.classList.remove('checked');
-        }
-        
-        function startProgressMonitor() {
-            document.getElementById('progress-bar').classList.add('show');
-            progressInterval = setInterval(async () => {
-                try {
-                    const response = await fetch('/api/progress');
-                    const data = await response.json();
-                    
-                    const percent = data.total > 0 ? Math.round((data.current / data.total) * 100) : 0;
-                    document.getElementById('progress-fill').style.width = percent + '%';
-                    document.getElementById('progress-text').textContent = data.message;
-                    
-                    if (!data.running) {
-                        clearInterval(progressInterval);
-                        setTimeout(() => {
-                            document.getElementById('progress-bar').classList.remove('show');
-                            loadProducts();
-                            showToast(data.message, 'success');
-                        }, 1000);
-                    }
-                } catch (e) {}
-            }, 500);
-        }
-        
-        async function addTagToSelected() {
-            const tag = document.getElementById('new-tag').value.trim();
-            if (!tag) return showToast('Entrez une balise', 'error');
-            if (selectedIds.size === 0) return showToast('Sélectionnez des produits', 'error');
-            
-            try {
-                fetch('/api/products/add-tag', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ product_ids: Array.from(selectedIds), tag })
-                });
-                startProgressMonitor();
-                document.getElementById('new-tag').value = '';
-                selectedIds.clear();
-            } catch (error) {
-                showToast('Erreur: ' + error.message, 'error');
-            }
-        }
-        
-        async function deleteSelected() {
-            if (selectedIds.size === 0) return showToast('Sélectionnez des produits', 'error');
-            if (!confirm(`Supprimer ${selectedIds.size} produit(s) ? Cette action est irréversible.`)) return;
-            
-            try {
-                fetch('/api/products/delete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ product_ids: Array.from(selectedIds) })
-                });
-                startProgressMonitor();
-                selectedIds.clear();
-            } catch (error) {
-                showToast('Erreur: ' + error.message, 'error');
-            }
-        }
-        
-        function openScheduler() { document.getElementById('scheduler-modal').classList.add('show'); }
-        function closeScheduler() { document.getElementById('scheduler-modal').classList.remove('show'); }
-        
-        async function scheduleTask() {
-            const action = document.getElementById('schedule-action').value;
-            const tag = document.getElementById('schedule-tag').value.trim();
-            const date = document.getElementById('schedule-date').value;
-            const time = document.getElementById('schedule-time').value;
-            
-            if (!tag || !date || !time) return showToast('Remplissez tous les champs', 'error');
-            
-            try {
-                await fetch('/api/tasks/schedule', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action, tag, scheduled_at: `${date}T${time}:00` })
-                });
-                showToast('Tâche planifiée !', 'success');
-                closeScheduler();
-            } catch (error) {
-                showToast('Erreur', 'error');
-            }
-        }
-        
-        function showToast(message, type) {
-            const existing = document.querySelector('.toast');
-            if (existing) existing.remove();
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 4000);
-        }
-    </script>
-</body>
-</html>
-'''
-
-SEO_TEMPLATE = '''
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔍 Gestion SEO | Shopify Manager</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
-            min-height: 100vh;
-            color: #fff;
-        }
-        .header {
-            padding: 20px 40px;
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0,0,0,0.3);
-        }
-        .header-left { display: flex; align-items: center; gap: 20px; }
-        .back-btn { padding: 10px 20px; background: #333; border: none; border-radius: 8px; color: #fff; text-decoration: none; font-size: 14px; }
-        .back-btn:hover { background: #444; }
-        .logo { font-size: 20px; font-weight: bold; }
-        .logo span { color: #00ff88; }
+        .logo span { color: #8b5cf6; }
         
         .container { max-width: 1600px; margin: 0 auto; padding: 30px; }
         
-        .controls { background: #1a1a2e; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; }
+        .seo-info {
+            background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(109,40,217,0.2));
+            border: 1px solid #8b5cf6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .seo-info h3 { color: #a78bfa; margin-bottom: 10px; }
+        .seo-info p { color: #888; font-size: 14px; line-height: 1.6; }
+        .seo-info code { background: #333; padding: 2px 6px; border-radius: 4px; color: #00ff88; }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
         .control-group { display: flex; flex-direction: column; gap: 6px; }
         .control-group label { font-size: 12px; color: #888; text-transform: uppercase; }
-        
-        input, select { padding: 12px 16px; background: #0a0a0f; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; min-width: 180px; }
-        input:focus, select:focus { outline: none; border-color: #00ff88; }
+        .control-group input, .control-group select {
+            padding: 10px 14px;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            min-width: 200px;
+        }
         
         .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
         .btn-primary { background: linear-gradient(135deg, #00ff88, #00cc6a); color: #000; }
@@ -1238,30 +824,32 @@ SEO_TEMPLATE = '''
         .btn:hover { transform: translateY(-1px); opacity: 0.9; }
         
         .selected-info { padding: 8px 16px; background: #0a0a0f; border-radius: 8px; font-size: 13px; color: #888; }
-        .selected-info strong { color: #00ff88; }
+        .selected-info strong { color: #8b5cf6; }
         
         .seo-table { background: #1a1a2e; border-radius: 12px; overflow-x: auto; border: 1px solid #333; }
-        .seo-table table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+        .seo-table table { width: 100%; border-collapse: collapse; min-width: 1400px; }
         .seo-table th { padding: 16px; background: #0a0a0f; font-size: 12px; text-transform: uppercase; color: #888; font-weight: 600; text-align: left; position: sticky; top: 0; }
         .seo-table td { padding: 12px 16px; border-bottom: 1px solid #2a2a3a; vertical-align: top; }
         .seo-table tr:hover { background: rgba(255,255,255,0.02); }
         
         .checkbox { width: 22px; height: 22px; border: 2px solid #444; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .checkbox.checked { background: #00ff88; border-color: #00ff88; }
-        .checkbox.checked::after { content: '✓'; color: #000; font-size: 14px; font-weight: bold; }
+        .checkbox.checked { background: #8b5cf6; border-color: #8b5cf6; }
+        .checkbox.checked::after { content: '✓'; color: #fff; font-size: 14px; font-weight: bold; }
         
         .product-cell { display: flex; align-items: center; gap: 12px; }
-        .product-image { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; background: #333; }
+        .product-image { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; background: #333; }
         .product-title { font-weight: 500; font-size: 13px; }
-        .product-sku { font-size: 11px; color: #666; font-family: monospace; }
+        .product-sku { font-size: 11px; color: #666; font-family: monospace; margin-top: 4px; }
+        .product-brand { font-size: 10px; color: #8b5cf6; margin-top: 2px; }
         
-        .seo-field { font-size: 12px; max-width: 250px; }
-        .seo-field.missing { color: #ff4757; font-style: italic; }
-        .seo-field.ok { color: #888; }
-        .seo-field.long { color: #ffa502; }
-        .seo-field.loading-seo { color: #666; font-style: italic; }
+        .seo-field { font-size: 12px; max-width: 280px; word-wrap: break-word; }
+        .seo-field.empty { color: #ff4757; font-style: italic; }
+        .seo-field.ok { color: #00ff88; }
+        .seo-field.warning { color: #ffa502; }
+        .seo-field.preview { color: #8b5cf6; background: rgba(139,92,246,0.1); padding: 8px; border-radius: 6px; border: 1px dashed #8b5cf6; }
         
-        .char-count { font-size: 10px; color: #666; }
+        .char-count { font-size: 10px; color: #666; margin-top: 4px; }
+        .char-count.ok { color: #00ff88; }
         .char-count.warning { color: #ffa502; }
         .char-count.error { color: #ff4757; }
         
@@ -1272,13 +860,14 @@ SEO_TEMPLATE = '''
         .progress-text { margin-top: 10px; font-size: 14px; color: #888; }
         
         .loading { text-align: center; padding: 60px; }
-        .spinner { width: 40px; height: 40px; border: 3px solid #333; border-top-color: #00ff88; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        .spinner { width: 40px; height: 40px; border: 3px solid #333; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; }
         .modal-overlay.show { display: flex; }
-        .modal { background: #1a1a2e; padding: 32px; border-radius: 16px; width: 100%; max-width: 600px; border: 1px solid #333; max-height: 90vh; overflow-y: auto; }
-        .modal h2 { margin-bottom: 24px; }
+        .modal { background: #1a1a2e; padding: 32px; border-radius: 16px; width: 100%; max-width: 700px; border: 1px solid #333; max-height: 90vh; overflow-y: auto; }
+        .modal h2 { margin-bottom: 10px; }
+        .modal .subtitle { color: #888; font-size: 14px; margin-bottom: 24px; }
         .modal .control-group { margin-bottom: 20px; }
         .modal input, .modal select, .modal textarea { width: 100%; }
         .modal textarea { min-height: 100px; resize: vertical; font-family: inherit; }
@@ -1286,19 +875,24 @@ SEO_TEMPLATE = '''
         .modal-actions .btn { flex: 1; justify-content: center; }
         
         .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-        .checkbox-label { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #0a0a0f; border: 1px solid #333; border-radius: 8px; cursor: pointer; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: #0a0a0f; border: 1px solid #333; border-radius: 8px; cursor: pointer; font-size: 13px; }
         .checkbox-label input { display: none; }
-        .checkbox-label.checked { border-color: #00ff88; background: rgba(0,255,136,0.1); }
+        .checkbox-label.checked { border-color: #8b5cf6; background: rgba(139,92,246,0.1); }
         
         .toast { position: fixed; bottom: 24px; right: 24px; padding: 16px 24px; border-radius: 10px; font-weight: 500; z-index: 2000; animation: slideIn 0.3s ease; }
         .toast.success { background: #00ff88; color: #000; }
         .toast.error { background: #ff4757; color: #fff; }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        
+        .action-btns { display: flex; gap: 6px; }
+        .action-btn { padding: 6px 10px; font-size: 11px; border: none; border-radius: 5px; cursor: pointer; }
+        .action-btn.preview { background: #333; color: #fff; }
+        .action-btn.apply { background: #8b5cf6; color: #fff; }
+        .action-btn:hover { opacity: 0.8; }
     </style>
 </head>
 <body>
     <div class="progress-bar" id="progress-bar">
-        <h3>🤖 Génération SEO en cours...</h3>
         <div class="progress-track">
             <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
         </div>
@@ -1308,27 +902,33 @@ SEO_TEMPLATE = '''
     <header class="header">
         <div class="header-left">
             <a href="/" class="back-btn">← Retour</a>
-            <div class="logo">🔍 Gestion <span>SEO</span></div>
+            <div class="logo">🔍 Gestion <span>SEO Pro</span></div>
         </div>
     </header>
     
     <main class="container">
+        <div class="seo-info">
+            <h3>💡 Formules SEO optimisées</h3>
+            <p>
+                <strong>Meta Title :</strong> <code>{Nom Produit} | ''' + SITE_NAME + '''</code> (max 60 car.)<br>
+                <strong>Meta Description :</strong> <code>Achetez la {Nom} (SKU: {SKU}) sur ''' + SITE_NAME + ''' ✓ 100% Authentique ✓ Livraison rapide ✓ Paiement 3x.</code> (max 155 car.)
+            </p>
+        </div>
+        
         <div class="controls">
             <div class="control-group">
                 <label>Rechercher</label>
-                <input type="text" id="search" placeholder="Nom, SKU...">
+                <input type="text" id="search" placeholder="Nom, SKU, marque...">
             </div>
             <div class="control-group">
-                <label>Filtrer par statut SEO</label>
+                <label>Filtrer</label>
                 <select id="filter-seo">
-                    <option value="all">Tous</option>
-                    <option value="missing-meta">Sans Meta Title</option>
-                    <option value="missing-desc">Sans Meta Description</option>
-                    <option value="missing-both">Sans les deux</option>
+                    <option value="all">Tous les produits</option>
+                    <option value="needs-seo">Besoin d'optimisation SEO</option>
                 </select>
             </div>
             <button class="btn btn-secondary" onclick="loadProducts()">🔄 Actualiser</button>
-            <button class="btn btn-ai" onclick="openGenerateModal()">🤖 Générer SEO avec IA</button>
+            <button class="btn btn-ai" onclick="openGenerateModal()">🤖 Générer SEO en masse</button>
             <div class="selected-info">
                 <strong id="selection-count">0</strong> sélectionné(s)
             </div>
@@ -1339,11 +939,11 @@ SEO_TEMPLATE = '''
                 <thead>
                     <tr>
                         <th style="width:50px"><div class="checkbox" id="select-all" onclick="toggleSelectAll()"></div></th>
-                        <th style="width:200px">Produit</th>
-                        <th style="width:250px">Meta Title</th>
-                        <th style="width:300px">Meta Description</th>
-                        <th style="width:150px">Handle (URL)</th>
-                        <th style="width:100px">Actions</th>
+                        <th style="width:220px">Produit</th>
+                        <th style="width:300px">Meta Title (actuel → généré)</th>
+                        <th style="width:350px">Meta Description (générée)</th>
+                        <th style="width:150px">Handle</th>
+                        <th style="width:120px">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="products-list">
@@ -1355,11 +955,11 @@ SEO_TEMPLATE = '''
     
     <div class="modal-overlay" id="generate-modal">
         <div class="modal">
-            <h2>🤖 Générer le SEO avec IA</h2>
-            <p style="color:#888;margin-bottom:20px;">Sélectionnez les champs à générer pour les <strong id="modal-count">0</strong> produits sélectionnés.</p>
+            <h2>🤖 Générer le SEO optimisé</h2>
+            <p class="subtitle">Génération basée sur les formules WetTheNew & Limited Resell pour <strong id="modal-count">0</strong> produits.</p>
             
             <div class="control-group">
-                <label>Champs à générer</label>
+                <label>Champs à générer et appliquer</label>
                 <div class="checkbox-group" id="fields-checkboxes">
                     <label class="checkbox-label checked" data-field="meta_title">
                         <input type="checkbox" checked> Meta Title
@@ -1370,34 +970,34 @@ SEO_TEMPLATE = '''
                     <label class="checkbox-label" data-field="handle">
                         <input type="checkbox"> Handle (URL)
                     </label>
-                    <label class="checkbox-label" data-field="description">
-                        <input type="checkbox"> Description longue
+                    <label class="checkbox-label" data-field="body_html">
+                        <input type="checkbox"> Description produit
                     </label>
                 </div>
             </div>
             
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeGenerateModal()">Annuler</button>
-                <button class="btn btn-ai" onclick="generateSEO()">🚀 Générer</button>
+                <button class="btn btn-secondary" onclick="closeModal('generate-modal')">Annuler</button>
+                <button class="btn btn-ai" onclick="generateBatch()">🚀 Générer et appliquer</button>
             </div>
         </div>
     </div>
     
     <div class="modal-overlay" id="edit-modal">
         <div class="modal">
-            <h2>✏️ Modifier SEO</h2>
+            <h2>✏️ Modifier le SEO</h2>
             <input type="hidden" id="edit-product-id">
             
             <div class="control-group">
                 <label>Meta Title (max 60 car.)</label>
-                <input type="text" id="edit-meta-title" maxlength="70">
-                <span class="char-count" id="title-count">0/60</span>
+                <input type="text" id="edit-meta-title" maxlength="70" oninput="updateEditCharCount()">
+                <div class="char-count" id="edit-title-count">0/60</div>
             </div>
             
             <div class="control-group">
-                <label>Meta Description (max 160 car.)</label>
-                <textarea id="edit-meta-desc" maxlength="170"></textarea>
-                <span class="char-count" id="desc-count">0/160</span>
+                <label>Meta Description (max 155 car.)</label>
+                <textarea id="edit-meta-desc" maxlength="200" oninput="updateEditCharCount()"></textarea>
+                <div class="char-count" id="edit-desc-count">0/155</div>
             </div>
             
             <div class="control-group">
@@ -1406,107 +1006,57 @@ SEO_TEMPLATE = '''
             </div>
             
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeEditModal()">Annuler</button>
-                <button class="btn btn-primary" onclick="saveProductSEO()">💾 Sauvegarder</button>
+                <button class="btn btn-secondary" onclick="closeModal('edit-modal')">Annuler</button>
+                <button class="btn btn-primary" onclick="saveEdit()">💾 Sauvegarder</button>
             </div>
         </div>
     </div>
-    
+
     <script>
         let products = [];
         let filteredProducts = [];
         let selectedIds = new Set();
-        let progressInterval = null;
         
-        document.addEventListener('DOMContentLoaded', () => {
-            loadProducts();
-            document.getElementById('search').addEventListener('input', filterProducts);
-            document.getElementById('filter-seo').addEventListener('change', filterProducts);
-            
-            document.getElementById('edit-meta-title').addEventListener('input', updateCharCount);
-            document.getElementById('edit-meta-desc').addEventListener('input', updateCharCount);
-            
-            document.querySelectorAll('.checkbox-label').forEach(label => {
-                label.addEventListener('click', () => label.classList.toggle('checked'));
-            });
-        });
+        // Fonctions SEO (côté client pour preview)
+        function generateMetaTitle(product) {
+            const siteName = "''' + SITE_NAME + '''";
+            let title = product.title + " | " + siteName;
+            if (title.length > 60) {
+                const maxLen = 60 - siteName.length - 7;
+                title = product.title.substring(0, maxLen) + "... | " + siteName;
+            }
+            return title;
+        }
         
-        function updateCharCount() {
-            const titleLen = document.getElementById('edit-meta-title').value.length;
-            const descLen = document.getElementById('edit-meta-desc').value.length;
+        function generateMetaDesc(product) {
+            const siteName = "''' + SITE_NAME + '''";
+            const sku = product.variants?.[0]?.sku || '';
+            const benefits = "100% Authentique ✓ Livraison rapide ✓ Paiement 3x";
             
-            const titleCount = document.getElementById('title-count');
-            titleCount.textContent = `${titleLen}/60`;
-            titleCount.className = 'char-count' + (titleLen > 60 ? ' error' : titleLen > 50 ? ' warning' : '');
+            let desc;
+            if (sku) {
+                desc = `Achetez la ${product.title} (SKU: ${sku}) sur ${siteName} ✓ ${benefits}.`;
+            } else {
+                desc = `Achetez la ${product.title} sur ${siteName} ✓ ${benefits}.`;
+            }
             
-            const descCount = document.getElementById('desc-count');
-            descCount.textContent = `${descLen}/160`;
-            descCount.className = 'char-count' + (descLen > 160 ? ' error' : descLen > 140 ? ' warning' : '');
+            if (desc.length > 155) {
+                desc = desc.substring(0, 152) + "...";
+            }
+            return desc;
         }
         
         async function loadProducts() {
             document.getElementById('products-list').innerHTML = '<tr><td colspan="6" class="loading"><div class="spinner"></div><p>Chargement des produits...</p></td></tr>';
             
             try {
-                const response = await fetch('/api/products/seo');
+                const response = await fetch('/api/products');
                 const data = await response.json();
                 products = data.products || [];
-                
-                // Initialiser les champs SEO vides
-                products.forEach(p => {
-                    p.seo_meta_title = '';
-                    p.seo_meta_description = '';
-                    p.seo_loaded = false;
-                });
-                
                 filterProducts();
-                
-                // Charger les metafields en arrière-plan
-                loadAllMetafieldsBackground();
             } catch (error) {
                 document.getElementById('products-list').innerHTML = '<tr><td colspan="6">Erreur de chargement</td></tr>';
             }
-        }
-        
-        let isLoadingMetafields = false;
-        let loadedCount = 0;
-        
-        async function loadAllMetafieldsBackground() {
-            if (isLoadingMetafields) return;
-            isLoadingMetafields = true;
-            loadedCount = 0;
-            
-            const toLoad = products.filter(p => !p.seo_loaded);
-            
-            for (const product of toLoad) {
-                try {
-                    const response = await fetch(`/api/product/${product.id}/seo`);
-                    if (response.ok) {
-                        const seoData = await response.json();
-                        product.seo_meta_title = seoData.meta_title || '';
-                        product.seo_meta_description = seoData.meta_description || '';
-                    }
-                    product.seo_loaded = true;
-                    loadedCount++;
-                    
-                    // Mettre à jour l'affichage tous les 10 produits
-                    if (loadedCount % 10 === 0) {
-                        renderProducts();
-                        console.log(`SEO chargé: ${loadedCount}/${toLoad.length}`);
-                    }
-                    
-                    // Pause pour éviter rate limit (Shopify limite à 2 req/sec)
-                    await new Promise(r => setTimeout(r, 550));
-                } catch (e) {
-                    console.error('Erreur chargement SEO:', e);
-                    product.seo_loaded = true; // Marquer comme chargé pour ne pas réessayer
-                }
-            }
-            
-            // Affichage final
-            renderProducts();
-            isLoadingMetafields = false;
-            console.log(`SEO chargé: ${loadedCount}/${toLoad.length} - Terminé!`);
         }
         
         function filterProducts() {
@@ -1514,18 +1064,19 @@ SEO_TEMPLATE = '''
             const filter = document.getElementById('filter-seo').value;
             
             filteredProducts = products.filter(p => {
+                const sku = p.variants?.[0]?.sku || '';
                 const matchSearch = !search || 
                     p.title.toLowerCase().includes(search) ||
-                    (p.variants?.[0]?.sku || '').toLowerCase().includes(search);
+                    sku.toLowerCase().includes(search) ||
+                    (p.vendor || '').toLowerCase().includes(search);
                 
                 if (!matchSearch) return false;
                 
-                const metaTitle = p.seo_meta_title || '';
-                const metaDesc = p.seo_meta_description || '';
-                
-                if (filter === 'missing-meta') return !metaTitle;
-                if (filter === 'missing-desc') return !metaDesc;
-                if (filter === 'missing-both') return !metaTitle && !metaDesc;
+                // Filtre "needs-seo" : produits qui n'ont pas de meta title personnalisé
+                if (filter === 'needs-seo') {
+                    // On considère qu'un produit a besoin de SEO si son title n'a pas de | dedans
+                    return true; // Pour l'instant, montrer tous
+                }
                 
                 return true;
             });
@@ -1544,14 +1095,19 @@ SEO_TEMPLATE = '''
             tbody.innerHTML = filteredProducts.map(p => {
                 const isSelected = selectedIds.has(p.id);
                 const imageUrl = p.image?.src || '';
-                const sku = p.variants?.[0]?.sku || '';
-                const metaTitle = p.seo_meta_title || '';
-                const metaDesc = p.seo_meta_description || '';
+                const sku = p.variants?.[0]?.sku || 'N/A';
+                const brand = p.vendor || p.title.split(' ')[0];
                 const handle = p.handle || '';
-                const isLoading = !p.seo_loaded;
                 
-                const titleClass = isLoading ? 'loading-seo' : (!metaTitle ? 'missing' : metaTitle.length > 60 ? 'long' : 'ok');
-                const descClass = isLoading ? 'loading-seo' : (!metaDesc ? 'missing' : metaDesc.length > 160 ? 'long' : 'ok');
+                // Générer les previews SEO
+                const generatedTitle = generateMetaTitle(p);
+                const generatedDesc = generateMetaDesc(p);
+                
+                const titleLen = generatedTitle.length;
+                const descLen = generatedDesc.length;
+                
+                const titleClass = titleLen <= 60 ? 'ok' : 'warning';
+                const descClass = descLen <= 155 ? 'ok' : 'warning';
                 
                 return `
                     <tr>
@@ -1560,222 +1116,587 @@ SEO_TEMPLATE = '''
                             <div class="product-cell">
                                 <img class="product-image" src="${imageUrl}" onerror="this.style.display='none'">
                                 <div>
-                                    <div class="product-title">${p.title.substring(0, 40)}${p.title.length > 40 ? '...' : ''}</div>
-                                    <div class="product-sku">${sku}</div>
+                                    <div class="product-title">${p.title.substring(0, 35)}${p.title.length > 35 ? '...' : ''}</div>
+                                    <div class="product-sku">SKU: ${sku}</div>
+                                    <div class="product-brand">${brand}</div>
                                 </div>
                             </div>
                         </td>
                         <td>
-                            <div class="seo-field ${titleClass}">${isLoading ? '⏳ Chargement...' : (metaTitle || '⚠️ Non défini')}</div>
-                            ${!isLoading && metaTitle ? `<div class="char-count ${metaTitle.length > 60 ? 'error' : ''}">${metaTitle.length}/60</div>` : ''}
+                            <div class="seo-field preview">${generatedTitle}</div>
+                            <div class="char-count ${titleClass}">${titleLen}/60 caractères</div>
                         </td>
                         <td>
-                            <div class="seo-field ${descClass}">${isLoading ? '⏳ Chargement...' : (metaDesc ? metaDesc.substring(0, 80) + '...' : '⚠️ Non défini')}</div>
-                            ${!isLoading && metaDesc ? `<div class="char-count ${metaDesc.length > 160 ? 'error' : ''}">${metaDesc.length}/160</div>` : ''}
+                            <div class="seo-field preview">${generatedDesc.substring(0, 100)}${generatedDesc.length > 100 ? '...' : ''}</div>
+                            <div class="char-count ${descClass}">${descLen}/155 caractères</div>
                         </td>
                         <td><div class="seo-field ok">/products/${handle}</div></td>
-                        <td><button class="btn btn-secondary" style="padding:8px 12px;font-size:12px;" onclick='loadAndEditProduct(${p.id})'>✏️</button></td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="action-btn apply" onclick="applySeoSingle(${p.id})">✓ Appliquer</button>
+                                <button class="action-btn preview" onclick="openEditModal(${p.id})">✏️</button>
+                            </div>
+                        </td>
                     </tr>
                 `;
             }).join('');
-            
-            updateSelectionUI();
         }
         
         function toggleProduct(id) {
-            if (selectedIds.has(id)) selectedIds.delete(id);
-            else selectedIds.add(id);
+            if (selectedIds.has(id)) {
+                selectedIds.delete(id);
+            } else {
+                selectedIds.add(id);
+            }
+            updateSelectionUI();
             renderProducts();
         }
         
         function toggleSelectAll() {
-            if (selectedIds.size === filteredProducts.length) selectedIds.clear();
-            else filteredProducts.forEach(p => selectedIds.add(p.id));
+            const allSelected = filteredProducts.every(p => selectedIds.has(p.id));
+            if (allSelected) {
+                filteredProducts.forEach(p => selectedIds.delete(p.id));
+            } else {
+                filteredProducts.forEach(p => selectedIds.add(p.id));
+            }
+            updateSelectionUI();
             renderProducts();
         }
         
         function updateSelectionUI() {
             document.getElementById('selection-count').textContent = selectedIds.size;
             const selectAll = document.getElementById('select-all');
-            if (selectedIds.size === filteredProducts.length && filteredProducts.length > 0) selectAll.classList.add('checked');
-            else selectAll.classList.remove('checked');
+            const allSelected = filteredProducts.length > 0 && filteredProducts.every(p => selectedIds.has(p.id));
+            selectAll.classList.toggle('checked', allSelected);
         }
         
+        // Appliquer SEO pour un seul produit
+        async function applySeoSingle(productId) {
+            showToast('Application du SEO...', 'success');
+            
+            try {
+                const response = await fetch('/api/seo/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        product_id: productId,
+                        fields: ['meta_title', 'meta_description']
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    showToast('SEO appliqué avec succès !', 'success');
+                } else {
+                    showToast('Erreur lors de l\\'application', 'error');
+                }
+            } catch (error) {
+                showToast('Erreur: ' + error.message, 'error');
+            }
+        }
+        
+        // Modal génération en masse
         function openGenerateModal() {
-            if (selectedIds.size === 0) return showToast('Sélectionnez des produits', 'error');
+            if (selectedIds.size === 0) {
+                showToast('Sélectionnez au moins un produit', 'error');
+                return;
+            }
             document.getElementById('modal-count').textContent = selectedIds.size;
             document.getElementById('generate-modal').classList.add('show');
         }
         
-        function closeGenerateModal() {
-            document.getElementById('generate-modal').classList.remove('show');
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
         }
         
-        async function generateSEO() {
-            const fields = [];
-            document.querySelectorAll('.checkbox-label.checked').forEach(label => {
-                fields.push(label.dataset.field);
-            });
+        async function generateBatch() {
+            const checkboxes = document.querySelectorAll('#fields-checkboxes .checkbox-label.checked');
+            const fields = Array.from(checkboxes).map(cb => cb.dataset.field);
             
-            if (fields.length === 0) return showToast('Sélectionnez au moins un champ', 'error');
+            if (fields.length === 0) {
+                showToast('Sélectionnez au moins un champ', 'error');
+                return;
+            }
             
-            closeGenerateModal();
-            document.getElementById('progress-bar').classList.add('show');
+            closeModal('generate-modal');
+            showProgress();
             
             try {
-                fetch('/api/seo/generate-batch', {
+                const response = await fetch('/api/seo/generate-batch', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ product_ids: Array.from(selectedIds), fields })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        product_ids: Array.from(selectedIds),
+                        fields: fields
+                    })
                 });
                 
-                progressInterval = setInterval(async () => {
-                    const response = await fetch('/api/progress');
-                    const data = await response.json();
+                // Suivre la progression
+                const progressInterval = setInterval(async () => {
+                    const prog = await fetch('/api/progress').then(r => r.json());
+                    updateProgress(prog.current, prog.total, prog.message);
                     
-                    const percent = data.total > 0 ? Math.round((data.current / data.total) * 100) : 0;
-                    document.getElementById('progress-fill').style.width = percent + '%';
-                    document.getElementById('progress-text').textContent = data.message;
-                    
-                    if (!data.running) {
+                    if (!prog.running) {
                         clearInterval(progressInterval);
-                        setTimeout(() => {
-                            document.getElementById('progress-bar').classList.remove('show');
-                            loadProducts();
-                            showToast(data.message, 'success');
-                        }, 1000);
+                        hideProgress();
+                        showToast(prog.message, 'success');
+                        selectedIds.clear();
+                        updateSelectionUI();
+                        loadProducts();
                     }
                 }, 500);
                 
-                selectedIds.clear();
             } catch (error) {
-                showToast('Erreur', 'error');
+                hideProgress();
+                showToast('Erreur: ' + error.message, 'error');
             }
         }
         
-        function openEditModal(product) {
-            document.getElementById('edit-product-id').value = product.id;
-            document.getElementById('edit-meta-title').value = product.seo_meta_title || '';
-            document.getElementById('edit-meta-desc').value = product.seo_meta_description || '';
-            document.getElementById('edit-handle').value = product.handle || '';
-            updateCharCount();
-            document.getElementById('edit-modal').classList.add('show');
-        }
-        
-        async function loadAndEditProduct(productId) {
-            // Trouver le produit
+        // Modal édition manuelle
+        function openEditModal(productId) {
             const product = products.find(p => p.id === productId);
             if (!product) return;
             
-            // Si les metafields ne sont pas chargés, les charger
-            if (!product.seo_loaded) {
-                showToast('Chargement des données SEO...', 'success');
-                try {
-                    const response = await fetch(`/api/product/${productId}/seo`);
-                    const seoData = await response.json();
-                    product.seo_meta_title = seoData.meta_title || '';
-                    product.seo_meta_description = seoData.meta_description || '';
-                    product.seo_loaded = true;
-                } catch (e) {
-                    console.error('Erreur:', e);
-                }
-            }
+            document.getElementById('edit-product-id').value = productId;
+            document.getElementById('edit-meta-title').value = generateMetaTitle(product);
+            document.getElementById('edit-meta-desc').value = generateMetaDesc(product);
+            document.getElementById('edit-handle').value = product.handle || '';
+            updateEditCharCount();
+            document.getElementById('edit-modal').classList.add('show');
+        }
+        
+        function updateEditCharCount() {
+            const titleLen = document.getElementById('edit-meta-title').value.length;
+            const descLen = document.getElementById('edit-meta-desc').value.length;
             
-            openEditModal(product);
+            const titleCount = document.getElementById('edit-title-count');
+            const descCount = document.getElementById('edit-desc-count');
+            
+            titleCount.textContent = `${titleLen}/60`;
+            titleCount.className = 'char-count ' + (titleLen <= 60 ? 'ok' : titleLen <= 70 ? 'warning' : 'error');
+            
+            descCount.textContent = `${descLen}/155`;
+            descCount.className = 'char-count ' + (descLen <= 155 ? 'ok' : descLen <= 170 ? 'warning' : 'error');
         }
         
-        function closeEditModal() {
-            document.getElementById('edit-modal').classList.remove('show');
-        }
-        
-        async function saveProductSEO() {
+        async function saveEdit() {
             const productId = document.getElementById('edit-product-id').value;
-            const updates = [{
-                id: parseInt(productId),
-                seo: {
-                    meta_title: document.getElementById('edit-meta-title').value,
-                    meta_description: document.getElementById('edit-meta-desc').value,
-                    handle: document.getElementById('edit-handle').value
-                }
-            }];
+            const data = {
+                product_id: parseInt(productId),
+                meta_title: document.getElementById('edit-meta-title').value,
+                meta_description: document.getElementById('edit-meta-desc').value,
+                handle: document.getElementById('edit-handle').value
+            };
             
             try {
-                await fetch('/api/products/update-seo', {
+                const response = await fetch('/api/seo/update', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ updates })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
                 });
-                showToast('SEO mis à jour !', 'success');
-                closeEditModal();
-                loadProducts();
+                
+                const result = await response.json();
+                closeModal('edit-modal');
+                
+                if (result.success) {
+                    showToast('SEO mis à jour !', 'success');
+                } else {
+                    showToast('Erreur lors de la mise à jour', 'error');
+                }
             } catch (error) {
-                showToast('Erreur', 'error');
+                showToast('Erreur: ' + error.message, 'error');
             }
         }
         
+        // Checkbox toggle
+        document.querySelectorAll('.checkbox-label').forEach(label => {
+            label.addEventListener('click', () => {
+                label.classList.toggle('checked');
+            });
+        });
+        
+        // Progress
+        function showProgress() {
+            document.getElementById('progress-bar').classList.add('show');
+        }
+        function hideProgress() {
+            document.getElementById('progress-bar').classList.remove('show');
+        }
+        function updateProgress(current, total, message) {
+            const pct = total > 0 ? (current / total * 100) : 0;
+            document.getElementById('progress-fill').style.width = pct + '%';
+            document.getElementById('progress-text').textContent = message;
+        }
+        
+        // Toast
         function showToast(message, type) {
             const existing = document.querySelector('.toast');
             if (existing) existing.remove();
+            
             const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
+            toast.className = 'toast ' + type;
             toast.textContent = message;
             document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 4000);
+            setTimeout(() => toast.remove(), 3000);
         }
+        
+        // Event listeners
+        document.getElementById('search').addEventListener('input', filterProducts);
+        document.getElementById('filter-seo').addEventListener('change', filterProducts);
+        
+        // Init
+        loadProducts();
     </script>
 </body>
 </html>
 '''
 
-# ============================================
-# PLANIFICATEUR
-# ============================================
+SITE_TEMPLATE = '''
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏷️ Gestion Site | Shopify Manager V3</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .header {
+            padding: 20px 40px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.3);
+        }
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .back-btn {
+            padding: 10px 20px;
+            background: #333;
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            text-decoration: none;
+        }
+        .logo { font-size: 20px; font-weight: bold; }
+        .logo span { color: #00ff88; }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
+        
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 12px; padding: 20px; }
+        .stat-card h3 { font-size: 32px; color: #00ff88; }
+        .stat-card p { color: #888; font-size: 14px; }
+        
+        .controls { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end; }
+        .control-group { display: flex; flex-direction: column; gap: 6px; }
+        .control-group label { font-size: 12px; color: #888; text-transform: uppercase; }
+        .control-group input, .control-group select { padding: 10px 14px; background: #1a1a2e; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 14px; min-width: 200px; }
+        
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: linear-gradient(135deg, #00ff88, #00cc6a); color: #000; }
+        .btn-danger { background: #ff4757; color: #fff; }
+        .btn-secondary { background: #333; color: #fff; }
+        
+        .products-table { background: #1a1a2e; border-radius: 12px; overflow: hidden; border: 1px solid #333; }
+        .products-table table { width: 100%; border-collapse: collapse; }
+        .products-table th { padding: 16px; background: #0a0a0f; font-size: 12px; text-transform: uppercase; color: #888; text-align: left; }
+        .products-table td { padding: 12px 16px; border-bottom: 1px solid #2a2a3a; }
+        
+        .checkbox { width: 22px; height: 22px; border: 2px solid #444; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .checkbox.checked { background: #00ff88; border-color: #00ff88; }
+        .checkbox.checked::after { content: '✓'; color: #000; font-size: 14px; }
+        
+        .product-cell { display: flex; align-items: center; gap: 12px; }
+        .product-image { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; }
+        .tag { display: inline-block; padding: 4px 10px; background: #333; border-radius: 20px; font-size: 11px; margin: 2px; }
+        
+        .progress-bar { position: fixed; top: 0; left: 0; right: 0; background: #1a1a2e; padding: 20px; z-index: 1000; border-bottom: 1px solid #333; display: none; }
+        .progress-bar.show { display: block; }
+        .progress-track { height: 10px; background: #333; border-radius: 5px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #00ff88, #00cc6a); transition: width 0.3s; }
+        
+        .loading { text-align: center; padding: 60px; }
+        .spinner { width: 40px; height: 40px; border: 3px solid #333; border-top-color: #00ff88; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: #1a1a2e; padding: 30px; border-radius: 16px; width: 90%; max-width: 500px; }
+        
+        .toast { position: fixed; bottom: 24px; right: 24px; padding: 16px 24px; border-radius: 10px; z-index: 2000; }
+        .toast.success { background: #00ff88; color: #000; }
+        .toast.error { background: #ff4757; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progress-bar">
+        <div class="progress-track">
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+        <p style="margin-top:10px;color:#888;" id="progress-text">Traitement en cours...</p>
+    </div>
 
-def run_scheduled_task(task):
-    global scheduled_tasks
-    print(f"[TÂCHE] Exécution: {task['action']} pour balise '{task['tag']}'")
+    <header class="header">
+        <div class="header-left">
+            <a href="/" class="back-btn">← Retour</a>
+            <div class="logo">🏷️ Gestion <span>Site</span></div>
+        </div>
+    </header>
     
-    if task['action'] == 'delete-without-tag':
-        products = get_all_products()
-        to_delete = [p['id'] for p in products if task['tag'].lower() not in (p.get('tags', '') or '').lower()]
-        delete_products_batch(to_delete)
+    <main class="container">
+        <div class="stats">
+            <div class="stat-card">
+                <h3 id="total-products">-</h3>
+                <p>Produits total</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="total-tags">-</h3>
+                <p>Balises uniques</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="selected-count">0</h3>
+                <p>Sélectionnés</p>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Rechercher</label>
+                <input type="text" id="search" placeholder="Nom, SKU...">
+            </div>
+            <div class="control-group">
+                <label>Filtrer par balise</label>
+                <select id="filter-tag">
+                    <option value="">Toutes les balises</option>
+                </select>
+            </div>
+            <button class="btn btn-secondary" onclick="loadData()">🔄 Actualiser</button>
+            <button class="btn btn-primary" onclick="openAddTagModal()">+ Ajouter balise</button>
+            <button class="btn btn-danger" onclick="openDeleteModal()">🗑️ Supprimer</button>
+        </div>
+        
+        <div class="products-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:50px"><div class="checkbox" id="select-all" onclick="toggleSelectAll()"></div></th>
+                        <th>Produit</th>
+                        <th>SKU</th>
+                        <th>Balises</th>
+                        <th>Prix</th>
+                    </tr>
+                </thead>
+                <tbody id="products-list">
+                    <tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
     
-    elif task['action'] == 'add-tag-all':
-        products = get_all_products()
-        for p in products:
-            add_tag_to_product(p['id'], task['tag'])
-            time.sleep(0.5)
+    <div class="modal-overlay" id="add-tag-modal">
+        <div class="modal">
+            <h2 style="margin-bottom:20px;">Ajouter une balise</h2>
+            <input type="text" id="new-tag" placeholder="Nom de la balise" style="width:100%;padding:12px;background:#0a0a0f;border:1px solid #333;border-radius:8px;color:#fff;margin-bottom:20px;">
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-secondary" onclick="closeModal('add-tag-modal')" style="flex:1;">Annuler</button>
+                <button class="btn btn-primary" onclick="addTag()" style="flex:1;">Ajouter</button>
+            </div>
+        </div>
+    </div>
     
-    scheduled_tasks = [t for t in scheduled_tasks if t['id'] != task['id']]
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal">
+            <h2 style="margin-bottom:20px;">⚠️ Confirmer la suppression</h2>
+            <p style="color:#888;margin-bottom:20px;">Supprimer <strong id="delete-count">0</strong> produit(s) ?</p>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-secondary" onclick="closeModal('delete-modal')" style="flex:1;">Annuler</button>
+                <button class="btn btn-danger" onclick="deleteProducts()" style="flex:1;">Supprimer</button>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        let products = [];
+        let tags = {};
+        let selectedIds = new Set();
+        
+        async function loadData() {
+            document.getElementById('products-list').innerHTML = '<tr><td colspan="5" class="loading"><div class="spinner"></div></td></tr>';
+            
+            const [productsRes, tagsRes] = await Promise.all([
+                fetch('/api/products').then(r => r.json()),
+                fetch('/api/tags').then(r => r.json())
+            ]);
+            
+            products = productsRes.products || [];
+            tags = tagsRes.tags || {};
+            
+            document.getElementById('total-products').textContent = products.length;
+            document.getElementById('total-tags').textContent = Object.keys(tags).length;
+            
+            const select = document.getElementById('filter-tag');
+            select.innerHTML = '<option value="">Toutes les balises</option>' +
+                Object.entries(tags).sort((a,b) => b[1] - a[1]).map(([tag, count]) => 
+                    `<option value="${tag}">${tag} (${count})</option>`
+                ).join('');
+            
+            filterProducts();
+        }
+        
+        function filterProducts() {
+            const search = document.getElementById('search').value.toLowerCase();
+            const tagFilter = document.getElementById('filter-tag').value;
+            
+            let filtered = products.filter(p => {
+                const matchSearch = !search || p.title.toLowerCase().includes(search) || (p.variants?.[0]?.sku || '').toLowerCase().includes(search);
+                const matchTag = !tagFilter || (p.tags || '').split(', ').includes(tagFilter);
+                return matchSearch && matchTag;
+            });
+            
+            renderProducts(filtered);
+        }
+        
+        function renderProducts(list) {
+            const tbody = document.getElementById('products-list');
+            tbody.innerHTML = list.map(p => {
+                const isSelected = selectedIds.has(p.id);
+                const tagsHtml = (p.tags || '').split(', ').filter(t => t).slice(0, 5).map(t => `<span class="tag">${t}</span>`).join('');
+                return `
+                    <tr>
+                        <td><div class="checkbox ${isSelected ? 'checked' : ''}" onclick="toggleProduct(${p.id})"></div></td>
+                        <td>
+                            <div class="product-cell">
+                                <img class="product-image" src="${p.image?.src || ''}" onerror="this.style.display='none'">
+                                <span>${p.title.substring(0, 50)}${p.title.length > 50 ? '...' : ''}</span>
+                            </div>
+                        </td>
+                        <td style="font-family:monospace;font-size:12px;color:#888;">${p.variants?.[0]?.sku || 'N/A'}</td>
+                        <td>${tagsHtml}</td>
+                        <td>${p.variants?.[0]?.price || '0'}€</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function toggleProduct(id) {
+            if (selectedIds.has(id)) selectedIds.delete(id);
+            else selectedIds.add(id);
+            updateSelection();
+            filterProducts();
+        }
+        
+        function toggleSelectAll() {
+            const visible = products.filter(p => {
+                const search = document.getElementById('search').value.toLowerCase();
+                const tagFilter = document.getElementById('filter-tag').value;
+                const matchSearch = !search || p.title.toLowerCase().includes(search);
+                const matchTag = !tagFilter || (p.tags || '').includes(tagFilter);
+                return matchSearch && matchTag;
+            });
+            
+            const allSelected = visible.every(p => selectedIds.has(p.id));
+            visible.forEach(p => allSelected ? selectedIds.delete(p.id) : selectedIds.add(p.id));
+            updateSelection();
+            filterProducts();
+        }
+        
+        function updateSelection() {
+            document.getElementById('selected-count').textContent = selectedIds.size;
+            document.getElementById('select-all').classList.toggle('checked', selectedIds.size > 0);
+        }
+        
+        function openAddTagModal() {
+            if (selectedIds.size === 0) { showToast('Sélectionnez des produits', 'error'); return; }
+            document.getElementById('add-tag-modal').classList.add('show');
+        }
+        
+        function openDeleteModal() {
+            if (selectedIds.size === 0) { showToast('Sélectionnez des produits', 'error'); return; }
+            document.getElementById('delete-count').textContent = selectedIds.size;
+            document.getElementById('delete-modal').classList.add('show');
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+        
+        async function addTag() {
+            const tag = document.getElementById('new-tag').value.trim();
+            if (!tag) return;
+            
+            closeModal('add-tag-modal');
+            showProgress();
+            
+            await fetch('/api/products/add-tags', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ product_ids: Array.from(selectedIds), tags: [tag] })
+            });
+            
+            monitorProgress(() => {
+                selectedIds.clear();
+                loadData();
+            });
+        }
+        
+        async function deleteProducts() {
+            closeModal('delete-modal');
+            showProgress();
+            
+            await fetch('/api/products/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ product_ids: Array.from(selectedIds) })
+            });
+            
+            monitorProgress(() => {
+                selectedIds.clear();
+                loadData();
+            });
+        }
+        
+        function showProgress() { document.getElementById('progress-bar').classList.add('show'); }
+        function hideProgress() { document.getElementById('progress-bar').classList.remove('show'); }
+        
+        async function monitorProgress(callback) {
+            const interval = setInterval(async () => {
+                const prog = await fetch('/api/progress').then(r => r.json());
+                const pct = prog.total > 0 ? (prog.current / prog.total * 100) : 0;
+                document.getElementById('progress-fill').style.width = pct + '%';
+                document.getElementById('progress-text').textContent = prog.message;
+                
+                if (!prog.running) {
+                    clearInterval(interval);
+                    hideProgress();
+                    showToast('Opération terminée !', 'success');
+                    callback();
+                }
+            }, 500);
+        }
+        
+        function showToast(msg, type) {
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        document.getElementById('search').addEventListener('input', filterProducts);
+        document.getElementById('filter-tag').addEventListener('change', filterProducts);
+        
+        loadData();
+    </script>
+</body>
+</html>
+'''
 
-def schedule_checker():
-    while True:
-        now = datetime.now()
-        for task in scheduled_tasks[:]:
-            try:
-                task_time = datetime.fromisoformat(task['scheduled_at'].replace('Z', ''))
-                if now >= task_time:
-                    thread = threading.Thread(target=run_scheduled_task, args=(task,))
-                    thread.start()
-            except Exception as e:
-                print(f"Erreur tâche: {e}")
-        time.sleep(30)
-
-
-checker_thread = threading.Thread(target=schedule_checker, daemon=True)
-checker_thread.start()
-
-# ============================================
-# DÉMARRAGE
-# ============================================
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    print(f'''
-╔════════════════════════════════════════════════════════════╗
-║   🛍️  SHOPIFY MANAGER V2                                   ║
-║   Serveur démarré sur http://localhost:{port}               ║
-╚════════════════════════════════════════════════════════════╝
-    ''')
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
