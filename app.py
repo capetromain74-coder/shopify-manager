@@ -85,7 +85,7 @@ def shopify_request(endpoint, method='GET', data=None, retries=3):
     return None
 
 
-def get_all_products():
+def get_all_products(include_metafields=False):
     """Récupère TOUS les produits avec pagination"""
     global task_progress
     all_products = []
@@ -111,6 +111,40 @@ def get_all_products():
     
     print(f"[API] Total: {len(all_products)} produits")
     return all_products
+
+
+def get_product_metafields(product_id):
+    """Récupère les metafields SEO d'un produit"""
+    result = shopify_request(f'products/{product_id}/metafields.json')
+    if result and 'metafields' in result:
+        metafields = {}
+        for mf in result['metafields']:
+            if mf.get('namespace') == 'global':
+                if mf.get('key') == 'title_tag':
+                    metafields['meta_title'] = mf.get('value', '')
+                elif mf.get('key') == 'description_tag':
+                    metafields['meta_description'] = mf.get('value', '')
+        return metafields
+    return {}
+
+
+def get_products_with_seo(limit=100):
+    """Récupère les produits avec leurs données SEO (metafields)"""
+    products = get_all_products()
+    
+    # Pour la page SEO, on récupère les metafields des premiers produits
+    # (pour éviter trop de requêtes API)
+    for i, product in enumerate(products[:limit]):
+        metafields = get_product_metafields(product['id'])
+        product['seo_meta_title'] = metafields.get('meta_title', '')
+        product['seo_meta_description'] = metafields.get('meta_description', '')
+        
+        if i % 10 == 0:
+            print(f"[SEO] Récupéré metafields pour {i+1}/{min(len(products), limit)} produits...")
+        
+        time.sleep(0.3)  # Éviter rate limit
+    
+    return products
 
 
 def add_tag_to_product(product_id, tag):
@@ -177,25 +211,78 @@ def delete_products_batch(product_ids):
 
 
 def update_product_seo(product_id, seo_data):
-    """Met à jour les données SEO d'un produit"""
-    update_data = {'product': {'id': product_id}}
+    """Met à jour les données SEO d'un produit via metafields"""
+    success = True
     
+    # Mettre à jour le titre du produit si fourni
     if 'title' in seo_data:
-        update_data['product']['title'] = seo_data['title']
+        result = shopify_request(f'products/{product_id}.json', 'PUT', {
+            'product': {'id': product_id, 'title': seo_data['title']}
+        })
+        if not result:
+            success = False
     
-    if 'body_html' in seo_data:
-        update_data['product']['body_html'] = seo_data['body_html']
-    
+    # Mettre à jour le handle si fourni
     if 'handle' in seo_data:
-        update_data['product']['handle'] = seo_data['handle']
+        result = shopify_request(f'products/{product_id}.json', 'PUT', {
+            'product': {'id': product_id, 'handle': seo_data['handle']}
+        })
+        if not result:
+            success = False
     
-    if 'metafields_global_title_tag' in seo_data:
-        update_data['product']['metafields_global_title_tag'] = seo_data['metafields_global_title_tag']
+    # Mettre à jour la description HTML si fournie
+    if 'body_html' in seo_data:
+        result = shopify_request(f'products/{product_id}.json', 'PUT', {
+            'product': {'id': product_id, 'body_html': seo_data['body_html']}
+        })
+        if not result:
+            success = False
     
-    if 'metafields_global_description_tag' in seo_data:
-        update_data['product']['metafields_global_description_tag'] = seo_data['metafields_global_description_tag']
+    # Mettre à jour le Meta Title via metafield
+    if 'meta_title' in seo_data or 'metafields_global_title_tag' in seo_data:
+        meta_title = seo_data.get('meta_title') or seo_data.get('metafields_global_title_tag')
+        result = shopify_request(f'products/{product_id}/metafields.json', 'POST', {
+            'metafield': {
+                'namespace': 'global',
+                'key': 'title_tag',
+                'value': meta_title,
+                'type': 'single_line_text_field'
+            }
+        })
+        if not result:
+            # Essayer de mettre à jour si le metafield existe déjà
+            metafields = shopify_request(f'products/{product_id}/metafields.json')
+            if metafields and 'metafields' in metafields:
+                for mf in metafields['metafields']:
+                    if mf.get('namespace') == 'global' and mf.get('key') == 'title_tag':
+                        shopify_request(f'products/{product_id}/metafields/{mf["id"]}.json', 'PUT', {
+                            'metafield': {'id': mf['id'], 'value': meta_title}
+                        })
+                        break
     
-    return shopify_request(f'products/{product_id}.json', 'PUT', update_data)
+    # Mettre à jour la Meta Description via metafield
+    if 'meta_description' in seo_data or 'metafields_global_description_tag' in seo_data:
+        meta_desc = seo_data.get('meta_description') or seo_data.get('metafields_global_description_tag')
+        result = shopify_request(f'products/{product_id}/metafields.json', 'POST', {
+            'metafield': {
+                'namespace': 'global',
+                'key': 'description_tag',
+                'value': meta_desc,
+                'type': 'single_line_text_field'
+            }
+        })
+        if not result:
+            # Essayer de mettre à jour si le metafield existe déjà
+            metafields = shopify_request(f'products/{product_id}/metafields.json')
+            if metafields and 'metafields' in metafields:
+                for mf in metafields['metafields']:
+                    if mf.get('namespace') == 'global' and mf.get('key') == 'description_tag':
+                        shopify_request(f'products/{product_id}/metafields/{mf["id"]}.json', 'PUT', {
+                            'metafield': {'id': mf['id'], 'value': meta_desc}
+                        })
+                        break
+    
+    return success
 
 
 def update_products_seo_batch(updates):
@@ -323,6 +410,37 @@ def api_get_products():
     return jsonify({'products': products})
 
 
+@app.route('/api/products/seo')
+def api_get_products_seo():
+    """Récupère les produits avec leurs metafields SEO"""
+    products = get_all_products()
+    
+    # Récupérer les metafields pour chaque produit (avec progression)
+    global task_progress
+    task_progress = {
+        'running': True,
+        'current': 0,
+        'total': len(products),
+        'message': 'Chargement des données SEO...',
+        'type': 'load_seo'
+    }
+    
+    for i, product in enumerate(products):
+        metafields = get_product_metafields(product['id'])
+        product['seo_meta_title'] = metafields.get('meta_title', '')
+        product['seo_meta_description'] = metafields.get('meta_description', '')
+        
+        task_progress['current'] = i + 1
+        task_progress['message'] = f'Chargement SEO: {i+1}/{len(products)}'
+        
+        time.sleep(0.2)  # Éviter rate limit
+    
+    task_progress['running'] = False
+    task_progress['message'] = 'Chargement terminé'
+    
+    return jsonify({'products': products})
+
+
 @app.route('/api/progress')
 def api_get_progress():
     return jsonify(task_progress)
@@ -422,10 +540,10 @@ def api_generate_seo_batch():
             seo_data = {}
             
             if 'meta_title' in fields:
-                seo_data['metafields_global_title_tag'] = generate_seo_content(product, 'meta_title')
+                seo_data['meta_title'] = generate_seo_content(product, 'meta_title')
             
             if 'meta_description' in fields:
-                seo_data['metafields_global_description_tag'] = generate_seo_content(product, 'meta_description')
+                seo_data['meta_description'] = generate_seo_content(product, 'meta_description')
             
             if 'handle' in fields:
                 seo_data['handle'] = generate_seo_content(product, 'handle')
@@ -1259,10 +1377,10 @@ SEO_TEMPLATE = '''
         }
         
         async function loadProducts() {
-            document.getElementById('products-list').innerHTML = '<tr><td colspan="6" class="loading"><div class="spinner"></div><p>Chargement...</p></td></tr>';
+            document.getElementById('products-list').innerHTML = '<tr><td colspan="6" class="loading"><div class="spinner"></div><p>Chargement des produits et données SEO...<br><small>Cela peut prendre quelques minutes</small></p></td></tr>';
             
             try {
-                const response = await fetch('/api/products');
+                const response = await fetch('/api/products/seo');
                 const data = await response.json();
                 products = data.products || [];
                 filterProducts();
@@ -1282,8 +1400,8 @@ SEO_TEMPLATE = '''
                 
                 if (!matchSearch) return false;
                 
-                const metaTitle = p.metafields_global_title_tag || '';
-                const metaDesc = p.metafields_global_description_tag || '';
+                const metaTitle = p.seo_meta_title || '';
+                const metaDesc = p.seo_meta_description || '';
                 
                 if (filter === 'missing-meta') return !metaTitle;
                 if (filter === 'missing-desc') return !metaDesc;
@@ -1307,8 +1425,8 @@ SEO_TEMPLATE = '''
                 const isSelected = selectedIds.has(p.id);
                 const imageUrl = p.image?.src || '';
                 const sku = p.variants?.[0]?.sku || '';
-                const metaTitle = p.metafields_global_title_tag || '';
-                const metaDesc = p.metafields_global_description_tag || '';
+                const metaTitle = p.seo_meta_title || '';
+                const metaDesc = p.seo_meta_description || '';
                 const handle = p.handle || '';
                 
                 const titleClass = !metaTitle ? 'missing' : metaTitle.length > 60 ? 'long' : 'ok';
@@ -1416,8 +1534,8 @@ SEO_TEMPLATE = '''
         
         function openEditModal(product) {
             document.getElementById('edit-product-id').value = product.id;
-            document.getElementById('edit-meta-title').value = product.metafields_global_title_tag || '';
-            document.getElementById('edit-meta-desc').value = product.metafields_global_description_tag || '';
+            document.getElementById('edit-meta-title').value = product.seo_meta_title || '';
+            document.getElementById('edit-meta-desc').value = product.seo_meta_description || '';
             document.getElementById('edit-handle').value = product.handle || '';
             updateCharCount();
             document.getElementById('edit-modal').classList.add('show');
@@ -1432,8 +1550,8 @@ SEO_TEMPLATE = '''
             const updates = [{
                 id: parseInt(productId),
                 seo: {
-                    metafields_global_title_tag: document.getElementById('edit-meta-title').value,
-                    metafields_global_description_tag: document.getElementById('edit-meta-desc').value,
+                    meta_title: document.getElementById('edit-meta-title').value,
+                    meta_description: document.getElementById('edit-meta-desc').value,
                     handle: document.getElementById('edit-handle').value
                 }
             }];
