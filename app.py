@@ -116,16 +116,66 @@ def get_all_products(include_metafields=False):
 def get_product_metafields(product_id):
     """Récupère les metafields SEO d'un produit"""
     result = shopify_request(f'products/{product_id}/metafields.json')
+    metafields = {'meta_title': '', 'meta_description': ''}
+    
     if result and 'metafields' in result:
-        metafields = {}
         for mf in result['metafields']:
-            if mf.get('namespace') == 'global':
-                if mf.get('key') == 'title_tag':
-                    metafields['meta_title'] = mf.get('value', '')
-                elif mf.get('key') == 'description_tag':
-                    metafields['meta_description'] = mf.get('value', '')
-        return metafields
-    return {}
+            namespace = mf.get('namespace', '')
+            key = mf.get('key', '')
+            value = mf.get('value', '')
+            
+            # Shopify stocke les SEO tags dans différents namespaces possibles
+            if key == 'title_tag' or key == 'seo_title':
+                metafields['meta_title'] = value
+            elif key == 'description_tag' or key == 'seo_description':
+                metafields['meta_description'] = value
+            
+            # Debug
+            print(f"[METAFIELD] {product_id}: {namespace}.{key} = {value[:50] if value else 'empty'}...")
+    
+    return metafields
+
+
+def get_product_with_seo_graphql(product_id):
+    """Récupère un produit avec ses données SEO via GraphQL"""
+    query = '''
+    {
+        product(id: "gid://shopify/Product/%s") {
+            id
+            title
+            handle
+            seo {
+                title
+                description
+            }
+        }
+    }
+    ''' % product_id
+    
+    url = f"https://{SHOP}/admin/api/{API_VERSION}/graphql.json"
+    headers = {
+        'X-Shopify-Access-Token': ACCESS_TOKEN,
+        'Content-Type': 'application/json'
+    }
+    
+    try:
+        req = Request(url, data=json.dumps({'query': query}).encode('utf-8'), headers=headers, method='POST')
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        
+        with urlopen(req, context=context, timeout=30) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            if result.get('data', {}).get('product'):
+                seo = result['data']['product'].get('seo', {})
+                return {
+                    'meta_title': seo.get('title', '') or '',
+                    'meta_description': seo.get('description', '') or ''
+                }
+    except Exception as e:
+        print(f"[GraphQL Error] {e}")
+    
+    return {'meta_title': '', 'meta_description': ''}
 
 
 def get_products_with_seo(limit=100):
@@ -419,9 +469,20 @@ def api_get_products_seo():
 
 @app.route('/api/product/<int:product_id>/seo')
 def api_get_product_seo(product_id):
-    """Récupère les metafields SEO d'un seul produit"""
-    metafields = get_product_metafields(product_id)
-    return jsonify(metafields)
+    """Récupère les metafields SEO d'un seul produit via GraphQL"""
+    seo_data = get_product_with_seo_graphql(product_id)
+    return jsonify(seo_data)
+
+
+@app.route('/api/debug/product/<int:product_id>')
+def api_debug_product(product_id):
+    """Debug: voir tous les metafields d'un produit"""
+    result = shopify_request(f'products/{product_id}/metafields.json')
+    graphql_seo = get_product_with_seo_graphql(product_id)
+    return jsonify({
+        'metafields': result,
+        'graphql_seo': graphql_seo
+    })
 
 
 @app.route('/api/progress')
