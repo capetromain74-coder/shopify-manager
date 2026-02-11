@@ -1,3 +1,2 @@
-flask>=3.0
-gunicorn>=21.2
-certifi>=2024.0
+flask==3.0.0
+gunicorn==21.2.0
