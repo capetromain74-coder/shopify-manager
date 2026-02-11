@@ -1,6 +1,6 @@
 """
 Shopify Manager V4 - SEO Pro Edition
-Avec génération IA, matching collections intelligent, stats SEO
+Basé sur V3 qui fonctionne + nouvelles fonctionnalités SEO
 """
 
 from flask import Flask, jsonify, request
@@ -15,54 +15,100 @@ from threading import Thread
 
 app = Flask(__name__)
 
+# Configuration - IDENTIQUE à V3
 SHOP = os.environ.get('SHOPIFY_SHOP', 'capet-shop.myshopify.com')
 ACCESS_TOKEN = os.environ.get('SHOPIFY_ACCESS_TOKEN', '')
 API_VERSION = '2024-01'
+
 SITE_NAME = os.environ.get('SITE_NAME', 'KP SHOES')
 SITE_DOMAIN = os.environ.get('SITE_DOMAIN', 'kpshoes.fr')
 BENEFITS = ["100% Authentique", "Livraison rapide", "Paiement 3x sans frais"]
 
-task_progress = {'running': False, 'current': 0, 'total': 0, 'message': '', 'success_count': 0, 'error_count': 0}
-_collections_cache = None
-_collections_cache_time = 0
+task_progress = {
+    'running': False,
+    'current': 0,
+    'total': 0,
+    'message': '',
+    'type': ''
+}
+
+
+# ═══════════════════════════════════════════════════════════════
+# FONCTIONS API SHOPIFY - IDENTIQUES à V3
+# ═══════════════════════════════════════════════════════════════
 
 def shopify_request(endpoint, method='GET', data=None):
+    """Fait une requête à l'API Shopify"""
     url = f"https://{SHOP}/admin/api/{API_VERSION}/{endpoint}"
-    headers = {'X-Shopify-Access-Token': ACCESS_TOKEN, 'Content-Type': 'application/json'}
+    headers = {
+        'X-Shopify-Access-Token': ACCESS_TOKEN,
+        'Content-Type': 'application/json'
+    }
+    
     try:
-        req = Request(url, data=json.dumps(data).encode('utf-8') if data else None, headers=headers, method=method)
+        if data:
+            req = Request(url, data=json.dumps(data).encode('utf-8'), headers=headers, method=method)
+        else:
+            req = Request(url, headers=headers, method=method)
+        
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
+        
         with urlopen(req, context=context, timeout=30) as response:
-            return True if method == 'DELETE' else json.loads(response.read().decode('utf-8'))
+            if method == 'DELETE':
+                return True
+            return json.loads(response.read().decode('utf-8'))
+    except HTTPError as e:
+        print(f"[API Error] {e.code}: {e.reason}")
+        return None
     except Exception as e:
         print(f"[Error] {e}")
         return None
 
+
 def get_all_products():
-    all_products, since_id = [], 0
+    """Récupère TOUS les produits avec pagination - IDENTIQUE à V3"""
+    all_products = []
+    since_id = 0
+    
     while True:
-        result = shopify_request(f'products.json?limit=250&since_id={since_id}')
-        if result and 'products' in result and result['products']:
-            all_products.extend(result['products'])
-            since_id = result['products'][-1]['id']
-            if len(result['products']) < 250: break
+        endpoint = f'products.json?limit=250&since_id={since_id}'
+        result = shopify_request(endpoint)
+        
+        if result and 'products' in result and len(result['products']) > 0:
+            products = result['products']
+            all_products.extend(products)
+            since_id = products[-1]['id']
+            print(f"[API] Récupéré {len(all_products)} produits...")
+            
+            if len(products) < 250:
+                break
             time.sleep(0.5)
-        else: break
+        else:
+            break
+    
     return all_products
 
-def get_all_collections(force_refresh=False):
-    global _collections_cache, _collections_cache_time
-    if not force_refresh and _collections_cache and (time.time() - _collections_cache_time < 300):
-        return _collections_cache
+
+def get_all_collections():
+    """Récupère toutes les collections"""
     all_collections = []
     for ctype in ['custom_collections', 'smart_collections']:
         result = shopify_request(f'{ctype}.json?limit=250')
         if result and ctype in result:
-            all_collections.extend([{'id': c['id'], 'handle': c['handle'], 'title': c['title']} for c in result[ctype]])
-    _collections_cache, _collections_cache_time = all_collections, time.time()
+            for c in result[ctype]:
+                all_collections.append({
+                    'id': c['id'],
+                    'handle': c['handle'],
+                    'title': c['title']
+                })
     return all_collections
+
+
+# ═══════════════════════════════════════════════════════════════
+# MATCHING COLLECTIONS - NOUVEAU V4
+# ═══════════════════════════════════════════════════════════════
 
 MODEL_PATTERNS = [
     ('jordan-4', ['jordan 4', 'aj4', 'air jordan 4']),
@@ -83,7 +129,7 @@ MODEL_PATTERNS = [
     ('asics-gel-nyc', ['gel-nyc', 'gel nyc']),
     ('ugg-tasman', ['tasman']),
     ('ugg-tazz', ['tazz']),
-    ('new-balance-550', ['550']),
+    ('new-balance-550', ['new balance 550', '550']),
     ('new-balance-530', ['530']),
     ('new-balance-2002r', ['2002r']),
     ('new-balance-9060', ['9060']),
@@ -107,284 +153,465 @@ BRAND_PATTERNS = [
     ('bape', ['bape']),
 ]
 
-EXCLUDED = ['tout-nos-modeles', 'all', 'best-seller', 'moins-de-150', 'livraison-48h', 'pour-enfants', 'sport', 'autre-marques', 'tous-nos-vetements', 'frontpage']
+EXCLUDED = ['tout-nos-modeles', 'all', 'best-seller', 'moins-de-150', 'livraison-48h', 'pour-enfants', 'sport', 'autre-marques']
+
 
 def find_best_collection(title, collections):
-    if not title: return None
+    """Trouve la meilleure collection: modèle > marque"""
+    if not title or not collections:
+        return None
+    
     tl = title.lower()
     available = {c['handle']: c['title'] for c in collections if c['handle'] not in EXCLUDED}
+    
+    # Priorité 1: Modèle
     for handle, patterns in MODEL_PATTERNS:
         if handle in available:
             for p in patterns:
-                if p in tl: return {'handle': handle, 'title': available[handle], 'match_type': 'model'}
+                if p in tl:
+                    return {'handle': handle, 'title': available[handle], 'match_type': 'model'}
+    
+    # Priorité 2: Marque
     for handle, patterns in BRAND_PATTERNS:
         if handle in available:
             for p in patterns:
-                if p in tl: return {'handle': handle, 'title': available[handle], 'match_type': 'brand'}
+                if p in tl:
+                    return {'handle': handle, 'title': available[handle], 'match_type': 'brand'}
+    
     return None
 
-def extract_sku(p): return p['variants'][0].get('sku', '') if p.get('variants') else ''
-def extract_brand(p):
-    t = p.get('title', '').lower()
-    for b, pats in [('Air Jordan', ['jordan']), ('Nike', ['nike', 'dunk']), ('Adidas', ['adidas']), ('Yeezy', ['yeezy']), ('New Balance', ['new balance']), ('Asics', ['asics']), ('UGG', ['ugg']), ('Puma', ['puma']), ('Birkenstock', ['birkenstock'])]:
-        for pat in pats:
-            if pat in t: return b
-    return p.get('vendor', 'Sneakers')
-def extract_colorway(p):
-    m = re.search(r'\(([^)]+)\)', p.get('title', ''))
-    return m.group(1) if m else ''
-def strip_html(h): return re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', h or '')).strip()
 
-def generate_meta_title(p):
-    t = p.get('title', '')
-    m = f"{t} | {SITE_NAME}"
-    return m if len(m) <= 60 else f"{t[:60-len(SITE_NAME)-7]}... | {SITE_NAME}"
+# ═══════════════════════════════════════════════════════════════
+# FONCTIONS SEO - BASÉES SUR V3
+# ═══════════════════════════════════════════════════════════════
 
-def generate_meta_description(p):
-    t, sku = p.get('title', ''), extract_sku(p)
-    base = f"Achetez la {t}" + (f" (SKU: {sku})" if sku else "") + f" sur {SITE_NAME}"
-    m = f"{base} ✓ " + " ✓ ".join(BENEFITS) + "."
-    return m if len(m) <= 155 else m[:152] + "..."
+def extract_sku(product):
+    if product.get('variants') and len(product['variants']) > 0:
+        return product['variants'][0].get('sku', '')
+    return ''
 
-def generate_description_ai(product, collection):
-    title, brand, sku, colorway = product.get('title', ''), extract_brand(product), extract_sku(product), extract_colorway(product)
+
+def extract_brand(product):
+    title = product.get('title', '').lower()
+    brands = ['Air Jordan', 'Nike', 'Adidas', 'Yeezy', 'New Balance', 'Asics', 'UGG', 'Puma', 'Birkenstock', 'Converse', 'Vans']
+    for brand in brands:
+        if brand.lower() in title:
+            return brand
+    return product.get('vendor', 'Sneakers')
+
+
+def extract_colorway(product):
+    title = product.get('title', '')
+    match = re.search(r'\(([^)]+)\)', title)
+    if match:
+        return match.group(1)
+    return ''
+
+
+def strip_html(html):
+    if not html:
+        return ''
+    clean = re.sub(r'<[^>]+>', ' ', html)
+    clean = re.sub(r'\s+', ' ', clean)
+    return clean.strip()
+
+
+def generate_meta_title(product):
+    title = product.get('title', '')
+    meta = f"{title} | {SITE_NAME}"
+    if len(meta) > 60:
+        max_len = 60 - len(f" | {SITE_NAME}") - 3
+        meta = f"{title[:max_len]}... | {SITE_NAME}"
+    return meta
+
+
+def generate_meta_description(product):
+    title = product.get('title', '')
+    sku = extract_sku(product)
+    if sku:
+        base = f"Achetez la {title} (SKU: {sku}) sur {SITE_NAME}"
+    else:
+        base = f"Achetez la {title} sur {SITE_NAME}"
+    meta = f"{base} ✓ " + " ✓ ".join(BENEFITS) + "."
+    if len(meta) > 155:
+        meta = meta[:152] + "..."
+    return meta
+
+
+def generate_description(product, collection=None):
+    """Génère une description avec lien interne vers la collection"""
+    title = product.get('title', '')
+    brand = extract_brand(product)
+    sku = extract_sku(product)
+    colorway = extract_colorway(product)
+    
     lines = []
+    
+    # Paragraphe 1: Intro avec lien collection
     if collection:
         link = f'<a href="https://{SITE_DOMAIN}/collections/{collection["handle"]}">{collection["title"]}</a>'
         lines.append(f'<p>Découvrez la <strong>{title}</strong>, une pièce incontournable de notre collection {link}.</p>')
     else:
         lines.append(f'<p>Découvrez la <strong>{title}</strong>, signée <strong>{brand}</strong>.</p>')
+    
+    # Paragraphe 2: Description
     if colorway:
         lines.append(f'<p>Cette sneaker arbore le colorway "<strong>{colorway}</strong>". Un design qui allie style et authenticité.</p>')
     else:
         lines.append(f'<p>Un design iconique et des finitions premium, fidèle à l\'héritage {brand}.</p>')
-    tech = [f'<strong>Marque</strong> : {brand}']
-    if sku: tech.insert(0, f'<strong>SKU</strong> : {sku}')
-    if colorway: tech.insert(1, f'<strong>Colorway</strong> : {colorway}')
+    
+    # Paragraphe 3: Infos techniques
+    tech = []
+    if sku:
+        tech.append(f'<strong>SKU</strong> : {sku}')
+    if colorway:
+        tech.append(f'<strong>Colorway</strong> : {colorway}')
+    tech.append(f'<strong>Marque</strong> : {brand}')
     lines.append('<p>' + '<br>'.join(tech) + '</p>')
+    
+    # Paragraphe 4: Authenticité
     lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, toutes nos sneakers sont <strong>100% authentiques</strong> et vérifiées par nos experts.</p>')
+    
     return '\n'.join(lines)
 
-def check_seo_status(p):
-    body = p.get('body_html', '') or ''
+
+def check_seo_status(product):
+    """Vérifie si le produit a un bon SEO"""
+    body = product.get('body_html', '') or ''
     has_desc = len(strip_html(body)) > 100
     has_link = f'{SITE_DOMAIN}/collections/' in body.lower()
     score = (30 if has_desc else 0) + (70 if has_link else 0)
-    return {'has_description': has_desc, 'has_internal_link': has_link, 'score': score, 'status': 'complete' if score >= 70 else 'partial' if score >= 30 else 'missing'}
+    status = 'complete' if score >= 70 else 'partial' if score >= 30 else 'missing'
+    return {'has_description': has_desc, 'has_internal_link': has_link, 'score': score, 'status': status}
 
-def update_product_seo(pid, updates):
-    ok = True
+
+def update_product_seo(product_id, updates):
+    """Met à jour le SEO d'un produit"""
+    success = True
+    
     if 'body_html' in updates:
-        if not shopify_request(f'products/{pid}.json', 'PUT', {'product': {'id': pid, 'body_html': updates['body_html']}}): ok = False
+        result = shopify_request(f'products/{product_id}.json', 'PUT', {
+            'product': {'id': product_id, 'body_html': updates['body_html']}
+        })
+        if not result:
+            success = False
         time.sleep(0.4)
-    for key, mkey in [('meta_title', 'title_tag'), ('meta_description', 'description_tag')]:
-        if key in updates:
-            shopify_request(f'products/{pid}/metafields.json', 'POST', {'metafield': {'namespace': 'global', 'key': mkey, 'value': updates[key], 'type': 'single_line_text_field'}})
-            time.sleep(0.3)
-    return ok
+    
+    if 'meta_title' in updates:
+        shopify_request(f'products/{product_id}/metafields.json', 'POST', {
+            'metafield': {
+                'namespace': 'global',
+                'key': 'title_tag',
+                'value': updates['meta_title'],
+                'type': 'single_line_text_field'
+            }
+        })
+        time.sleep(0.3)
+    
+    if 'meta_description' in updates:
+        shopify_request(f'products/{product_id}/metafields.json', 'POST', {
+            'metafield': {
+                'namespace': 'global',
+                'key': 'description_tag',
+                'value': updates['meta_description'],
+                'type': 'single_line_text_field'
+            }
+        })
+        time.sleep(0.3)
+    
+    return success
+
+
+# ═══════════════════════════════════════════════════════════════
+# ROUTES - STRUCTURE IDENTIQUE à V3
+# ═══════════════════════════════════════════════════════════════
 
 @app.route('/')
 def home():
     return f'''<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Shopify Manager V4</title>
-<style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:-apple-system,sans-serif;background:linear-gradient(135deg,#0a0a0f,#1a1a2e);min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff}}.c{{text-align:center;padding:40px}}.logo{{font-size:70px;margin-bottom:20px}}h1{{font-size:48px;background:linear-gradient(135deg,#00ff88,#00cc6a);-webkit-background-clip:text;-webkit-text-fill-color:transparent}}.v{{background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;padding:6px 16px;border-radius:20px;font-size:14px;margin:15px 0 30px;display:inline-block;font-weight:bold}}.btn{{display:inline-block;padding:18px 50px;background:linear-gradient(135deg,#00ff88,#00cc6a);color:#000;text-decoration:none;border-radius:12px;font-size:18px;font-weight:bold}}.status{{margin-top:30px;color:#666;font-size:14px}}</style></head>
-<body><div class="c"><div class="logo">🚀</div><h1>Shopify Manager</h1><div class="v">V4 - SEO Pro + IA</div><a href="/seo" class="btn">⚡ Gestion SEO</a><div class="status">✅ Connecté à {SHOP}</div></div></body></html>'''
+<style>*{{margin:0;padding:0;box-sizing:border-box}}body{{font-family:-apple-system,sans-serif;background:linear-gradient(135deg,#0a0a0f,#1a1a2e);min-height:100vh;display:flex;align-items:center;justify-content:center;color:#fff}}.c{{text-align:center;padding:40px}}.logo{{font-size:70px;margin-bottom:20px}}h1{{font-size:48px;background:linear-gradient(135deg,#00ff88,#00cc6a);-webkit-background-clip:text;-webkit-text-fill-color:transparent}}.v{{background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;padding:6px 16px;border-radius:20px;font-size:14px;margin:15px 0 30px;display:inline-block;font-weight:bold}}.btn{{display:inline-block;padding:18px 50px;background:linear-gradient(135deg,#00ff88,#00cc6a);color:#000;text-decoration:none;border-radius:12px;font-size:18px;font-weight:bold;margin:10px}}.status{{margin-top:30px;color:#666;font-size:14px}}</style></head>
+<body><div class="c"><div class="logo">🚀</div><h1>Shopify Manager</h1><div class="v">V4 - SEO Pro</div><br><a href="/seo" class="btn">⚡ Gestion SEO</a><div class="status">✅ Connecté à {SHOP}</div></div></body></html>'''
+
 
 @app.route('/seo')
 def seo_page():
     return '''<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>SEO Manager V4</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,sans-serif;background:#0a0a0f;min-height:100vh;color:#fff}
-.hd{padding:15px 30px;background:#111;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center}.logo{font-size:20px;font-weight:bold}.logo span{background:linear-gradient(135deg,#00ff88,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.back{color:#888;text-decoration:none}
-.stats{display:flex;gap:20px;padding:20px 30px;background:linear-gradient(90deg,rgba(0,255,136,0.05),rgba(139,92,246,0.05));border-bottom:1px solid #222;flex-wrap:wrap;align-items:center}.stat{background:rgba(0,0,0,0.3);padding:15px 25px;border-radius:12px;text-align:center;min-width:100px}.sv{font-size:28px;font-weight:bold}.sv.g{color:#00ff88}.sv.o{color:#ffa502}.sv.r{color:#ff4757}.sv.p{color:#8b5cf6}.sl{font-size:10px;color:#666;margin-top:5px;text-transform:uppercase}.sp{background:linear-gradient(135deg,#00ff88,#00cc6a);color:#000;padding:20px 30px;border-radius:12px;font-size:32px;font-weight:bold}
-.ctrl{padding:20px 30px;display:flex;gap:15px;flex-wrap:wrap;align-items:flex-end;border-bottom:1px solid #222}.cg{display:flex;flex-direction:column;gap:5px}.cg label{font-size:10px;color:#666;text-transform:uppercase}.cg input,.cg select{padding:10px 14px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:#fff;font-size:14px;min-width:180px}
-.btn{padding:12px 24px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s}.btn:hover{transform:translateY(-2px)}.btn-p{background:linear-gradient(135deg,#00ff88,#00cc6a);color:#000}.btn-d{background:linear-gradient(135deg,#ff4757,#ff3344);color:#fff}.btn-s{background:#333;color:#fff}
-.fs{display:flex;gap:10px;align-items:center;background:#1a1a2e;padding:8px 15px;border-radius:8px;border:1px solid #333}.fs label{font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer}.fs input{width:16px;height:16px;accent-color:#00ff88}
-.si{margin-left:auto;background:#1a1a2e;padding:10px 20px;border-radius:8px;font-size:13px}.si strong{color:#8b5cf6;font-size:18px}
-.prods{padding:20px 30px;display:flex;flex-direction:column;gap:12px}
-.prod{background:#1a1a2e;border:1px solid #2a2a3a;border-radius:12px;padding:15px 20px;display:grid;grid-template-columns:35px 70px 1fr 180px 100px 120px;gap:20px;align-items:center;transition:all 0.2s}.prod:hover{border-color:#444}.prod.sel{border-color:#8b5cf6;background:rgba(139,92,246,0.1)}
-.chk{width:24px;height:24px;border:2px solid #444;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center}.chk.on{background:#00ff88;border-color:#00ff88}.chk.on::after{content:'✓';color:#000;font-weight:bold}
-.pimg{width:70px;height:70px;border-radius:10px;object-fit:cover;background:#333}
-.pinfo h3{font-size:14px;font-weight:600;margin-bottom:5px}.psku{font-size:11px;color:#666;font-family:monospace;margin-bottom:4px}.pcol{font-size:11px;padding:3px 8px;border-radius:4px;display:inline-block}.pcol.m{background:rgba(0,255,136,0.2);color:#00ff88}.pcol.b{background:rgba(139,92,246,0.2);color:#8b5cf6}.pcol.n{background:rgba(255,71,87,0.2);color:#ff4757}
-.sst{font-size:12px}.si2{display:flex;align-items:center;gap:6px;margin-bottom:4px}.si2.ok{color:#00ff88}.si2.ms{color:#ff4757}
-.scb{display:inline-block;padding:8px 16px;border-radius:20px;font-weight:bold;font-size:14px}.scb.h{background:rgba(0,255,136,0.2);color:#00ff88}.scb.md{background:rgba(255,165,2,0.2);color:#ffa502}.scb.l{background:rgba(255,71,87,0.2);color:#ff4757}
-.acts{display:flex;gap:8px}.abtn{padding:8px 12px;font-size:12px;border:none;border-radius:6px;cursor:pointer}.abtn.v{background:#333;color:#fff}.abtn.a{background:#00ff88;color:#000}
-.pov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;z-index:1000}.pov.sh{display:flex}.pbox{background:#1a1a2e;padding:40px;border-radius:16px;width:500px;text-align:center}.pbox h2{margin-bottom:20px}.ptr{height:12px;background:#333;border-radius:6px;overflow:hidden;margin-bottom:15px}.pfl{height:100%;background:linear-gradient(90deg,#00ff88,#8b5cf6);transition:width 0.3s}.ptx{color:#888;font-size:14px}.pct{font-size:24px;font-weight:bold;color:#00ff88;margin-top:10px}
-.mov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}.mov.sh{display:flex}.mod{background:#1a1a2e;border-radius:16px;width:100%;max-width:800px;max-height:90vh;overflow:hidden}.mhd{padding:20px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center}.mhd h2{font-size:18px}.mx{background:none;border:none;color:#888;font-size:28px;cursor:pointer}.mbd{padding:20px;overflow-y:auto;max-height:60vh}.mft{padding:20px;border-top:1px solid #333;display:flex;gap:10px;justify-content:flex-end}
-.psec{margin-bottom:20px}.psec h4{font-size:13px;color:#888;margin-bottom:10px}.pcur{background:#0a0a0f;padding:12px;border-radius:8px;font-size:12px;color:#888;border-left:3px solid #444;margin-bottom:8px}.pgen{background:#0a0a0f;padding:12px;border-radius:8px;font-size:12px;color:#00ff88;border-left:3px solid #00ff88}.pgen pre{white-space:pre-wrap;font-family:inherit}
-.tst{position:fixed;bottom:30px;right:30px;padding:15px 25px;border-radius:10px;font-weight:500;z-index:2000;animation:sIn 0.3s}.tst.s{background:#00ff88;color:#000}.tst.e{background:#ff4757;color:#fff}@keyframes sIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
-.ld{text-align:center;padding:60px}.spin{width:50px;height:50px;border:4px solid #333;border-top-color:#00ff88;border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 20px}@keyframes sp{to{transform:rotate(360deg)}}
+.hd{padding:15px 30px;background:#111;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center}.logo{font-size:20px;font-weight:bold}.logo span{color:#00ff88}.back{color:#888;text-decoration:none}
+.stats{display:flex;gap:15px;padding:20px 30px;background:linear-gradient(90deg,rgba(0,255,136,0.05),rgba(139,92,246,0.05));flex-wrap:wrap;align-items:center}.stat{background:rgba(0,0,0,0.3);padding:12px 20px;border-radius:10px;text-align:center}.sv{font-size:24px;font-weight:bold}.sv.g{color:#00ff88}.sv.o{color:#ffa502}.sv.r{color:#ff4757}.sl{font-size:10px;color:#666;margin-top:4px}.sp{background:#00ff88;color:#000;padding:15px 25px;border-radius:10px;font-size:28px;font-weight:bold}
+.ctrl{padding:15px 30px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #222}.cg input,.cg select{padding:10px;background:#1a1a2e;border:1px solid #333;border-radius:6px;color:#fff}.btn{padding:10px 20px;border:none;border-radius:6px;font-weight:600;cursor:pointer}.btn-p{background:#00ff88;color:#000}.btn-d{background:#ff4757;color:#fff}.btn-s{background:#333;color:#fff}
+.prods{padding:20px 30px}.prod{background:#1a1a2e;border:1px solid #333;border-radius:10px;padding:12px 15px;margin-bottom:10px;display:grid;grid-template-columns:30px 60px 1fr 150px 80px 100px;gap:15px;align-items:center}.prod:hover{border-color:#444}
+.chk{width:20px;height:20px;border:2px solid #444;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center}.chk.on{background:#00ff88;border-color:#00ff88}.chk.on::after{content:'✓';color:#000;font-size:12px;font-weight:bold}
+.pimg{width:60px;height:60px;border-radius:8px;object-fit:cover;background:#333}.pinfo h3{font-size:13px;margin-bottom:3px}.psku{font-size:10px;color:#666}.pcol{font-size:10px;margin-top:3px}.pcol.m{color:#00ff88}.pcol.b{color:#8b5cf6}.pcol.n{color:#ff4757}
+.sst{font-size:11px}.si{margin-bottom:2px}.si.ok{color:#00ff88}.si.ms{color:#ff4757}
+.scb{padding:6px 12px;border-radius:15px;font-size:12px;font-weight:bold}.scb.h{background:rgba(0,255,136,0.2);color:#00ff88}.scb.m{background:rgba(255,165,2,0.2);color:#ffa502}.scb.l{background:rgba(255,71,87,0.2);color:#ff4757}
+.acts button{padding:6px 10px;font-size:11px;border:none;border-radius:4px;cursor:pointer;margin-right:5px}.acts .v{background:#333;color:#fff}.acts .a{background:#00ff88;color:#000}
+.pbar{position:fixed;top:0;left:0;right:0;background:#1a1a2e;padding:20px 30px;z-index:100;display:none;border-bottom:2px solid #00ff88}.pbar.sh{display:block}.ptr{height:8px;background:#333;border-radius:4px;margin:10px 0}.pfl{height:100%;background:#00ff88;border-radius:4px;transition:width 0.3s}
+.ld{text-align:center;padding:60px;color:#888}.spin{width:40px;height:40px;border:3px solid #333;border-top-color:#00ff88;border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 15px}@keyframes sp{to{transform:rotate(360deg)}}
+.tst{position:fixed;bottom:20px;right:20px;padding:12px 20px;border-radius:8px;z-index:200}.tst.s{background:#00ff88;color:#000}.tst.e{background:#ff4757;color:#fff}
 </style></head><body>
-<div class="pov" id="pov"><div class="pbox"><h2>⚡ Génération SEO...</h2><div class="ptr"><div class="pfl" id="pfl"></div></div><div class="ptx" id="ptx">Init...</div><div class="pct" id="pct">0/0</div></div></div>
-<div class="mov" id="mov"><div class="mod"><div class="mhd"><h2 id="mt">Aperçu</h2><button class="mx" onclick="cMod()">×</button></div><div class="mbd" id="mbd"></div><div class="mft"><button class="btn btn-s" onclick="cMod()">Fermer</button><button class="btn btn-p" onclick="aMod()">✅ Appliquer</button></div></div></div>
+<div class="pbar" id="pbar"><div style="display:flex;justify-content:space-between"><strong>Génération SEO...</strong><span id="pct">0/0</span></div><div class="ptr"><div class="pfl" id="pfl"></div></div><div id="ptx" style="font-size:12px;color:#888">Init...</div></div>
 <header class="hd"><a href="/" class="back">← Accueil</a><div class="logo">🚀 SEO <span>Manager V4</span></div><div></div></header>
-<div class="stats"><div class="stat"><div class="sv g" id="s1">-</div><div class="sl">✅ Complet</div></div><div class="stat"><div class="sv o" id="s2">-</div><div class="sl">⚠️ Partiel</div></div><div class="stat"><div class="sv r" id="s3">-</div><div class="sl">❌ Sans liens</div></div><div class="stat"><div class="sv" id="s4">-</div><div class="sl">Total</div></div><div class="stat"><div class="sv p" id="s5">-</div><div class="sl">Collections</div></div><div class="sp" id="s6">-%</div></div>
-<div class="ctrl"><div class="cg"><label>Rechercher</label><input type="text" id="src" placeholder="Nom, SKU..."></div><div class="cg"><label>Filtrer</label><select id="flt"><option value="all">Tous</option><option value="missing">❌ Sans liens</option><option value="partial">⚠️ Partiel</option><option value="complete">✅ Complet</option></select></div><div class="fs"><span style="font-size:11px;color:#888">Appliquer:</span><label><input type="checkbox" id="ft"> Title</label><label><input type="checkbox" id="fd"> Desc</label><label><input type="checkbox" id="fb" checked> Body</label></div><button class="btn btn-s" onclick="load()">🔄</button><button class="btn btn-p" onclick="aSel()">⚡ Sélection</button><button class="btn btn-d" onclick="aAll()">🚀 TOUT LE SITE</button><div class="si"><strong id="sc">0</strong> sélectionné(s)</div></div>
-<div class="prods" id="prods"><div class="ld"><div class="spin"></div><p>Chargement...</p></div></div>
+<div class="stats"><div class="stat"><div class="sv g" id="s1">-</div><div class="sl">✅ Complet</div></div><div class="stat"><div class="sv o" id="s2">-</div><div class="sl">⚠️ Partiel</div></div><div class="stat"><div class="sv r" id="s3">-</div><div class="sl">❌ Sans liens</div></div><div class="stat"><div class="sv" id="s4">-</div><div class="sl">Total</div></div><div class="sp" id="s5">-%</div></div>
+<div class="ctrl"><div class="cg"><input type="text" id="src" placeholder="Rechercher..."></div><div class="cg"><select id="flt"><option value="all">Tous</option><option value="missing">❌ Sans liens</option><option value="partial">⚠️ Partiel</option><option value="complete">✅ Complet</option></select></div><button class="btn btn-s" onclick="load()">🔄</button><button class="btn btn-p" onclick="aSel()">⚡ Sélection</button><button class="btn btn-d" onclick="aAll()">🚀 TOUT</button><div style="margin-left:auto;color:#888"><strong id="sc">0</strong> sél.</div></div>
+<div class="prods" id="prods"><div class="ld"><div class="spin"></div>Chargement...</div></div>
 <script>
-let P=[],C=[],sel=new Set(),curId=null;
+let P=[],C=[],sel=new Set();
+
 async function load(){
-    document.getElementById('prods').innerHTML='<div class="ld"><div class="spin"></div><p>Chargement...</p></div>';
+    document.getElementById('prods').innerHTML='<div class="ld"><div class="spin"></div>Chargement...</div>';
     try{
-        const r=await fetch('/api/products');const d=await r.json();
-        P=d.products||[];C=d.collections||[];
-        document.getElementById('s1').textContent=d.stats.complete;
-        document.getElementById('s2').textContent=d.stats.partial;
-        document.getElementById('s3').textContent=d.stats.missing;
-        document.getElementById('s4').textContent=d.stats.total;
-        document.getElementById('s5').textContent=C.length;
-        document.getElementById('s6').textContent=d.stats.percent_complete+'%';
+        // Charger produits et collections en parallèle
+        const [pRes, cRes] = await Promise.all([
+            fetch('/api/products').then(r=>r.json()),
+            fetch('/api/collections').then(r=>r.json())
+        ]);
+        P = pRes.products || [];
+        C = cRes.collections || [];
+        
+        // Calculer stats SEO côté client
+        let complete=0, partial=0, missing=0;
+        P.forEach(p => {
+            const body = p.body_html || '';
+            const hasLink = body.toLowerCase().includes('kpshoes.fr/collections/');
+            const hasDesc = body.length > 100;
+            p.has_link = hasLink;
+            p.has_desc = hasDesc;
+            p.score = (hasDesc?30:0) + (hasLink?70:0);
+            p.status = p.score>=70?'complete':p.score>=30?'partial':'missing';
+            p.collection = findCollection(p.title);
+            if(p.status==='complete') complete++;
+            else if(p.status==='partial') partial++;
+            else missing++;
+        });
+        
+        document.getElementById('s1').textContent = complete;
+        document.getElementById('s2').textContent = partial;
+        document.getElementById('s3').textContent = missing;
+        document.getElementById('s4').textContent = P.length;
+        document.getElementById('s5').textContent = P.length ? Math.round(complete/P.length*100)+'%' : '0%';
+        
         filter();
-    }catch(e){document.getElementById('prods').innerHTML='<div class="ld">❌ '+e.message+'</div>';}
+    }catch(e){
+        document.getElementById('prods').innerHTML='<div class="ld">❌ Erreur: '+e.message+'</div>';
+    }
 }
+
+function findCollection(title){
+    if(!title) return null;
+    const t = title.toLowerCase();
+    const models = [
+        ['jordan-4', ['jordan 4','aj4']],
+        ['jordan-1-high', ['jordan 1 high']],
+        ['jordan-1-low', ['jordan 1 low']],
+        ['jordan-1-mid', ['jordan 1 mid']],
+        ['adidas-samba', ['samba']],
+        ['adidas-campus', ['campus']],
+        ['adidas-gazelle', ['gazelle']],
+        ['adidas-spezial', ['spezial']],
+        ['asics-gel-1130', ['gel-1130','gel 1130']],
+        ['asics-gel-kayano', ['kayano']],
+        ['ugg-tasman', ['tasman']],
+        ['ugg-tazz', ['tazz']],
+        ['nike-dunk-low', ['dunk low']],
+        ['air-force-1', ['air force 1']],
+        ['yeezy-slide', ['yeezy slide']],
+    ];
+    const brands = [
+        ['jordan-1', ['jordan']],
+        ['adidas-1', ['adidas']],
+        ['asics-1', ['asics']],
+        ['nike', ['nike']],
+        ['ugg', ['ugg']],
+        ['new-balance', ['new balance']],
+    ];
+    const avail = C.map(c=>c.handle);
+    for(let [h,ps] of models){
+        if(avail.includes(h)){
+            for(let p of ps) if(t.includes(p)) return {handle:h, title:C.find(c=>c.handle===h).title, type:'model'};
+        }
+    }
+    for(let [h,ps] of brands){
+        if(avail.includes(h)){
+            for(let p of ps) if(t.includes(p)) return {handle:h, title:C.find(c=>c.handle===h).title, type:'brand'};
+        }
+    }
+    return null;
+}
+
 function filter(){
-    const s=document.getElementById('src').value.toLowerCase(),f=document.getElementById('flt').value;
+    const s=document.getElementById('src').value.toLowerCase();
+    const f=document.getElementById('flt').value;
     render(P.filter(p=>{
-        if(s&&!p.title.toLowerCase().includes(s)&&!(p.sku||'').toLowerCase().includes(s))return false;
-        if(f==='missing')return p.seo_status==='missing';
-        if(f==='partial')return p.seo_status==='partial';
-        if(f==='complete')return p.seo_status==='complete';
+        if(s && !p.title.toLowerCase().includes(s)) return false;
+        if(f==='missing') return p.status==='missing';
+        if(f==='partial') return p.status==='partial';
+        if(f==='complete') return p.status==='complete';
         return true;
     }));
 }
+
 function render(L){
-    const el=document.getElementById('prods');
-    if(!L.length){el.innerHTML='<div class="ld">Aucun produit</div>';return;}
-    el.innerHTML=L.map(p=>{
-        const ck=sel.has(p.id)?'on':'',sc=p.seo_score>=70?'h':p.seo_score>=30?'md':'l';
-        let cc='n',ct='⚠️ Aucune';
-        if(p.collection){cc=p.collection.match_type==='model'?'m':'b';ct=(p.collection.match_type==='model'?'✅ ':'📁 ')+p.collection.title;}
-        return '<div class="prod'+(sel.has(p.id)?' sel':'')+'"><div class="chk '+ck+'" onclick="tog('+p.id+')"></div><img class="pimg" src="'+(p.image||'')+'" onerror="this.style.background=\'#333\'"><div class="pinfo"><h3>'+esc(p.title.substring(0,45))+(p.title.length>45?'...':'')+'</h3><div class="psku">SKU: '+(p.sku||'N/A')+'</div><div class="pcol '+cc+'">'+ct+'</div></div><div class="sst"><div class="si2 '+(p.has_description?'ok':'ms')+'">'+(p.has_description?'✅':'❌')+' Description</div><div class="si2 '+(p.has_internal_link?'ok':'ms')+'">'+(p.has_internal_link?'✅':'❌')+' Lien interne</div></div><div class="scb '+sc+'">'+p.seo_score+'%</div><div class="acts"><button class="abtn v" onclick="view('+p.id+')">👁️</button><button class="abtn a" onclick="aOne('+p.id+')">⚡</button></div></div>';
+    if(!L.length){document.getElementById('prods').innerHTML='<div class="ld">Aucun produit</div>';return;}
+    document.getElementById('prods').innerHTML = L.map(p=>{
+        const ck = sel.has(p.id)?'on':'';
+        const sc = p.score>=70?'h':p.score>=30?'m':'l';
+        let col = '<span class="pcol n">⚠️ Aucune</span>';
+        if(p.collection){
+            col = '<span class="pcol '+(p.collection.type==='model'?'m':'b')+'">'+(p.collection.type==='model'?'✅':'📁')+' '+esc(p.collection.title)+'</span>';
+        }
+        const img = p.image?.src || '';
+        const sku = p.variants?.[0]?.sku || 'N/A';
+        return '<div class="prod"><div class="chk '+ck+'" onclick="tog('+p.id+')"></div><img class="pimg" src="'+img+'" onerror="this.style.background=\'#333\'"><div class="pinfo"><h3>'+esc(p.title.substring(0,40))+(p.title.length>40?'...':'')+'</h3><div class="psku">'+sku+'</div>'+col+'</div><div class="sst"><div class="si '+(p.has_desc?'ok':'ms')+'">'+(p.has_desc?'✅':'❌')+' Desc</div><div class="si '+(p.has_link?'ok':'ms')+'">'+(p.has_link?'✅':'❌')+' Lien</div></div><div class="scb '+sc+'">'+p.score+'%</div><div class="acts"><button class="a" onclick="aOne('+p.id+')">⚡</button></div></div>';
     }).join('');
 }
+
 function esc(t){return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function tog(id){sel.has(id)?sel.delete(id):sel.add(id);document.getElementById('sc').textContent=sel.size;filter();}
-function gF(){const f=[];if(document.getElementById('ft').checked)f.push('meta_title');if(document.getElementById('fd').checked)f.push('meta_description');if(document.getElementById('fb').checked)f.push('body_html');return f;}
-async function view(id){
-    curId=id;document.getElementById('mbd').innerHTML='<div class="ld"><div class="spin"></div></div>';document.getElementById('mov').classList.add('sh');
-    try{
-        const r=await fetch('/api/product/'+id+'/preview');const d=await r.json();
-        document.getElementById('mt').textContent=d.product.title;
-        let h='<p style="margin-bottom:15px"><strong>Collection:</strong> '+(d.collection?(d.collection.match_type==='model'?'✅ Modèle':'📁 Marque')+' - '+esc(d.collection.title):'<span style="color:#ff4757">⚠️ Aucune</span>')+'</p>';
-        h+='<div class="psec"><h4>Meta Title</h4><div class="pgen">'+esc(d.generated.meta_title)+'</div></div>';
-        h+='<div class="psec"><h4>Meta Description</h4><div class="pgen">'+esc(d.generated.meta_description)+'</div></div>';
-        h+='<div class="psec"><h4>Description '+(d.seo_status.has_internal_link?'<span style="color:#00ff88">✅ Lien OK</span>':'<span style="color:#ff4757">❌ Sans lien</span>')+'</h4>';
-        if(d.current_body)h+='<div class="pcur"><strong>Actuel:</strong> '+esc(d.current_body.substring(0,150))+'...</div>';
-        h+='<div class="pgen"><pre>'+esc(d.generated.body_html)+'</pre></div></div>';
-        document.getElementById('mbd').innerHTML=h;
-    }catch(e){document.getElementById('mbd').innerHTML='<div class="ld">❌ '+e.message+'</div>';}
-}
-function cMod(){document.getElementById('mov').classList.remove('sh');curId=null;}
-async function aMod(){if(!curId)return;cMod();await aOne(curId);}
+
 async function aOne(id){
-    const f=gF();if(!f.length){toast('Cochez un champ','e');return;}
     toast('Application...','s');
     try{
-        const r=await fetch('/api/seo/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:id,fields:f})});
+        const r=await fetch('/api/seo/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:id})});
         const d=await r.json();
-        if(d.success){toast('✅ SEO appliqué!','s');load();}else toast('❌ Erreur','e');
+        if(d.success){toast('✅ OK!','s');load();}else toast('❌ Erreur','e');
     }catch(e){toast('❌ '+e.message,'e');}
 }
-async function aSel(){if(!sel.size){toast('Sélectionnez des produits','e');return;}const f=gF();if(!f.length){toast('Cochez un champ','e');return;}batch(Array.from(sel),f);}
-async function aAll(){const f=gF();if(!f.length){toast('Cochez un champ','e');return;}if(!confirm('Appliquer à '+P.length+' produits?'))return;batch(P.map(p=>p.id),f);}
-async function batch(ids,f){
-    sPov();
-    try{await fetch('/api/seo/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_ids:ids,fields:f})});mon();}
-    catch(e){hPov();toast('❌ '+e.message,'e');}
+
+async function aSel(){
+    if(!sel.size){toast('Sélectionnez des produits','e');return;}
+    batch(Array.from(sel));
 }
+
+async function aAll(){
+    if(!confirm('Appliquer à '+P.length+' produits?')) return;
+    batch(P.map(p=>p.id));
+}
+
+async function batch(ids){
+    sPbar();
+    try{
+        await fetch('/api/seo/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_ids:ids})});
+        mon();
+    }catch(e){hPbar();toast('❌ '+e.message,'e');}
+}
+
 function mon(){
     const iv=setInterval(async()=>{
-        try{
-            const r=await fetch('/api/progress');const p=await r.json();
-            document.getElementById('pfl').style.width=(p.total>0?p.current/p.total*100:0)+'%';
-            document.getElementById('ptx').textContent=p.message;
-            document.getElementById('pct').textContent=p.current+'/'+p.total;
-            if(!p.running){clearInterval(iv);hPov();toast(p.message,'s');sel.clear();document.getElementById('sc').textContent='0';load();}
-        }catch(e){}
+        const r=await fetch('/api/progress').then(r=>r.json());
+        document.getElementById('pfl').style.width=(r.total?r.current/r.total*100:0)+'%';
+        document.getElementById('pct').textContent=r.current+'/'+r.total;
+        document.getElementById('ptx').textContent=r.message;
+        if(!r.running){clearInterval(iv);hPbar();toast(r.message,'s');sel.clear();document.getElementById('sc').textContent='0';load();}
     },800);
 }
-function sPov(){document.getElementById('pov').classList.add('sh');}
-function hPov(){document.getElementById('pov').classList.remove('sh');}
-function toast(m,t){document.querySelectorAll('.tst').forEach(e=>e.remove());const e=document.createElement('div');e.className='tst '+t;e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),4000);}
+
+function sPbar(){document.getElementById('pbar').classList.add('sh');}
+function hPbar(){document.getElementById('pbar').classList.remove('sh');}
+function toast(m,t){document.querySelectorAll('.tst').forEach(e=>e.remove());const e=document.createElement('div');e.className='tst '+t;e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),3000);}
+
 document.getElementById('src').addEventListener('input',filter);
 document.getElementById('flt').addEventListener('change',filter);
 load();
 </script></body></html>'''
 
+
+# ═══════════════════════════════════════════════════════════════
+# API ROUTES - SIMPLES COMME V3
+# ═══════════════════════════════════════════════════════════════
+
 @app.route('/api/products')
 def api_products():
-    products, collections = get_all_products(), get_all_collections()
-    result, stats = [], {'complete': 0, 'partial': 0, 'missing': 0, 'total': 0}
-    for p in products:
-        seo = check_seo_status(p)
-        col = find_best_collection(p.get('title', ''), collections)
-        stats['total'] += 1
-        stats[seo['status']] += 1
-        result.append({'id': p['id'], 'title': p['title'], 'handle': p['handle'], 'image': (p.get('image') or {}).get('src'), 'sku': extract_sku(p), 'collection': col, 'seo_score': seo['score'], 'seo_status': seo['status'], 'has_description': seo['has_description'], 'has_internal_link': seo['has_internal_link']})
-    stats['percent_complete'] = round(stats['complete'] / stats['total'] * 100, 1) if stats['total'] else 0
-    return jsonify({'products': result, 'collections': [{'handle': c['handle'], 'title': c['title']} for c in collections], 'stats': stats})
+    """Retourne les produits BRUTS comme V3"""
+    products = get_all_products()
+    return jsonify({'products': products})
 
-@app.route('/api/product/<int:pid>/preview')
-def api_preview(pid):
-    r = shopify_request(f'products/{pid}.json')
-    if not r: return jsonify({'error': 'Not found'}), 404
-    p = r['product']
-    cols = get_all_collections()
-    col = find_best_collection(p.get('title', ''), cols)
-    seo = check_seo_status(p)
-    return jsonify({'product': {'id': p['id'], 'title': p['title'], 'sku': extract_sku(p)}, 'collection': col, 'seo_status': seo, 'current_body': strip_html(p.get('body_html', ''))[:500], 'generated': {'meta_title': generate_meta_title(p), 'meta_description': generate_meta_description(p), 'body_html': generate_description_ai(p, col)}})
 
-@app.route('/api/seo/apply', methods=['POST'])
-def api_apply():
-    data = request.json
-    pid, fields = data.get('product_id'), data.get('fields', ['body_html'])
-    r = shopify_request(f'products/{pid}.json')
-    if not r: return jsonify({'error': 'Not found'}), 404
-    p = r['product']
-    col = find_best_collection(p.get('title', ''), get_all_collections())
-    updates = {}
-    if 'meta_title' in fields: updates['meta_title'] = generate_meta_title(p)
-    if 'meta_description' in fields: updates['meta_description'] = generate_meta_description(p)
-    if 'body_html' in fields: updates['body_html'] = generate_description_ai(p, col)
-    return jsonify({'success': update_product_seo(pid, updates), 'collection': col})
+@app.route('/api/collections')
+def api_collections():
+    """Retourne les collections"""
+    collections = get_all_collections()
+    return jsonify({'collections': collections})
 
-@app.route('/api/seo/batch', methods=['POST'])
-def api_batch():
-    global task_progress
-    data = request.json
-    pids, fields = data.get('product_ids', []), data.get('fields', ['body_html'])
-    def process():
-        global task_progress
-        task_progress = {'running': True, 'current': 0, 'total': len(pids), 'message': 'Chargement...', 'success_count': 0, 'error_count': 0}
-        cols = get_all_collections(True)
-        for i, pid in enumerate(pids):
-            task_progress['current'] = i + 1
-            r = shopify_request(f'products/{pid}.json')
-            if r and 'product' in r:
-                p = r['product']
-                task_progress['message'] = f'#{i+1}/{len(pids)} {p.get("title","")[:30]}...'
-                col = find_best_collection(p.get('title', ''), cols)
-                updates = {}
-                if 'meta_title' in fields: updates['meta_title'] = generate_meta_title(p)
-                if 'meta_description' in fields: updates['meta_description'] = generate_meta_description(p)
-                if 'body_html' in fields: updates['body_html'] = generate_description_ai(p, col)
-                if updates and update_product_seo(pid, updates): task_progress['success_count'] += 1
-                else: task_progress['error_count'] += 1
-            else: task_progress['error_count'] += 1
-            time.sleep(1.0)
-        task_progress['running'] = False
-        task_progress['message'] = f"✅ Terminé! {task_progress['success_count']} OK, {task_progress['error_count']} erreurs"
-    Thread(target=process, daemon=True).start()
-    return jsonify({'status': 'started', 'total': len(pids)})
 
 @app.route('/api/progress')
 def api_progress():
     return jsonify(task_progress)
 
-@app.route('/api/collections')
-def api_collections():
-    c = get_all_collections(True)
-    return jsonify({'collections': c, 'count': len(c)})
+
+@app.route('/api/seo/apply', methods=['POST'])
+def api_apply_seo():
+    """Applique le SEO à un produit"""
+    data = request.json
+    product_id = data.get('product_id')
+    
+    result = shopify_request(f'products/{product_id}.json')
+    if not result or 'product' not in result:
+        return jsonify({'error': 'Not found'}), 404
+    
+    product = result['product']
+    collections = get_all_collections()
+    collection = find_best_collection(product.get('title', ''), collections)
+    
+    updates = {
+        'meta_title': generate_meta_title(product),
+        'meta_description': generate_meta_description(product),
+        'body_html': generate_description(product, collection)
+    }
+    
+    success = update_product_seo(product_id, updates)
+    return jsonify({'success': success, 'collection': collection})
+
+
+@app.route('/api/seo/batch', methods=['POST'])
+def api_batch_seo():
+    """Applique le SEO en batch"""
+    global task_progress
+    
+    data = request.json
+    product_ids = data.get('product_ids', [])
+    
+    def process():
+        global task_progress
+        task_progress = {
+            'running': True,
+            'current': 0,
+            'total': len(product_ids),
+            'message': 'Démarrage...',
+            'type': 'seo'
+        }
+        
+        collections = get_all_collections()
+        
+        for i, pid in enumerate(product_ids):
+            task_progress['current'] = i + 1
+            
+            result = shopify_request(f'products/{pid}.json')
+            if result and 'product' in result:
+                product = result['product']
+                task_progress['message'] = f'#{i+1} {product.get("title", "")[:30]}...'
+                
+                collection = find_best_collection(product.get('title', ''), collections)
+                
+                updates = {
+                    'meta_title': generate_meta_title(product),
+                    'meta_description': generate_meta_description(product),
+                    'body_html': generate_description(product, collection)
+                }
+                
+                update_product_seo(pid, updates)
+            
+            time.sleep(1.0)
+        
+        task_progress['running'] = False
+        task_progress['message'] = f'✅ Terminé! {len(product_ids)} produits'
+    
+    Thread(target=process, daemon=True).start()
+    return jsonify({'status': 'started', 'total': len(product_ids)})
+
 
 if __name__ == '__main__':
-    print(f"[V4] Shop: {SHOP}, Token: {'OK' if ACCESS_TOKEN else 'MISSING'}")
+    print(f"[V4] Shop: {SHOP}")
+    print(f"[V4] Token: {'SET' if ACCESS_TOKEN else 'MISSING!'}")
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
