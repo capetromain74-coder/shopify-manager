@@ -99,7 +99,12 @@ def home():
 
 @app.route('/seo')
 def seo():
-    return '''<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SEO</title>
+    return '''<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SEO Manager</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:system-ui;background:#0a0a0f;color:#fff}
@@ -153,17 +158,35 @@ button{padding:7px 14px;border:none;border-radius:4px;cursor:pointer;font-weight
 .toast{position:fixed;bottom:15px;right:15px;padding:8px 14px;border-radius:5px;font-size:11px;z-index:100}
 .toast.s{background:#0f8;color:#000}
 .toast.e{background:#f55}
-</style></head><body>
-<div class="bar" id="bar"><div style="display:flex;justify-content:space-between"><span id="bm">...</span><span id="bc">0/0</span></div><div class="tr"><div class="fl" id="bf"></div></div></div>
+</style>
+</head>
+<body>
+<div class="bar" id="bar">
+<div style="display:flex;justify-content:space-between"><span id="bm">...</span><span id="bc">0/0</span></div>
+<div class="tr"><div class="fl" id="bf"></div></div>
+</div>
 <div class="hd"><a href="/">Retour</a><b>SEO V4</b><span></span></div>
-<div class="stats"><div class="st"><div class="v g" id="s1">-</div><div class="l">OK</div></div><div class="st"><div class="v o" id="s2">-</div><div class="l">PARTIEL</div></div><div class="st"><div class="v r" id="s3">-</div><div class="l">MANQUE</div></div><div class="st"><div class="v" id="s4">-</div><div class="l">TOTAL</div></div><div class="pct" id="pct">-</div></div>
-<div class="ctrl"><input id="q" placeholder="Rechercher..."><select id="f"><option value="">Tous</option><option value="missing">Sans lien</option><option value="partial">Partiel</option><option value="complete">Complet</option></select><button class="bs" onclick="reload()">Actualiser</button><button class="bg" onclick="doSel()">Selection</button><button class="br" onclick="doAll()">TOUT</button><div class="info"><b id="sc">0</b> sel.</div></div>
+<div class="stats">
+<div class="st"><div class="v g" id="s1">-</div><div class="l">OK</div></div>
+<div class="st"><div class="v o" id="s2">-</div><div class="l">PARTIEL</div></div>
+<div class="st"><div class="v r" id="s3">-</div><div class="l">MANQUE</div></div>
+<div class="st"><div class="v" id="s4">-</div><div class="l">TOTAL</div></div>
+<div class="pct" id="pct">-</div>
+</div>
+<div class="ctrl">
+<input id="q" placeholder="Rechercher...">
+<select id="f"><option value="">Tous</option><option value="missing">Sans lien</option><option value="partial">Partiel</option><option value="complete">Complet</option></select>
+<button class="bs" onclick="reload()">Actualiser</button>
+<button class="bg" onclick="doSel()">Selection</button>
+<button class="br" onclick="doAll()">TOUT</button>
+<div class="info"><b id="sc">0</b> sel.</div>
+</div>
 <div class="msg" id="msg"></div>
 <div id="list"><div class="ld"><div class="sp"></div>Chargement...</div></div>
 <script>
 var P=[];
 var C=[];
-var sel=new Set();
+var sel={};
 var sinceId=0;
 var loading=false;
 
@@ -212,24 +235,25 @@ function findC(t){
     t=t.toLowerCase();
     var M=[["jordan-4",["jordan 4"]],["jordan-1-high",["jordan 1 high"]],["jordan-1-low",["jordan 1 low"]],["adidas-samba",["samba"]],["adidas-campus",["campus"]],["adidas-gazelle",["gazelle"]],["asics-gel-1130",["gel-1130"]],["ugg-tasman",["tasman"]],["ugg-tazz",["tazz"]],["nike-dunk-low",["dunk low"]],["air-force-1",["air force 1"]]];
     var B=[["jordan-1",["jordan"]],["adidas-1",["adidas"]],["asics-1",["asics"]],["nike",["nike"]],["ugg",["ugg"]],["new-balance",["new balance"]]];
-    for(var i=0;i<M.length;i++){
-        var h=M[i][0];
-        var ps=M[i][1];
-        var c=null;
-        for(var j=0;j<C.length;j++){if(C[j].handle===h){c=C[j];break;}}
+    var i,j,k,h,ps,c;
+    for(i=0;i<M.length;i++){
+        h=M[i][0];
+        ps=M[i][1];
+        c=null;
+        for(j=0;j<C.length;j++){if(C[j].handle===h){c=C[j];break;}}
         if(c){
-            for(var k=0;k<ps.length;k++){
+            for(k=0;k<ps.length;k++){
                 if(t.indexOf(ps[k])>=0) return {h:h,n:c.title,t:"m"};
             }
         }
     }
-    for(var i=0;i<B.length;i++){
-        var h=B[i][0];
-        var ps=B[i][1];
-        var c=null;
-        for(var j=0;j<C.length;j++){if(C[j].handle===h){c=C[j];break;}}
+    for(i=0;i<B.length;i++){
+        h=B[i][0];
+        ps=B[i][1];
+        c=null;
+        for(j=0;j<C.length;j++){if(C[j].handle===h){c=C[j];break;}}
         if(c){
-            for(var k=0;k<ps.length;k++){
+            for(k=0;k<ps.length;k++){
                 if(t.indexOf(ps[k])>=0) return {h:h,n:c.title,t:"b"};
             }
         }
@@ -238,8 +262,8 @@ function findC(t){
 }
 
 function updateStats(){
-    var c1=0,c2=0,c3=0;
-    for(var i=0;i<P.length;i++){
+    var c1=0,c2=0,c3=0,i;
+    for(i=0;i<P.length;i++){
         if(P[i]._st==="complete") c1++;
         else if(P[i]._st==="partial") c2++;
         else c3++;
@@ -254,15 +278,15 @@ function updateStats(){
 function showMsg(t){
     var m=document.getElementById("msg");
     m.textContent=t;
-    if(t){m.classList.add("on");}else{m.classList.remove("on");}
+    if(t){m.className="msg on";}else{m.className="msg";}
 }
 
 function filter(){
     var q=document.getElementById("q").value.toLowerCase();
     var f=document.getElementById("f").value;
-    var L=[];
-    for(var i=0;i<P.length;i++){
-        var p=P[i];
+    var L=[],i,p;
+    for(i=0;i<P.length;i++){
+        p=P[i];
         if(q && p.title.toLowerCase().indexOf(q)<0) continue;
         if(f && p._st!==f) continue;
         L.push(p);
@@ -271,53 +295,85 @@ function filter(){
 }
 
 function render(L){
+    var el=document.getElementById("list");
     if(!L.length && !loading){
-        document.getElementById("list").innerHTML="<div class='ld'>Aucun produit</div>";
+        el.innerHTML="<div class='ld'>Aucun produit</div>";
         return;
     }
     var html="";
     var max=Math.min(L.length,200);
-    for(var i=0;i<max;i++){
-        var p=L[i];
-        var ck=sel.has(p.id)?"on":"";
-        var sc=p._sc>=70?"h":p._sc>=30?"m":"l";
-        var co="<span class='co n'>-</span>";
+    var i,p,ck,sc,co,img,sku;
+    for(i=0;i<max;i++){
+        p=L[i];
+        ck=sel[p.id]?"on":"";
+        sc=p._sc>=70?"h":p._sc>=30?"m":"l";
+        co="<span class='co n'>-</span>";
         if(p._co){
             co="<span class='co "+(p._co.t==="m"?"g":"p")+"'>"+(p._co.t==="m"?"V":"O")+" "+esc(p._co.n)+"</span>";
         }
-        var img=(p.image && p.image.src)?p.image.src:"";
-        var sku=(p.variants && p.variants[0] && p.variants[0].sku)?p.variants[0].sku:"-";
+        img=(p.image && p.image.src)?p.image.src:"";
+        sku=(p.variants && p.variants[0] && p.variants[0].sku)?p.variants[0].sku:"-";
         html+="<div class='pr'>";
-        html+="<div class='ck "+ck+"' onclick='tog("+p.id+")'></div>";
-        html+="<img class='im' src='"+img+"' onerror=\"this.src=''\">";
+        html+="<div class='ck "+ck+"' data-id='"+p.id+"'></div>";
+        html+="<img class='im' src='"+img+"'>";
         html+="<div class='ti'><h4>"+esc(p.title)+"</h4><div class='sk'>"+sku+"</div>"+co+"</div>";
         html+="<div class='se'><div class='"+(p._ds?"ok":"no")+"'>"+(p._ds?"V":"X")+" Desc</div><div class='"+(p._lk?"ok":"no")+"'>"+(p._lk?"V":"X")+" Lien</div></div>";
         html+="<div class='sc "+sc+"'>"+p._sc+"%</div>";
-        html+="<div><button class='bg' onclick='doOne("+p.id+")'>GO</button></div>";
+        html+="<div><button class='bg' data-pid='"+p.id+"'>GO</button></div>";
         html+="</div>";
     }
     if(L.length>200){
-        html+="<div class='ld'>200 affiches. Utilisez recherche.</div>";
+        html+="<div class='ld'>200 affiches max</div>";
     }
-    document.getElementById("list").innerHTML=html;
+    el.innerHTML=html;
+    
+    // Add click handlers
+    var cks=document.querySelectorAll(".ck");
+    for(i=0;i<cks.length;i++){
+        cks[i].onclick=function(){
+            var id=parseInt(this.getAttribute("data-id"));
+            tog(id);
+        };
+    }
+    var btns=document.querySelectorAll(".pr button");
+    for(i=0;i<btns.length;i++){
+        btns[i].onclick=function(){
+            var id=parseInt(this.getAttribute("data-pid"));
+            doOne(id);
+        };
+    }
 }
 
 function esc(s){
     if(!s) return "";
-    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
 function tog(id){
-    if(sel.has(id)){sel.delete(id);}else{sel.add(id);}
-    document.getElementById("sc").textContent=sel.size;
+    if(sel[id]){delete sel[id];}else{sel[id]=true;}
+    var cnt=0;
+    for(var k in sel){if(sel.hasOwnProperty(k))cnt++;}
+    document.getElementById("sc").textContent=cnt;
     filter();
+}
+
+function getSelCount(){
+    var cnt=0;
+    for(var k in sel){if(sel.hasOwnProperty(k))cnt++;}
+    return cnt;
+}
+
+function getSelIds(){
+    var ids=[];
+    for(var k in sel){if(sel.hasOwnProperty(k))ids.push(parseInt(k));}
+    return ids;
 }
 
 function reload(){
     P=[];
     C=[];
     sinceId=0;
-    sel.clear();
+    sel={};
     document.getElementById("sc").textContent="0";
     document.getElementById("list").innerHTML="<div class='ld'><div class='sp'></div>Chargement...</div>";
     loadMore();
@@ -349,40 +405,43 @@ function doOne(id){
 }
 
 function doSel(){
-    if(!sel.size){toast("Selectionnez","e");return;}
-    var ids=Array.from(sel);
+    var ids=getSelIds();
+    if(!ids.length){toast("Selectionnez","e");return;}
     batch(ids);
 }
 
 function doAll(){
     if(!confirm("Appliquer a "+P.length+" produits?")) return;
-    var ids=[];
-    for(var i=0;i<P.length;i++){ids.push(P[i].id);}
+    var ids=[],i;
+    for(i=0;i<P.length;i++){ids.push(P[i].id);}
     batch(ids);
 }
 
 function batch(ids){
-    document.getElementById("bar").classList.add("on");
+    document.getElementById("bar").className="bar on";
     fetch("/api/seo/batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_ids:ids})})
         .then(function(){
-            var iv=setInterval(function(){
-                fetch("/api/progress")
-                    .then(function(r){return r.json();})
-                    .then(function(r){
-                        var pct=r.total?Math.round(r.current/r.total*100):0;
-                        document.getElementById("bf").style.width=pct+"%";
-                        document.getElementById("bc").textContent=r.current+"/"+r.total;
-                        document.getElementById("bm").textContent=r.message||"...";
-                        if(!r.running){
-                            clearInterval(iv);
-                            document.getElementById("bar").classList.remove("on");
-                            toast("Termine!","s");
-                            sel.clear();
-                            document.getElementById("sc").textContent="0";
-                            reload();
-                        }
-                    });
-            },1000);
+            checkProgress();
+        });
+}
+
+function checkProgress(){
+    fetch("/api/progress")
+        .then(function(r){return r.json();})
+        .then(function(r){
+            var pct=r.total?Math.round(r.current/r.total*100):0;
+            document.getElementById("bf").style.width=pct+"%";
+            document.getElementById("bc").textContent=r.current+"/"+r.total;
+            document.getElementById("bm").textContent=r.message||"...";
+            if(!r.running){
+                document.getElementById("bar").className="bar";
+                toast("Termine!","s");
+                sel={};
+                document.getElementById("sc").textContent="0";
+                reload();
+            }else{
+                setTimeout(checkProgress,1000);
+            }
         });
 }
 
@@ -391,13 +450,15 @@ function toast(m,t){
     e.className="toast "+t;
     e.textContent=m;
     document.body.appendChild(e);
-    setTimeout(function(){e.remove();},2000);
+    setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},2000);
 }
 
-document.getElementById("q").addEventListener("input",filter);
-document.getElementById("f").addEventListener("change",filter);
+document.getElementById("q").oninput=filter;
+document.getElementById("f").onchange=filter;
 loadMore();
-</script></body></html>'''
+</script>
+</body>
+</html>'''
 
 
 @app.route('/api/products')
