@@ -1,6 +1,7 @@
 """
 Shopify Manager V4 - SEO Pro Edition
 Descriptions style WetTheNew / LimitedResell
+Avec nom EXACT du produit et liens collections dynamiques
 """
 
 from flask import Flask, jsonify, request
@@ -36,174 +37,252 @@ def shopify_request(endpoint, method='GET', data=None):
 
 
 def get_collections():
+    """Récupère TOUTES les collections depuis Shopify"""
     global _collections_cache
     if _collections_cache: return _collections_cache
     cols = []
     for t in ['custom_collections', 'smart_collections']:
         r = shopify_request(f'{t}.json?limit=250')
         if r and t in r:
-            cols.extend([{'id': c['id'], 'handle': c['handle'], 'title': c['title']} for c in r[t]])
+            for c in r[t]:
+                cols.append({
+                    'id': c['id'], 
+                    'handle': c['handle'], 
+                    'title': c['title']
+                })
     _collections_cache = cols
+    print(f"[Collections] {len(cols)} collections chargees")
+    for c in cols:
+        print(f"  - {c['handle']}: {c['title']}")
     return cols
 
 
-def find_col(title, cols):
-    if not title: return None
+# ══════════════════════════════════════════════════════════════
+# MAPPING COLLECTIONS - MODÈLES (priorité 1)
+# ══════════════════════════════════════════════════════════════
+MODEL_KEYWORDS = {
+    # Jordan
+    'jordan-4': ['jordan 4', 'aj4', 'air jordan 4'],
+    'jordan-1-high': ['jordan 1 high', 'jordan 1 retro high', 'aj1 high'],
+    'jordan-1-low': ['jordan 1 low', 'aj1 low'],
+    'jordan-1-mid': ['jordan 1 mid', 'aj1 mid'],
+    'jordan-3': ['jordan 3', 'aj3'],
+    'jordan-5': ['jordan 5', 'aj5'],
+    'jordan-6': ['jordan 6', 'aj6'],
+    'jordan-11': ['jordan 11', 'aj11'],
+    
+    # Nike
+    'nike-dunk-low': ['dunk low', 'sb dunk low'],
+    'nike-dunk-high': ['dunk high', 'sb dunk high'],
+    'nike-dunk': ['dunk', 'sb dunk'],
+    'air-force-1': ['air force 1', 'af1', 'air force one'],
+    'air-max-1': ['air max 1', 'airmax 1'],
+    'air-max-90': ['air max 90', 'airmax 90'],
+    'air-max-95': ['air max 95', 'airmax 95'],
+    'air-max-97': ['air max 97', 'airmax 97'],
+    'air-max-plus': ['air max plus', 'tn', 'tuned'],
+    'nike-vomero': ['vomero'],
+    'nike-v2k': ['v2k'],
+    
+    # Adidas
+    'adidas-samba': ['samba'],
+    'adidas-campus': ['campus'],
+    'adidas-gazelle': ['gazelle'],
+    'adidas-spezial': ['spezial', 'handball spezial'],
+    'adidas-forum': ['forum'],
+    'adidas-superstar': ['superstar'],
+    'adidas-stan-smith': ['stan smith'],
+    
+    # Yeezy
+    'yeezy-slide': ['yeezy slide'],
+    'yeezy-350': ['yeezy 350', '350 v2', 'boost 350'],
+    'yeezy-500': ['yeezy 500'],
+    'yeezy-700': ['yeezy 700'],
+    'yeezy-foam': ['foam runner', 'foam rnnr'],
+    
+    # New Balance
+    'new-balance-550': ['new balance 550', 'nb 550', 'bb550', '550'],
+    'new-balance-530': ['new balance 530', 'nb 530', 'mr530'],
+    'new-balance-2002r': ['2002r', 'new balance 2002'],
+    'new-balance-9060': ['9060', 'new balance 9060'],
+    'new-balance-1906': ['1906', 'new balance 1906'],
+    
+    # Asics
+    'asics-gel-1130': ['gel-1130', 'gel 1130'],
+    'asics-gel-kayano': ['gel kayano', 'kayano 14', 'gel-kayano'],
+    'asics-gel-nyc': ['gel-nyc', 'gel nyc'],
+    
+    # UGG
+    'ugg-tasman': ['tasman'],
+    'ugg-tazz': ['tazz'],
+    'ugg-ultra-mini': ['ultra mini'],
+    
+    # Autres modèles
+    'birkenstock-boston': ['birkenstock boston', 'boston clog'],
+    'crocs-classic': ['crocs classic'],
+    'salomon-xt-6': ['xt-6', 'xt6'],
+    'salomon-acs': ['acs pro'],
+}
+
+# ══════════════════════════════════════════════════════════════
+# MAPPING COLLECTIONS - MARQUES (priorité 2 - fallback)
+# ══════════════════════════════════════════════════════════════
+BRAND_KEYWORDS = {
+    'jordan-1': ['jordan', 'air jordan'],
+    'nike': ['nike'],
+    'adidas-1': ['adidas'],
+    'adidas': ['adidas'],
+    'new-balance': ['new balance'],
+    'asics-1': ['asics'],
+    'asics': ['asics'],
+    'ugg': ['ugg'],
+    'puma': ['puma'],
+    'reebok': ['reebok'],
+    'converse': ['converse', 'chuck taylor'],
+    'vans': ['vans'],
+    'crocs': ['crocs'],
+    'birkenstock-1': ['birkenstock'],
+    'birkenstock': ['birkenstock'],
+    'salomon': ['salomon'],
+    'hoka': ['hoka'],
+    'on-running': ['on running', 'on cloud'],
+    'saucony': ['saucony'],
+}
+
+# Collections à exclure (pas de lien vers celles-ci)
+EXCLUDED_HANDLES = [
+    'tout-nos-modeles', 'all', 'best-seller', 'moins-de-150', 
+    'livraison-48h', 'pour-enfants', 'sport', 'autre-marques',
+    'frontpage', 'tous-nos-vetements'
+]
+
+
+def find_collection(title, collections):
+    """
+    Trouve la meilleure collection pour un produit.
+    Priorité 1: Modèle (jordan-4, nike-dunk-low, etc.)
+    Priorité 2: Marque (jordan-1, adidas, crocs, etc.)
+    """
+    if not title or not collections:
+        return None
+    
     t = title.lower()
-    MODEL_PATTERNS = [
-        ('jordan-4', ['jordan 4', 'aj4']), 
-        ('jordan-1-high', ['jordan 1 high', 'jordan 1 retro high']), 
-        ('jordan-1-low', ['jordan 1 low']),
-        ('jordan-1-mid', ['jordan 1 mid']),
-        ('adidas-samba', ['samba']), 
-        ('adidas-campus', ['campus']), 
-        ('adidas-gazelle', ['gazelle']),
-        ('adidas-spezial', ['spezial', 'handball spezial']),
-        ('adidas-forum', ['forum']),
-        ('asics-gel-1130', ['gel-1130', 'gel 1130']),
-        ('asics-gel-kayano', ['gel kayano', 'kayano 14']),
-        ('asics-gel-nyc', ['gel-nyc', 'gel nyc']),
-        ('ugg-tasman', ['tasman']), 
-        ('ugg-tazz', ['tazz']),
-        ('nike-dunk-low', ['dunk low']),
-        ('nike-dunk-high', ['dunk high']),
-        ('air-force-1', ['air force 1', 'af1']),
-        ('air-max-1', ['air max 1']),
-        ('air-max-90', ['air max 90']),
-        ('air-max-95', ['air max 95']),
-        ('air-max-97', ['air max 97']),
-        ('new-balance-550', ['nb 550', 'new balance 550', '550']),
-        ('new-balance-530', ['nb 530', 'new balance 530']),
-        ('new-balance-2002r', ['2002r']),
-        ('new-balance-9060', ['9060']),
-        ('yeezy-slide', ['yeezy slide']),
-        ('yeezy-350', ['yeezy 350', '350 v2']),
-        ('yeezy-500', ['yeezy 500']),
-        ('yeezy-700', ['yeezy 700']),
-        ('yeezy-foam', ['foam runner', 'foam rnnr']),
-    ]
-    BRAND_PATTERNS = [
-        ('jordan-1', ['jordan', 'air jordan']), 
-        ('adidas-1', ['adidas']),
-        ('asics-1', ['asics']), 
-        ('nike', ['nike']),
-        ('new-balance', ['new balance']), 
-        ('ugg', ['ugg']),
-        ('puma', ['puma']),
-        ('reebok', ['reebok']),
-        ('converse', ['converse', 'chuck taylor']),
-        ('vans', ['vans']),
-    ]
-    for h, ps in MODEL_PATTERNS:
-        c = next((x for x in cols if x['handle'] == h), None)
-        if c:
-            for p in ps:
-                if p in t: return {'handle': h, 'title': c['title'], 'type': 'model'}
-    for h, ps in BRAND_PATTERNS:
-        c = next((x for x in cols if x['handle'] == h), None)
-        if c:
-            for p in ps:
-                if p in t: return {'handle': h, 'title': c['title'], 'type': 'brand'}
+    
+    # Liste des handles disponibles (exclure les génériques)
+    available_handles = [c['handle'] for c in collections if c['handle'] not in EXCLUDED_HANDLES]
+    
+    # PRIORITÉ 1: Chercher un modèle
+    for handle, keywords in MODEL_KEYWORDS.items():
+        if handle in available_handles:
+            for kw in keywords:
+                if kw in t:
+                    col = next((c for c in collections if c['handle'] == handle), None)
+                    if col:
+                        return {
+                            'handle': col['handle'],
+                            'title': col['title'],
+                            'url': f"https://{SITE_DOMAIN}/collections/{col['handle']}",
+                            'type': 'model'
+                        }
+    
+    # PRIORITÉ 2: Chercher une marque
+    for handle, keywords in BRAND_KEYWORDS.items():
+        if handle in available_handles:
+            for kw in keywords:
+                if kw in t:
+                    col = next((c for c in collections if c['handle'] == handle), None)
+                    if col:
+                        return {
+                            'handle': col['handle'],
+                            'title': col['title'],
+                            'url': f"https://{SITE_DOMAIN}/collections/{col['handle']}",
+                            'type': 'brand'
+                        }
+    
     return None
 
 
 # ══════════════════════════════════════════════════════════════
-# EXTRACTION INTELLIGENTE DES INFOS PRODUIT
+# EXTRACTION INFOS PRODUIT
 # ══════════════════════════════════════════════════════════════
 
 def extract_brand(title):
-    """Extrait la marque depuis le titre (PAS le vendor Shopify)"""
+    """Extrait la marque depuis le titre"""
     t = title.lower()
-    brands = [
-        ('Nike', ['nike', 'dunk', 'air force', 'air max', 'air jordan', 'jordan']),
-        ('Adidas', ['adidas', 'yeezy', 'samba', 'campus', 'gazelle', 'spezial', 'forum']),
-        ('New Balance', ['new balance', 'nb 550', 'nb 530']),
-        ('Asics', ['asics', 'gel-']),
-        ('UGG', ['ugg', 'tasman', 'tazz']),
-        ('Puma', ['puma', 'speedcat']),
-        ('Converse', ['converse', 'chuck taylor', 'chuck 70']),
-        ('Vans', ['vans', 'old skool', 'sk8-hi']),
-        ('Reebok', ['reebok', 'club c']),
-        ('Birkenstock', ['birkenstock', 'boston']),
-        ('Salomon', ['salomon', 'xt-6', 'acs']),
-        ('On Running', ['on running', 'cloudmonster']),
-        ('Hoka', ['hoka', 'bondi', 'clifton']),
-        ('Crocs', ['crocs']),
-    ]
-    # Jordan en premier si présent
-    if 'jordan' in t or 'air jordan' in t:
+    
+    # Jordan en premier
+    if 'jordan' in t:
         return 'Jordan'
-    for brand, patterns in brands:
-        for p in patterns:
-            if p in t:
+    
+    brands = [
+        ('Nike', ['nike', 'dunk', 'air force', 'air max']),
+        ('Adidas', ['adidas', 'yeezy', 'samba', 'campus', 'gazelle', 'spezial', 'forum']),
+        ('New Balance', ['new balance']),
+        ('Asics', ['asics', 'gel-']),
+        ('UGG', ['ugg']),
+        ('Puma', ['puma']),
+        ('Converse', ['converse']),
+        ('Vans', ['vans']),
+        ('Reebok', ['reebok']),
+        ('Crocs', ['crocs']),
+        ('Birkenstock', ['birkenstock']),
+        ('Salomon', ['salomon']),
+        ('Hoka', ['hoka']),
+        ('On Running', ['on running', 'on cloud']),
+        ('Saucony', ['saucony']),
+    ]
+    
+    for brand, keywords in brands:
+        for kw in keywords:
+            if kw in t:
                 return brand
+    
     return 'Sneakers'
 
 
 def extract_model(title):
-    """Extrait le modèle précis"""
+    """Extrait le modèle depuis le titre"""
     t = title.lower()
+    
     models = [
-        ('Air Jordan 4 Retro', ['jordan 4', 'aj4']),
-        ('Air Jordan 1 Retro High OG', ['jordan 1 high', 'jordan 1 retro high']),
+        ('Air Jordan 4', ['jordan 4']),
+        ('Air Jordan 1 High', ['jordan 1 high', 'jordan 1 retro high']),
         ('Air Jordan 1 Low', ['jordan 1 low']),
         ('Air Jordan 1 Mid', ['jordan 1 mid']),
         ('Nike Dunk Low', ['dunk low']),
         ('Nike Dunk High', ['dunk high']),
-        ('Nike Air Force 1', ['air force 1', 'af1']),
+        ('Nike Air Force 1', ['air force 1']),
         ('Nike Air Max 1', ['air max 1']),
         ('Nike Air Max 90', ['air max 90']),
-        ('Adidas Samba OG', ['samba og', 'samba']),
-        ('Adidas Campus 00s', ['campus 00s', 'campus']),
+        ('Nike Air Max 95', ['air max 95']),
+        ('Nike Air Max Plus', ['air max plus', ' tn ']),
+        ('Adidas Samba', ['samba']),
+        ('Adidas Campus', ['campus']),
         ('Adidas Gazelle', ['gazelle']),
-        ('Adidas Handball Spezial', ['spezial', 'handball spezial']),
-        ('Adidas Forum Low', ['forum low', 'forum']),
+        ('Adidas Spezial', ['spezial']),
         ('Yeezy Slide', ['yeezy slide']),
-        ('Yeezy Boost 350 V2', ['yeezy 350', '350 v2']),
-        ('Yeezy 500', ['yeezy 500']),
-        ('Yeezy Foam Runner', ['foam runner', 'foam rnnr']),
-        ('New Balance 550', ['new balance 550', 'nb 550', 'bb550']),
-        ('New Balance 530', ['new balance 530', 'nb 530']),
+        ('Yeezy 350', ['yeezy 350', '350 v2']),
+        ('New Balance 550', ['550']),
+        ('New Balance 530', ['530']),
         ('New Balance 2002R', ['2002r']),
-        ('New Balance 9060', ['9060']),
         ('Asics Gel-1130', ['gel-1130', 'gel 1130']),
-        ('Asics Gel-Kayano 14', ['gel kayano', 'kayano 14']),
-        ('Asics Gel-NYC', ['gel-nyc', 'gel nyc']),
+        ('Asics Gel-Kayano', ['kayano']),
         ('UGG Tasman', ['tasman']),
         ('UGG Tazz', ['tazz']),
+        ('Crocs', ['crocs']),
     ]
-    for model, patterns in models:
-        for p in patterns:
-            if p in t:
+    
+    for model, keywords in models:
+        for kw in keywords:
+            if kw in t:
                 return model
+    
     return extract_brand(title)
 
 
-def extract_colorway(title):
-    """Extrait le colorway depuis le titre"""
-    # Entre parenthèses
-    match = re.search(r'\(([^)]+)\)', title)
-    if match:
-        return match.group(1)
-    # Après le modèle, souvent après un tiret ou espace
-    parts = title.split(' ')
-    # Chercher les mots de couleur
-    colors = ['black', 'white', 'red', 'blue', 'green', 'grey', 'gray', 'brown', 'pink', 'purple', 'orange', 'yellow', 'navy', 'beige', 'cream', 'gold', 'silver', 'noir', 'blanc', 'gris']
-    found = []
-    for p in parts:
-        if p.lower() in colors:
-            found.append(p)
-    if found:
-        return ' '.join(found)
-    return ''
-
-
 def extract_sku(product):
-    """Extrait le SKU"""
     if product.get('variants') and len(product['variants']) > 0:
-        sku = product['variants'][0].get('sku', '')
-        if sku:
-            return sku
+        return product['variants'][0].get('sku', '')
     return ''
 
 
@@ -212,112 +291,100 @@ def extract_sku(product):
 # ══════════════════════════════════════════════════════════════
 
 MODEL_DESCRIPTIONS = {
-    'Air Jordan 4 Retro': """La Air Jordan 4 est l'une des silhouettes les plus emblématiques de la ligne Jordan. Conçue par Tinker Hatfield en 1989, elle a été rendue célèbre par Michael Jordan lors des playoffs NBA. Son design reconnaissable se distingue par ses ailes en mesh sur les côtés, sa languette en plastique et ses lacets à ailettes. Un modèle qui a marqué l'histoire du basketball et de la culture streetwear.""",
+    'Air Jordan 4': """Conçue par Tinker Hatfield en 1989, la Air Jordan 4 est l'une des silhouettes les plus emblématiques de la ligne Jordan. Rendue célèbre par Michael Jordan lors des playoffs NBA, elle se distingue par ses ailes en mesh, sa languette en plastique et ses lacets à ailettes. Un modèle légendaire qui a marqué l'histoire du basketball et de la culture streetwear.""",
     
-    'Air Jordan 1 Retro High OG': """La Air Jordan 1 est la sneaker qui a tout commencé. Créée en 1985 par Peter Moore pour Michael Jordan, elle a révolutionné l'industrie de la chaussure de sport. Avec son col haut caractéristique et son design intemporel, la AJ1 High OG reste aujourd'hui l'une des sneakers les plus convoitées. Chaque colorway raconte une histoire unique dans la légende Jordan.""",
+    'Air Jordan 1 High': """La Air Jordan 1, créée en 1985 par Peter Moore, est la sneaker qui a tout commencé. Avec son col haut caractéristique et son design intemporel, elle reste aujourd'hui l'une des sneakers les plus convoitées au monde. Chaque colorway raconte une histoire unique dans la légende Jordan.""",
     
-    'Air Jordan 1 Low': """La Air Jordan 1 Low reprend le design iconique de la AJ1 dans une version basse plus décontractée. Parfaite pour un style quotidien, elle conserve l'ADN de la célèbre silhouette tout en offrant un look plus discret. Un incontournable qui se porte facilement en toute saison.""",
+    'Air Jordan 1 Low': """Version basse de l'iconique Air Jordan 1, cette silhouette reprend l'ADN de la légendaire sneaker dans un format plus décontracté. Parfaite pour un style quotidien, elle conserve l'essence de la AJ1 tout en offrant un look plus discret et polyvalent.""",
     
-    'Nike Dunk Low': """La Nike Dunk Low, créée en 1985 comme chaussure de basketball universitaire, est devenue une icône de la culture sneakers. Son design simple mais efficace et ses nombreuses collaborations en font l'une des silhouettes les plus populaires. La construction cuir premium et les multiples colorways disponibles permettent de l'adapter à tous les styles.""",
+    'Nike Dunk Low': """Créée en 1985 comme chaussure de basketball universitaire, la Nike Dunk Low est devenue une icône de la culture sneakers. Son design simple mais efficace et ses nombreuses collaborations en font l'une des silhouettes les plus populaires. La construction cuir premium et les multiples colorways permettent de l'adapter à tous les styles.""",
     
-    'Nike Air Force 1': """La Nike Air Force 1, créée en 1982 par Bruce Kilgore, est la première chaussure de basketball à intégrer la technologie Air. Devenue un symbole de la culture hip-hop et streetwear, l'AF1 est l'une des sneakers les plus vendues de l'histoire. Son design épuré et sa semelle épaisse caractéristique en font un classique indémodable.""",
+    'Nike Dunk High': """Version haute de la légendaire Dunk, ce modèle reprend les codes du basketball universitaire des années 80. Son col montant et son design classique en font une pièce incontournable pour les amateurs de sneakers vintage.""",
     
-    'Adidas Samba OG': """L'Adidas Samba est une légende née en 1950, initialement conçue pour le football en salle. Avec sa tige en cuir, ses trois bandes iconiques et sa semelle en gomme, elle est devenue un classique du style casual. La Samba OG perpétue cet héritage avec une construction fidèle à l'originale.""",
+    'Nike Air Force 1': """Créée en 1982 par Bruce Kilgore, la Nike Air Force 1 est la première chaussure de basketball à intégrer la technologie Air. Devenue un symbole de la culture hip-hop et streetwear, l'AF1 est l'une des sneakers les plus vendues de l'histoire. Son design épuré et sa semelle épaisse caractéristique en font un classique indémodable.""",
     
-    'Adidas Campus 00s': """L'Adidas Campus 00s réinterprète le classique des années 80 avec une construction modernisée. Upper en suède premium, trois bandes contrastées et semelle en caoutchouc, elle incarne le style décontracté à l'allemande. Une sneaker polyvalente qui s'inscrit parfaitement dans la tendance terrace.""",
+    'Adidas Samba': """L'Adidas Samba est une légende née en 1950, initialement conçue pour le football en salle. Avec sa tige en cuir, ses trois bandes iconiques et sa semelle en gomme, elle est devenue un classique du style casual. Un modèle qui traverse les décennies sans prendre une ride.""",
     
-    'Adidas Gazelle': """L'Adidas Gazelle, lancée en 1966, est une icône du sportswear allemand. Initialement conçue pour l'entraînement, elle a conquis les terrains de football, les scènes musicales et la rue. Son upper en suède doux, ses trois bandes contrastées et sa silhouette élancée en font une sneaker intemporelle.""",
+    'Adidas Campus': """L'Adidas Campus réinterprète le classique des années 80 avec une construction modernisée. Upper en suède premium, trois bandes contrastées et semelle en caoutchouc, elle incarne le style décontracté à l'allemande. Une sneaker polyvalente qui s'inscrit parfaitement dans la tendance terrace.""",
     
-    'New Balance 550': """La New Balance 550, ressortie en 2021 après sa création en 1989, est devenue un phénomène de mode. Son design basketball vintage, son cuir premium et sa silhouette chunky mais équilibrée en font la sneaker parfaite pour le style rétro contemporain. Le gros "N" sur les côtés est devenu un symbole de bon goût.""",
+    'Adidas Gazelle': """Lancée en 1966, l'Adidas Gazelle est une icône du sportswear allemand. Son upper en suède doux, ses trois bandes contrastées et sa silhouette élancée en font une sneaker intemporelle qui a conquis les terrains de football, les scènes musicales et la rue.""",
     
-    'New Balance 530': """La New Balance 530 combine le meilleur du running des années 90 avec un style contemporain. Sa semelle ABZORB offre un confort exceptionnel tandis que son design technique assumé s'inscrit parfaitement dans la tendance dad shoes. Une sneaker confortable et stylée.""",
+    'New Balance 550': """Ressortie en 2021 après sa création en 1989, la New Balance 550 est devenue un phénomène de mode. Son design basketball vintage, son cuir premium et sa silhouette chunky mais équilibrée en font la sneaker parfaite pour le style rétro contemporain.""",
     
-    'Asics Gel-1130': """L'Asics Gel-1130 est une running technique des années 2000 devenue un must-have du streetwear. Sa technologie GEL visible au talon, son mesh respirant et ses overlays en cuir synthétique créent un look unique. Portée par les amateurs de mode du monde entier, elle représente parfaitement l'esthétique Y2K.""",
+    'Asics Gel-1130': """L'Asics Gel-1130 est une running technique des années 2000 devenue un must-have du streetwear. Sa technologie GEL visible au talon, son mesh respirant et ses overlays créent un look unique qui représente parfaitement l'esthétique Y2K.""",
     
     'UGG Tasman': """La UGG Tasman est une slipper devenue incontournable du style casual. Avec sa doublure en peau de mouton authentique, son upper en suède et sa semelle Treadlite légère, elle offre un confort incomparable. Le motif tressé sur le contour lui donne son caractère unique.""",
     
-    'Yeezy Slide': """La Yeezy Slide, conçue par Kanye West pour Adidas, a redéfini les standards de la sandale de luxe. Son design minimaliste en mousse EVA injectée offre un confort cloud-like unique. Devenue un phénomène culturel, elle se porte désormais aussi bien à la plage qu'en ville.""",
+    'Yeezy Slide': """La Yeezy Slide, conçue par Kanye West pour Adidas, a redéfini les standards de la sandale de luxe. Son design minimaliste en mousse EVA injectée offre un confort cloud-like unique. Devenue un phénomène culturel, elle se porte aussi bien à la plage qu'en ville.""",
     
-    'Yeezy Boost 350 V2': """La Yeezy Boost 350 V2 est l'une des sneakers les plus influentes de la dernière décennie. Créée par Kanye West et Adidas, elle révolutionne le design avec son upper Primeknit, sa semelle Boost ultra confortable et sa silhouette futuriste. Chaque colorway devient instantanément collector.""",
+    'Crocs': """Les Crocs sont devenues un phénomène de mode incontournable. Leur design unique en Croslite offre un confort et une légèreté incomparables. Personnalisables avec des Jibbitz, elles sont passées du statut de chaussure pratique à celui d'accessoire de mode prisé par les plus grandes stars.""",
 }
 
-DEFAULT_DESCRIPTION = """Un modèle qui allie design contemporain et qualité premium. Cette sneaker se distingue par ses finitions soignées et son confort au quotidien. Une pièce polyvalente qui s'adapte à tous les styles, du casual au plus recherché."""
+DEFAULT_DESCRIPTION = """Un modèle qui allie design contemporain et qualité premium. Cette paire se distingue par ses finitions soignées et son confort au quotidien. Une pièce polyvalente qui s'adapte à tous les styles."""
 
 
 def generate_description(product, collection):
-    """Génère une description style WetTheNew/LimitedResell"""
+    """Génère une description SEO complète avec le nom EXACT du produit"""
+    
+    # NOM EXACT DU PRODUIT (titre complet)
     title = product.get('title', '')
     brand = extract_brand(title)
     model = extract_model(title)
-    colorway = extract_colorway(title)
     sku = extract_sku(product)
     
-    # Récupérer la description du modèle ou utiliser la générique
-    model_desc = MODEL_DESCRIPTIONS.get(model, DEFAULT_DESCRIPTION)
+    # Trouver la description du modèle
+    model_desc = DEFAULT_DESCRIPTION
+    for key, desc in MODEL_DESCRIPTIONS.items():
+        if key.lower() in model.lower() or key.lower() in title.lower():
+            model_desc = desc
+            break
     
     lines = []
     
-    # === PARAGRAPHE 1: Intro avec lien collection ===
+    # === PARAGRAPHE 1: Intro avec NOM EXACT et LIEN COLLECTION ===
     if collection:
-        link = f'<a href="https://{SITE_DOMAIN}/collections/{collection["handle"]}">{collection["title"]}</a>'
-        if colorway:
-            lines.append(f'<p>Découvrez la <strong>{model}</strong> "{colorway}" disponible sur {SITE_NAME}. Retrouvez tous nos modèles dans la collection {link}.</p>')
-        else:
-            lines.append(f'<p>Découvrez la <strong>{model}</strong> disponible sur {SITE_NAME}. Retrouvez tous nos modèles dans la collection {link}.</p>')
+        link = f'<a href="{collection["url"]}">{collection["title"]}</a>'
+        lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}. Retrouvez ce modèle et bien d\'autres dans notre collection {link}.</p>')
     else:
-        if colorway:
-            lines.append(f'<p>Découvrez la <strong>{model}</strong> "{colorway}" disponible sur {SITE_NAME}.</p>')
-        else:
-            lines.append(f'<p>Découvrez la <strong>{model}</strong> disponible sur {SITE_NAME}.</p>')
+        lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}.</p>')
     
     # === PARAGRAPHE 2: Histoire/Description du modèle ===
     lines.append(f'<p>{model_desc}</p>')
     
-    # === PARAGRAPHE 3: Colorway spécifique (si disponible) ===
-    if colorway:
-        lines.append(f'<p>Ce coloris "{colorway}" apporte une touche unique à cette silhouette iconique. Un choix parfait pour se démarquer tout en restant fidèle à l\'esprit de la marque {brand}.</p>')
-    
-    # === PARAGRAPHE 4: Infos techniques ===
+    # === PARAGRAPHE 3: Infos techniques ===
     tech_info = []
     if sku:
-        tech_info.append(f'<strong>Référence (SKU)</strong> : {sku}')
-    if colorway:
-        tech_info.append(f'<strong>Coloris</strong> : {colorway}')
+        tech_info.append(f'<strong>Référence</strong> : {sku}')
     tech_info.append(f'<strong>Marque</strong> : {brand}')
-    tech_info.append(f'<strong>Modèle</strong> : {model}')
     
     lines.append('<p>' + '<br>'.join(tech_info) + '</p>')
     
-    # === PARAGRAPHE 5: Garantie authenticité ===
-    lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque paire. Toutes nos sneakers sont vérifiées par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
+    # === PARAGRAPHE 4: Garantie authenticité ===
+    lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque paire. Toutes nos sneakers sont vérifiées par nos experts avant expédition. Livraison rapide et paiement sécurisé disponibles.</p>')
     
     return '\n\n'.join(lines)
 
 
 def gen_title(p): 
     title = p.get('title', '')
-    model = extract_model(title)
-    colorway = extract_colorway(title)
-    if colorway:
-        meta = f"{model} {colorway} | {SITE_NAME}"
-    else:
-        meta = f"{model} | {SITE_NAME}"
+    meta = f"{title} | {SITE_NAME}"
+    if len(meta) > 60:
+        meta = title[:55] + "... | " + SITE_NAME
+        if len(meta) > 60:
+            meta = title[:47] + "... | " + SITE_NAME
     return meta[:60]
 
 
 def gen_desc(p):
     title = p.get('title', '')
-    model = extract_model(title)
-    brand = extract_brand(title)
-    colorway = extract_colorway(title)
     sku = extract_sku(p)
     
-    if colorway and sku:
-        return f"Achetez la {model} {colorway} ({sku}) | 100% Authentique | Livraison rapide | {SITE_NAME}"[:155]
-    elif colorway:
-        return f"Achetez la {model} {colorway} | 100% Authentique | Livraison rapide | {SITE_NAME}"[:155]
+    if sku:
+        desc = f"Achetez {title} ({sku}) | 100% Authentique | Livraison rapide | {SITE_NAME}"
     else:
-        return f"Achetez la {model} | 100% Authentique | Livraison rapide | {SITE_NAME}"[:155]
+        desc = f"Achetez {title} | 100% Authentique | Livraison rapide | {SITE_NAME}"
+    
+    return desc[:155]
 
 
 def update_seo(pid, updates):
@@ -335,7 +402,7 @@ def update_seo(pid, updates):
 def home():
     return '''<!DOCTYPE html><html><head><meta charset="UTF-8"><title>V4</title>
 <style>body{font-family:system-ui;background:#0a0a0f;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}a{background:#00ff88;color:#000;padding:15px 40px;border-radius:8px;text-decoration:none;font-weight:bold}</style></head>
-<body><div style="text-align:center"><h1 style="color:#00ff88">Shopify Manager V4</h1><p style="color:#666;margin:15px">Descriptions SEO Pro</p><a href="/seo">Gestion SEO</a></div></body></html>'''
+<body><div style="text-align:center"><h1 style="color:#00ff88">Shopify Manager V4</h1><p style="color:#666;margin:15px">SEO Pro - WetTheNew Style</p><a href="/seo">Gestion SEO</a></div></body></html>'''
 
 
 @app.route('/seo')
@@ -474,31 +541,91 @@ function loadMore(){
 function findC(t){
     if(!t||!C.length) return null;
     t=t.toLowerCase();
-    var M=[["jordan-4",["jordan 4"]],["jordan-1-high",["jordan 1 high"]],["jordan-1-low",["jordan 1 low"]],["adidas-samba",["samba"]],["adidas-campus",["campus"]],["adidas-gazelle",["gazelle"]],["adidas-spezial",["spezial"]],["asics-gel-1130",["gel-1130"]],["asics-gel-kayano",["kayano"]],["ugg-tasman",["tasman"]],["ugg-tazz",["tazz"]],["nike-dunk-low",["dunk low"]],["nike-dunk-high",["dunk high"]],["air-force-1",["air force 1"]],["new-balance-550",["550"]],["new-balance-530",["530"]],["yeezy-slide",["yeezy slide"]],["yeezy-350",["yeezy 350"]]];
-    var B=[["jordan-1",["jordan"]],["adidas-1",["adidas"]],["asics-1",["asics"]],["nike",["nike"]],["ugg",["ugg"]],["new-balance",["new balance"]],["puma",["puma"]]];
-    var i,j,k,h,ps,c;
-    for(i=0;i<M.length;i++){
-        h=M[i][0];
-        ps=M[i][1];
-        c=null;
-        for(j=0;j<C.length;j++){if(C[j].handle===h){c=C[j];break;}}
-        if(c){
-            for(k=0;k<ps.length;k++){
-                if(t.indexOf(ps[k])>=0) return {h:h,n:c.title,t:"m"};
+    
+    // Modeles (priorite 1)
+    var M={
+        "jordan-4":["jordan 4"],
+        "jordan-1-high":["jordan 1 high"],
+        "jordan-1-low":["jordan 1 low"],
+        "jordan-1-mid":["jordan 1 mid"],
+        "nike-dunk-low":["dunk low"],
+        "nike-dunk-high":["dunk high"],
+        "nike-dunk":["dunk"],
+        "air-force-1":["air force 1"],
+        "adidas-samba":["samba"],
+        "adidas-campus":["campus"],
+        "adidas-gazelle":["gazelle"],
+        "adidas-spezial":["spezial"],
+        "asics-gel-1130":["gel-1130","gel 1130"],
+        "asics-gel-kayano":["kayano"],
+        "asics-gel-nyc":["gel-nyc","gel nyc"],
+        "ugg-tasman":["tasman"],
+        "ugg-tazz":["tazz"],
+        "new-balance-550":["550"],
+        "new-balance-530":["530"],
+        "new-balance-2002r":["2002r"],
+        "yeezy-slide":["yeezy slide"],
+        "yeezy-350":["yeezy 350","350 v2"]
+    };
+    
+    // Marques (priorite 2)
+    var B={
+        "jordan-1":["jordan"],
+        "nike":["nike"],
+        "adidas-1":["adidas"],
+        "adidas":["adidas"],
+        "new-balance":["new balance"],
+        "asics-1":["asics"],
+        "asics":["asics"],
+        "ugg":["ugg"],
+        "puma":["puma"],
+        "crocs":["crocs"],
+        "birkenstock-1":["birkenstock"],
+        "birkenstock":["birkenstock"],
+        "converse":["converse"],
+        "vans":["vans"],
+        "reebok":["reebok"],
+        "salomon":["salomon"],
+        "hoka":["hoka"]
+    };
+    
+    var avail=[];
+    for(var i=0;i<C.length;i++){
+        avail.push(C[i].handle);
+    }
+    
+    // Chercher modele
+    for(var h in M){
+        if(avail.indexOf(h)>=0){
+            var kws=M[h];
+            for(var k=0;k<kws.length;k++){
+                if(t.indexOf(kws[k])>=0){
+                    var c=null;
+                    for(var j=0;j<C.length;j++){
+                        if(C[j].handle===h){c=C[j];break;}
+                    }
+                    if(c) return {h:h,n:c.title,t:"m"};
+                }
             }
         }
     }
-    for(i=0;i<B.length;i++){
-        h=B[i][0];
-        ps=B[i][1];
-        c=null;
-        for(j=0;j<C.length;j++){if(C[j].handle===h){c=C[j];break;}}
-        if(c){
-            for(k=0;k<ps.length;k++){
-                if(t.indexOf(ps[k])>=0) return {h:h,n:c.title,t:"b"};
+    
+    // Chercher marque
+    for(var h in B){
+        if(avail.indexOf(h)>=0){
+            var kws=B[h];
+            for(var k=0;k<kws.length;k++){
+                if(t.indexOf(kws[k])>=0){
+                    var c=null;
+                    for(var j=0;j<C.length;j++){
+                        if(C[j].handle===h){c=C[j];break;}
+                    }
+                    if(c) return {h:h,n:c.title,t:"b"};
+                }
             }
         }
     }
+    
     return null;
 }
 
@@ -550,7 +677,7 @@ function render(L){
         sc=p._sc>=70?"h":p._sc>=30?"m":"l";
         co="<span class='co n'>-</span>";
         if(p._co){
-            co="<span class='co "+(p._co.t==="m"?"g":"p")+"'>"+(p._co.t==="m"?"V":"O")+" "+esc(p._co.n)+"</span>";
+            co="<span class='co "+(p._co.t==="m"?"g":"p")+"'>"+(p._co.t==="m"?"M":"B")+" "+esc(p._co.n)+"</span>";
         }
         img=(p.image && p.image.src)?p.image.src:"";
         sku=(p.variants && p.variants[0] && p.variants[0].sku)?p.variants[0].sku:"-";
@@ -564,7 +691,7 @@ function render(L){
         html+="</div>";
     }
     if(L.length>200){
-        html+="<div class='ld'>200 max affiches</div>";
+        html+="<div class='ld'>200 max</div>";
     }
     el.innerHTML=html;
     
@@ -715,9 +842,13 @@ def api_apply():
     r = shopify_request(f'products/{pid}.json')
     if not r: return jsonify({'error': 'err'}), 404
     p = r['product']
-    col = find_col(p.get('title', ''), get_collections())
-    update_seo(pid, {'meta_title': gen_title(p), 'meta_description': gen_desc(p), 'body_html': generate_description(p, col)})
-    return jsonify({'success': True})
+    col = find_collection(p.get('title', ''), get_collections())
+    update_seo(pid, {
+        'meta_title': gen_title(p), 
+        'meta_description': gen_desc(p), 
+        'body_html': generate_description(p, col)
+    })
+    return jsonify({'success': True, 'collection': col})
 
 
 @app.route('/api/seo/batch', methods=['POST'])
@@ -734,12 +865,23 @@ def api_batch():
             if r and 'product' in r:
                 p = r['product']
                 task_progress['message'] = p.get('title','')[:30]
-                col = find_col(p.get('title', ''), cols)
-                update_seo(pid, {'meta_title': gen_title(p), 'meta_description': gen_desc(p), 'body_html': generate_description(p, col)})
+                col = find_collection(p.get('title', ''), cols)
+                update_seo(pid, {
+                    'meta_title': gen_title(p), 
+                    'meta_description': gen_desc(p), 
+                    'body_html': generate_description(p, col)
+                })
             time.sleep(1)
         task_progress = {'running': False, 'current': len(pids), 'total': len(pids), 'message': 'Termine! '+str(len(pids))+' produits'}
     Thread(target=run, daemon=True).start()
     return jsonify({'ok': True})
+
+
+# Route pour voir les collections disponibles
+@app.route('/api/collections')
+def api_collections():
+    cols = get_collections()
+    return jsonify({'collections': cols, 'count': len(cols)})
 
 
 if __name__ == '__main__':
