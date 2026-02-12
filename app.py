@@ -1,6 +1,6 @@
 """
-Shopify Manager V4 - SEO Pro Edition
-Avec toutes les collections KP SHOES
+KP SHOES - Plateforme de Gestion Shopify
+Version 5.0 - Dashboard Produits + Détails + Variantes + SEO
 """
 
 from flask import Flask, jsonify, request
@@ -48,279 +48,253 @@ def get_collections():
     return cols
 
 
+def get_product_metafields(product_id):
+    """Récupère les metafields SEO d'un produit"""
+    r = shopify_request(f'products/{product_id}/metafields.json')
+    meta_title = ''
+    meta_description = ''
+    if r and 'metafields' in r:
+        for m in r['metafields']:
+            if m.get('key') == 'title_tag':
+                meta_title = m.get('value', '')
+            elif m.get('key') == 'description_tag':
+                meta_description = m.get('value', '')
+    return {'meta_title': meta_title, 'meta_description': meta_description}
+
+
 # ══════════════════════════════════════════════════════════════
-# MAPPING EXACT DES COLLECTIONS KP SHOES
+# COLLECTIONS MAPPING
 # ══════════════════════════════════════════════════════════════
 
-# PRIORITÉ 1: Collections MODÈLES (handle -> keywords)
 MODEL_COLLECTIONS = {
-    # Jordan
-    'jordan-4': ['jordan 4', 'aj4', 'air jordan 4'],
-    'jordan-1-high': ['jordan 1 high', 'jordan 1 retro high', 'aj1 high', 'air jordan 1 high'],
-    'jordan-1-low': ['jordan 1 low', 'aj1 low', 'air jordan 1 low'],
-    'jordan-1-mid': ['jordan 1 mid', 'aj1 mid', 'air jordan 1 mid'],
-    
-    # Nike
-    'nike-dunk': ['dunk', 'sb dunk'],
-    'air-force-1': ['air force 1', 'af1', 'air force one'],
-    'nike-p-6000': ['air max', 'p-6000', 'p6000', 'vapormax'],
-    'nike-vomero': ['vomero', 'zoom vomero'],
-    'nike-sacail': ['sacai'],
-    'nike-sb': ['nike sb'],
-    
-    # Adidas
-    'adidas-samba': ['samba'],
-    'adidas-campus': ['campus'],
-    'adidas-gazelle': ['gazelle'],
-    'adidas-spezial': ['spezial', 'handball spezial'],
-    'adidas-forum': ['forum'],
-    
-    # Yeezy
-    'yeezy-slide': ['yeezy slide'],
-    'yeezy-351': ['yeezy 350', '350 v2', 'boost 350'],
-    'yeezy-350': ['yeezy 700', '700 v2', '700 v3'],
-    
-    # New Balance
-    'new-balance-550': ['new balance 550', 'nb 550', 'nb550', 'bb550'],
-    'new-balance-530': ['new balance 530', 'nb 530', 'mr530'],
-    'new-balance-2002r': ['2002r', 'new balance 2002'],
-    'new-balance-9060': ['9060', 'new balance 9060'],
-    'new-balance-740': ['740', 'new balance 740'],
-    
-    # Asics
-    'asics-gel-1130': ['gel-1130', 'gel 1130'],
-    'asics-gel-kayano': ['gel kayano', 'kayano 14', 'gel-kayano'],
-    'asics-gel-nyc': ['gel-nyc', 'gel nyc'],
-    
-    # UGG
-    'ugg-tasman': ['tasman'],
-    'ugg-tazz': ['tazz'],
-    'ugg-ultra-mini': ['ultra mini'],
-    'ugg-classic-mini': ['classic mini'],
-    'ugg-lowmel': ['lowmel'],
-    
-    # Autres modèles
-    'travis-scott': ['travis scott', 'cactus jack'],
-    'off-white': ['off-white', 'off white'],
-    'supreme': ['supreme'],
-    'patta': ['patta'],
-    'dior': ['dior'],
-    'bape': ['bape', 'a bathing ape'],
+    'jordan-4': ['jordan 4'], 'jordan-1-high': ['jordan 1 high'], 'jordan-1-low': ['jordan 1 low'],
+    'jordan-1-mid': ['jordan 1 mid'], 'nike-dunk': ['dunk'], 'air-force-1': ['air force 1'],
+    'nike-p-6000': ['air max'], 'nike-vomero': ['vomero'], 'nike-sacail': ['sacai'],
+    'adidas-samba': ['samba'], 'adidas-campus': ['campus'], 'adidas-gazelle': ['gazelle'],
+    'adidas-spezial': ['spezial'], 'adidas-forum': ['forum'], 'yeezy-slide': ['yeezy slide'],
+    'yeezy-351': ['yeezy 350', '350 v2'], 'yeezy-350': ['yeezy 700'],
+    'new-balance-550': ['550'], 'new-balance-530': ['530'], 'new-balance-2002r': ['2002r'],
+    'new-balance-9060': ['9060'], 'asics-gel-1130': ['gel-1130', 'gel 1130'],
+    'asics-gel-kayano': ['kayano'], 'asics-gel-nyc': ['gel-nyc', 'gel nyc'],
+    'ugg-tasman': ['tasman'], 'ugg-tazz': ['tazz'], 'ugg-ultra-mini': ['ultra mini'],
+    'travis-scott': ['travis scott'], 'off-white': ['off-white'], 'supreme': ['supreme'],
 }
 
-# PRIORITÉ 2: Collections MARQUES (fallback)
 BRAND_COLLECTIONS = {
-    'jordan-1': ['jordan', 'air jordan'],
-    'nike-1': ['nike', 'nocta', 'blazer'],
-    'adidas-1': ['adidas'],
-    'yeezy-1': ['yeezy', 'foam runner', 'foam rnnr'],
-    'new-balance-1': ['new balance'],
-    'asics-1': ['asics'],
-    'ugg-1': ['ugg'],
-    'puma-1': ['puma', 'speedcat'],
-    'crocs': ['crocs'],
-    'birkenstock-1': ['birkenstock', 'boston'],
-    'converse': ['converse', 'chuck taylor', 'chuck 70'],
-    'salomon': ['salomon', 'xt-6', 'xt6', 'acs'],
-    'timberland': ['timberland'],
+    'jordan-1': ['jordan'], 'nike-1': ['nike', 'nocta', 'blazer'], 'adidas-1': ['adidas'],
+    'yeezy-1': ['yeezy', 'foam runner'], 'new-balance-1': ['new balance'], 'asics-1': ['asics'],
+    'ugg-1': ['ugg'], 'puma-1': ['puma'], 'crocs': ['crocs'], 'birkenstock-1': ['birkenstock'],
+    'converse': ['converse'], 'salomon': ['salomon'], 'timberland': ['timberland'],
 }
 
-# Collections à EXCLURE des liens
-EXCLUDED = ['tout-nos-modeles', 'best-seller', 'moins-de-150', 'livraison-48h', 
-            'pour-enfants', 'sport', 'autre-marques', 'tous-nos-vetements', 
-            'nouveautes', 'stock-x-sneakers']
+EXCLUDED = ['tout-nos-modeles', 'best-seller', 'moins-de-150', 'livraison-48h', 'pour-enfants', 'sport', 'autre-marques']
 
 
 def find_collection(title, collections):
-    """Trouve la meilleure collection: MODÈLE > MARQUE"""
-    if not title or not collections:
-        return None
-    
+    if not title or not collections: return None
     t = title.lower()
     available = [c['handle'] for c in collections if c['handle'] not in EXCLUDED]
     
-    # PRIORITÉ 1: Chercher un MODÈLE
     for handle, keywords in MODEL_COLLECTIONS.items():
         if handle in available:
             for kw in keywords:
                 if kw in t:
                     col = next((c for c in collections if c['handle'] == handle), None)
-                    if col:
-                        return {
-                            'handle': col['handle'],
-                            'title': col['title'],
-                            'url': f"https://{SITE_DOMAIN}/collections/{col['handle']}",
-                            'type': 'model'
-                        }
+                    if col: return {'handle': col['handle'], 'title': col['title'], 'url': f"https://{SITE_DOMAIN}/collections/{col['handle']}", 'type': 'model'}
     
-    # PRIORITÉ 2: Chercher une MARQUE
     for handle, keywords in BRAND_COLLECTIONS.items():
         if handle in available:
             for kw in keywords:
                 if kw in t:
                     col = next((c for c in collections if c['handle'] == handle), None)
-                    if col:
-                        return {
-                            'handle': col['handle'],
-                            'title': col['title'],
-                            'url': f"https://{SITE_DOMAIN}/collections/{col['handle']}",
-                            'type': 'brand'
-                        }
-    
+                    if col: return {'handle': col['handle'], 'title': col['title'], 'url': f"https://{SITE_DOMAIN}/collections/{col['handle']}", 'type': 'brand'}
     return None
 
 
 def extract_brand(title):
-    """Extrait la marque depuis le titre"""
     t = title.lower()
     if 'jordan' in t: return 'Jordan'
     if 'yeezy' in t: return 'Yeezy'
-    brands = [
-        ('Nike', ['nike', 'dunk', 'air force', 'air max', 'nocta', 'sacai', 'vomero']),
-        ('Adidas', ['adidas', 'samba', 'campus', 'gazelle', 'spezial', 'forum']),
-        ('New Balance', ['new balance']),
-        ('Asics', ['asics', 'gel-']),
-        ('UGG', ['ugg', 'tasman', 'tazz']),
-        ('Puma', ['puma']),
-        ('Converse', ['converse']),
-        ('Crocs', ['crocs']),
-        ('Birkenstock', ['birkenstock']),
-        ('Salomon', ['salomon']),
-        ('Timberland', ['timberland']),
-        ('Hoka', ['hoka']),
-    ]
-    for brand, keywords in brands:
-        for kw in keywords:
-            if kw in t:
-                return brand
+    brands = [('Nike', ['nike', 'dunk', 'air force', 'air max', 'nocta']), ('Adidas', ['adidas', 'samba', 'campus', 'gazelle']),
+              ('New Balance', ['new balance']), ('Asics', ['asics']), ('UGG', ['ugg']), ('Puma', ['puma']),
+              ('Crocs', ['crocs']), ('Birkenstock', ['birkenstock']), ('Salomon', ['salomon']), ('Timberland', ['timberland'])]
+    for brand, kws in brands:
+        for kw in kws:
+            if kw in t: return brand
     return 'Sneakers'
 
 
-def extract_sku(product):
-    if product.get('variants') and len(product['variants']) > 0:
-        return product['variants'][0].get('sku', '')
-    return ''
+# ══════════════════════════════════════════════════════════════
+# ANALYSE SEO - Basée sur nos critères
+# ══════════════════════════════════════════════════════════════
+
+def analyze_seo(product, meta_title, meta_description):
+    """Analyse complète SEO d'un produit"""
+    title = product.get('title', '')
+    body_html = product.get('body_html', '') or ''
+    
+    results = {
+        'score': 0,
+        'max_score': 100,
+        'checks': []
+    }
+    
+    # 1. META TITLE (25 points)
+    meta_title_check = {'name': 'Meta Title', 'points': 0, 'max': 25, 'status': 'error', 'message': ''}
+    if meta_title:
+        if SITE_NAME in meta_title and len(meta_title) <= 60:
+            meta_title_check['points'] = 25
+            meta_title_check['status'] = 'success'
+            meta_title_check['message'] = f'OK ({len(meta_title)} caractères)'
+        elif len(meta_title) > 60:
+            meta_title_check['points'] = 10
+            meta_title_check['status'] = 'warning'
+            meta_title_check['message'] = f'Trop long ({len(meta_title)}/60 caractères)'
+        else:
+            meta_title_check['points'] = 15
+            meta_title_check['status'] = 'warning'
+            meta_title_check['message'] = f'Manque "{SITE_NAME}"'
+    else:
+        meta_title_check['message'] = 'Absent'
+    results['checks'].append(meta_title_check)
+    results['score'] += meta_title_check['points']
+    
+    # 2. META DESCRIPTION (25 points)
+    meta_desc_check = {'name': 'Meta Description', 'points': 0, 'max': 25, 'status': 'error', 'message': ''}
+    if meta_description:
+        has_auth = '100%' in meta_description or 'authentique' in meta_description.lower()
+        good_length = 100 <= len(meta_description) <= 155
+        if has_auth and good_length:
+            meta_desc_check['points'] = 25
+            meta_desc_check['status'] = 'success'
+            meta_desc_check['message'] = f'OK ({len(meta_description)} caractères)'
+        elif good_length:
+            meta_desc_check['points'] = 15
+            meta_desc_check['status'] = 'warning'
+            meta_desc_check['message'] = 'Manque mention authenticité'
+        else:
+            meta_desc_check['points'] = 10
+            meta_desc_check['status'] = 'warning'
+            meta_desc_check['message'] = f'Longueur: {len(meta_description)} (idéal: 100-155)'
+    else:
+        meta_desc_check['message'] = 'Absente'
+    results['checks'].append(meta_desc_check)
+    results['score'] += meta_desc_check['points']
+    
+    # 3. DESCRIPTION avec lien collection (35 points)
+    desc_check = {'name': 'Description + Lien', 'points': 0, 'max': 35, 'status': 'error', 'message': ''}
+    has_desc = len(body_html) > 100
+    has_link = f'{SITE_DOMAIN}/collections/' in body_html.lower()
+    if has_desc and has_link:
+        desc_check['points'] = 35
+        desc_check['status'] = 'success'
+        desc_check['message'] = 'Description complète avec lien interne'
+    elif has_desc:
+        desc_check['points'] = 15
+        desc_check['status'] = 'warning'
+        desc_check['message'] = 'Description OK mais sans lien collection'
+    else:
+        desc_check['message'] = 'Description manquante ou trop courte'
+    results['checks'].append(desc_check)
+    results['score'] += desc_check['points']
+    
+    # 4. INFOS TECHNIQUES - SKU (15 points)
+    sku_check = {'name': 'SKU/Référence', 'points': 0, 'max': 15, 'status': 'error', 'message': ''}
+    sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
+    if sku:
+        sku_check['points'] = 15
+        sku_check['status'] = 'success'
+        sku_check['message'] = f'SKU: {sku}'
+    else:
+        sku_check['message'] = 'SKU manquant'
+    results['checks'].append(sku_check)
+    results['score'] += sku_check['points']
+    
+    # Statut global
+    if results['score'] >= 85:
+        results['status'] = 'excellent'
+    elif results['score'] >= 70:
+        results['status'] = 'good'
+    elif results['score'] >= 50:
+        results['status'] = 'warning'
+    else:
+        results['status'] = 'poor'
+    
+    return results
 
 
 # ══════════════════════════════════════════════════════════════
-# DESCRIPTIONS PAR MODÈLE
+# GÉNÉRATION SEO (mêmes règles qu'avant)
 # ══════════════════════════════════════════════════════════════
 
 MODEL_DESCRIPTIONS = {
-    'jordan 4': """Conçue par Tinker Hatfield en 1989, la Air Jordan 4 est l'une des silhouettes les plus emblématiques de la ligne Jordan. Rendue célèbre par Michael Jordan lors des playoffs NBA, elle se distingue par ses ailes en mesh, sa languette en plastique et ses lacets à ailettes. Un modèle légendaire qui a marqué l'histoire du basketball et de la culture streetwear.""",
-    
-    'jordan 1 high': """La Air Jordan 1 High, créée en 1985 par Peter Moore, est la sneaker qui a tout commencé. Avec son col haut caractéristique et son design intemporel, elle reste aujourd'hui l'une des sneakers les plus convoitées au monde. Chaque colorway raconte une histoire unique dans la légende Jordan.""",
-    
-    'jordan 1 low': """Version basse de l'iconique Air Jordan 1, cette silhouette reprend l'ADN de la légendaire sneaker dans un format plus décontracté. Parfaite pour un style quotidien, elle conserve l'essence de la AJ1 tout en offrant un look plus discret et polyvalent.""",
-    
-    'jordan 1 mid': """La Air Jordan 1 Mid offre le parfait équilibre entre la High et la Low. Avec son col mi-montant, elle combine style classique et confort quotidien. Une silhouette accessible qui conserve tout l'ADN de la légendaire AJ1.""",
-    
-    'dunk': """Créée en 1985 comme chaussure de basketball universitaire, la Nike Dunk est devenue une icône de la culture sneakers. Son design simple mais efficace et ses nombreuses collaborations en font l'une des silhouettes les plus populaires. La construction cuir premium et les multiples colorways permettent de l'adapter à tous les styles.""",
-    
-    'air force 1': """Créée en 1982 par Bruce Kilgore, la Nike Air Force 1 est la première chaussure de basketball à intégrer la technologie Air. Devenue un symbole de la culture hip-hop et streetwear, l'AF1 est l'une des sneakers les plus vendues de l'histoire. Son design épuré et sa semelle épaisse caractéristique en font un classique indémodable.""",
-    
-    'air max': """La gamme Air Max de Nike révolutionne le monde de la sneaker depuis 1987 avec sa technologie Air visible. Confort exceptionnel, design avant-gardiste et style intemporel font des Air Max des incontournables de la culture sneakers.""",
-    
-    'samba': """L'Adidas Samba est une légende née en 1950, initialement conçue pour le football en salle. Avec sa tige en cuir, ses trois bandes iconiques et sa semelle en gomme, elle est devenue un classique du style casual qui traverse les décennies.""",
-    
-    'campus': """L'Adidas Campus réinterprète le classique des années 80 avec une construction modernisée. Upper en suède premium, trois bandes contrastées et semelle en caoutchouc, elle incarne le style décontracté à l'allemande.""",
-    
-    'gazelle': """Lancée en 1966, l'Adidas Gazelle est une icône du sportswear allemand. Son upper en suède doux, ses trois bandes contrastées et sa silhouette élancée en font une sneaker intemporelle.""",
-    
-    'spezial': """L'Adidas Spezial, née dans les années 70 pour le handball, est devenue un symbole de la culture terrace britannique. Son design épuré et sa semelle en gomme translucide en font un classique intemporel.""",
-    
-    'yeezy slide': """La Yeezy Slide, conçue par Kanye West, a redéfini les standards de la sandale de luxe. Son design minimaliste en mousse EVA injectée offre un confort cloud-like unique. Un phénomène culturel qui se porte partout.""",
-    
-    'yeezy 350': """La Yeezy Boost 350 V2 est l'une des sneakers les plus influentes de la dernière décennie. Son upper Primeknit, sa semelle Boost ultra confortable et sa silhouette futuriste en font une pièce collector.""",
-    
-    'yeezy 700': """La Yeezy 700 incarne l'esthétique dad shoe avec son design chunky et ses multiples couches de matériaux. Confort Boost et style avant-gardiste pour un modèle devenu iconique.""",
-    
-    'foam runner': """La Yeezy Foam Runner propose un design organique futuriste entièrement moulé en une seule pièce. Légèreté, confort et style unique pour une silhouette qui ne ressemble à aucune autre.""",
-    
-    'new balance 550': """Ressortie en 2021 après sa création en 1989, la New Balance 550 est devenue un phénomène de mode. Son design basketball vintage et son cuir premium en font la sneaker parfaite pour le style rétro contemporain.""",
-    
-    'new balance 530': """La New Balance 530 combine le meilleur du running des années 90 avec un style contemporain. Sa technologie ABZORB offre un confort exceptionnel dans un design technique assumé.""",
-    
-    '2002r': """La New Balance 2002R revisite un classique du running avec des matériaux premium et un confort moderne. Une silhouette polyvalente qui s'inscrit parfaitement dans la tendance lifestyle.""",
-    
-    '9060': """La New Balance 9060 propose un design audacieux inspiré des archives running de la marque. Ses lignes organiques et son amorti ABZORB SBS en font une sneaker avant-gardiste.""",
-    
-    'gel-1130': """L'Asics Gel-1130 est une running technique des années 2000 devenue un must-have du streetwear. Sa technologie GEL visible au talon et son design Y2K en font une pièce très recherchée.""",
-    
-    'gel kayano': """L'Asics Gel-Kayano est une légende du running depuis 1993. Technologie GEL, maintien exceptionnel et design technique en font un modèle apprécié autant pour le sport que pour le style.""",
-    
-    'gel nyc': """L'Asics Gel-NYC fusionne plusieurs modèles iconiques de la marque dans un design contemporain. Une silhouette hybride qui célèbre l'héritage running d'Asics.""",
-    
-    'tasman': """La UGG Tasman est une slipper devenue incontournable. Doublure en peau de mouton authentique, upper en suède et semelle Treadlite pour un confort incomparable au quotidien.""",
-    
-    'tazz': """La UGG Tazz modernise le confort légendaire UGG avec une plateforme tendance. Doublure en laine, suède premium et semelle compensée pour un style affirmé.""",
-    
-    'crocs': """Les Crocs sont devenues un phénomène de mode incontournable. Design unique en Croslite, légèreté et confort incomparables, personnalisables avec des Jibbitz. Un classique du casual.""",
-    
-    'birkenstock': """Birkenstock propose depuis 1774 un savoir-faire allemand unique. Semelle anatomique en liège, confort orthopédique et style intemporel pour des sandales devenues iconiques.""",
-    
-    'salomon': """Salomon, expert du trail running, propose des silhouettes techniques devenues incontournables dans le streetwear. Technologie Quicklace, amorti optimal et design avant-gardiste.""",
+    'jordan 4': """Conçue par Tinker Hatfield en 1989, la Air Jordan 4 est l'une des silhouettes les plus emblématiques de la ligne Jordan. Rendue célèbre par Michael Jordan lors des playoffs NBA, elle se distingue par ses ailes en mesh, sa languette en plastique et ses lacets à ailettes.""",
+    'jordan 1 high': """La Air Jordan 1 High, créée en 1985 par Peter Moore, est la sneaker qui a tout commencé. Avec son col haut caractéristique et son design intemporel, elle reste aujourd'hui l'une des sneakers les plus convoitées au monde.""",
+    'jordan 1 low': """Version basse de l'iconique Air Jordan 1, cette silhouette reprend l'ADN de la légendaire sneaker dans un format plus décontracté. Parfaite pour un style quotidien.""",
+    'dunk': """Créée en 1985 comme chaussure de basketball universitaire, la Nike Dunk est devenue une icône de la culture sneakers. Son design simple mais efficace en font l'une des silhouettes les plus populaires.""",
+    'air force 1': """Créée en 1982 par Bruce Kilgore, la Nike Air Force 1 est la première chaussure de basketball à intégrer la technologie Air. Un classique indémodable.""",
+    'samba': """L'Adidas Samba est une légende née en 1950, initialement conçue pour le football en salle. Avec sa tige en cuir et ses trois bandes iconiques, elle est devenue un classique du style casual.""",
+    'campus': """L'Adidas Campus réinterprète le classique des années 80 avec une construction modernisée. Upper en suède premium et trois bandes contrastées.""",
+    'yeezy slide': """La Yeezy Slide a redéfini les standards de la sandale de luxe. Son design minimaliste en mousse EVA offre un confort cloud-like unique.""",
+    'yeezy 350': """La Yeezy Boost 350 V2 est l'une des sneakers les plus influentes de la dernière décennie. Son upper Primeknit et sa semelle Boost en font une pièce collector.""",
+    'new balance 550': """Ressortie en 2021, la New Balance 550 est devenue un phénomène de mode. Son design basketball vintage en fait la sneaker parfaite pour le style rétro.""",
+    'gel-1130': """L'Asics Gel-1130 est une running technique des années 2000 devenue un must-have du streetwear. Son design Y2K est très recherché.""",
+    'tasman': """La UGG Tasman est une slipper incontournable. Doublure en peau de mouton authentique pour un confort incomparable.""",
+    'crocs': """Les Crocs sont devenues un phénomène de mode. Design unique en Croslite, légèreté et confort incomparables.""",
 }
 
-DEFAULT_DESCRIPTION = """Un modèle qui allie design contemporain et qualité premium. Cette paire se distingue par ses finitions soignées et son confort au quotidien. Une pièce polyvalente qui s'adapte à tous les styles."""
+DEFAULT_DESC = """Un modèle qui allie design contemporain et qualité premium. Finitions soignées et confort au quotidien."""
 
 
 def get_model_description(title):
-    """Trouve la description du modèle basée sur le titre"""
     t = title.lower()
     for key, desc in MODEL_DESCRIPTIONS.items():
-        if key in t:
-            return desc
-    return DEFAULT_DESCRIPTION
+        if key in t: return desc
+    return DEFAULT_DESC
 
 
-def generate_description(product, collection):
-    """Génère une description SEO avec nom EXACT et lien collection"""
+def generate_seo(product, collections):
+    """Génère les SEO pour un produit"""
     title = product.get('title', '')
     brand = extract_brand(title)
-    sku = extract_sku(product)
+    sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
+    collection = find_collection(title, collections)
     model_desc = get_model_description(title)
     
-    lines = []
+    # Meta Title
+    meta_title = f"{title} | {SITE_NAME}"
+    if len(meta_title) > 60:
+        meta_title = title[:47] + "... | " + SITE_NAME
     
-    # PARAGRAPHE 1: Intro avec NOM EXACT et LIEN
+    # Meta Description
+    if sku:
+        meta_description = f"Achetez {title} ({sku}) | 100% Authentique | Livraison rapide | {SITE_NAME}"[:155]
+    else:
+        meta_description = f"Achetez {title} | 100% Authentique | Livraison rapide | {SITE_NAME}"[:155]
+    
+    # Description HTML
+    lines = []
     if collection:
         link = f'<a href="{collection["url"]}">{collection["title"]}</a>'
-        lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}. Retrouvez ce modèle et bien d\'autres dans notre collection {link}.</p>')
+        lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}. Retrouvez ce modèle dans notre collection {link}.</p>')
     else:
         lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}.</p>')
-    
-    # PARAGRAPHE 2: Description du modèle
     lines.append(f'<p>{model_desc}</p>')
-    
-    # PARAGRAPHE 3: Infos techniques
-    tech = []
-    if sku:
-        tech.append(f'<strong>Référence</strong> : {sku}')
-    tech.append(f'<strong>Marque</strong> : {brand}')
+    tech = [f'<strong>Marque</strong> : {brand}']
+    if sku: tech.insert(0, f'<strong>Référence</strong> : {sku}')
     lines.append('<p>' + '<br>'.join(tech) + '</p>')
+    lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque paire. Toutes nos sneakers sont vérifiées par nos experts avant expédition.</p>')
+    body_html = '\n\n'.join(lines)
     
-    # PARAGRAPHE 4: Authenticité
-    lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque paire. Toutes nos sneakers sont vérifiées par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
-    
-    return '\n\n'.join(lines)
+    return {
+        'meta_title': meta_title,
+        'meta_description': meta_description,
+        'body_html': body_html,
+        'collection': collection
+    }
 
 
-def gen_title(p): 
-    title = p.get('title', '')
-    meta = f"{title} | {SITE_NAME}"
-    return meta[:60] if len(meta) <= 60 else title[:47] + "... | " + SITE_NAME
-
-
-def gen_desc(p):
-    title = p.get('title', '')
-    sku = extract_sku(p)
-    if sku:
-        return f"Achetez {title} ({sku}) | 100% Authentique | Livraison rapide | {SITE_NAME}"[:155]
-    return f"Achetez {title} | 100% Authentique | Livraison rapide | {SITE_NAME}"[:155]
-
-
-def update_seo(pid, updates):
+def update_product_seo(pid, updates):
     if 'body_html' in updates:
         shopify_request(f'products/{pid}.json', 'PUT', {'product': {'id': pid, 'body_html': updates['body_html']}})
         time.sleep(0.4)
@@ -331,163 +305,111 @@ def update_seo(pid, updates):
     return True
 
 
+# ══════════════════════════════════════════════════════════════
+# ROUTES - PAGES HTML
+# ══════════════════════════════════════════════════════════════
+
 @app.route('/')
 def home():
-    return '''<!DOCTYPE html><html><head><meta charset="UTF-8"><title>V4</title>
-<style>body{font-family:system-ui;background:#0a0a0f;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}a{background:#00ff88;color:#000;padding:15px 40px;border-radius:8px;text-decoration:none;font-weight:bold}</style></head>
-<body><div style="text-align:center"><h1 style="color:#00ff88">Shopify Manager V4</h1><p style="color:#666;margin:15px">SEO Pro - Collections KP SHOES</p><a href="/seo">Gestion SEO</a></div></body></html>'''
-
-
-@app.route('/seo')
-def seo():
     return '''<!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SEO Manager</title>
+<title>KP SHOES - Gestion Shopify</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui;background:#0a0a0f;color:#fff}
-.hd{padding:10px 15px;background:#111;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #222}
-.hd a{color:#666;text-decoration:none}
-.hd b{color:#00ff88}
-.stats{display:flex;gap:8px;padding:10px 15px;background:#0d0d14;flex-wrap:wrap}
-.st{background:#1a1a2e;padding:8px 14px;border-radius:6px;text-align:center}
-.st .v{font-size:18px;font-weight:bold}
-.st .v.g{color:#0f8}
-.st .v.o{color:#fa0}
-.st .v.r{color:#f55}
-.st .l{font-size:8px;color:#555}
-.pct{background:#0f8;color:#000;padding:8px 16px;border-radius:6px;font-size:20px;font-weight:bold}
-.ctrl{padding:10px 15px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid #222}
-input,select{padding:7px 10px;background:#1a1a2e;border:1px solid #333;border-radius:4px;color:#fff;font-size:12px}
-button{padding:7px 14px;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px}
-.bg{background:#0f8;color:#000}
-.br{background:#f55;color:#fff}
-.bs{background:#333;color:#fff}
-.info{margin-left:auto;font-size:11px;color:#555}
-.msg{padding:10px 15px;font-size:11px;color:#0f8;background:#0f81a;display:none}
-.msg.on{display:block}
-#list{padding:10px 15px}
-.pr{background:#111;border:1px solid #222;border-radius:6px;padding:8px 10px;margin-bottom:5px;display:grid;grid-template-columns:22px 45px 1fr 90px 50px 60px;gap:8px;align-items:center;font-size:11px}
-.ck{width:16px;height:16px;border:2px solid #444;border-radius:3px;cursor:pointer}
-.ck.on{background:#0f8;border-color:#0f8}
-.im{width:45px;height:45px;border-radius:4px;object-fit:cover;background:#222}
-.ti{overflow:hidden}
-.ti h4{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
-.ti .sk{font-size:8px;color:#444}
-.ti .co{font-size:8px;margin-top:1px}
-.ti .co.g{color:#0f8}
-.ti .co.p{color:#a5f}
-.ti .co.n{color:#f55}
-.se{font-size:8px}
-.se .ok{color:#0f8}
-.se .no{color:#f55}
-.sc{font-size:9px;padding:3px 7px;border-radius:8px}
-.sc.h{background:#0f82;color:#0f8}
-.sc.m{background:#fa02;color:#fa0}
-.sc.l{background:#f552;color:#f55}
-.pr button{padding:3px 7px;font-size:9px}
-.ld{text-align:center;padding:40px;color:#555}
-.sp{width:30px;height:30px;border:3px solid #222;border-top-color:#0f8;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0a0a0f;color:#fff;min-height:100vh}
+.header{background:linear-gradient(135deg,#111 0%,#1a1a2e 100%);padding:20px;border-bottom:1px solid #222}
+.header-content{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:24px;font-weight:bold;color:#00ff88}
+.logo span{color:#fff}
+.nav{display:flex;gap:15px}
+.nav a{color:#888;text-decoration:none;padding:8px 16px;border-radius:6px;transition:all 0.2s}
+.nav a:hover,.nav a.active{color:#fff;background:#222}
+
+.stats-bar{background:#111;padding:15px 20px;border-bottom:1px solid #222}
+.stats-content{max-width:1400px;margin:0 auto;display:flex;gap:20px;flex-wrap:wrap}
+.stat-card{background:#1a1a2e;padding:15px 25px;border-radius:10px;text-align:center}
+.stat-value{font-size:28px;font-weight:bold;color:#00ff88}
+.stat-label{font-size:11px;color:#666;margin-top:5px}
+
+.main{max-width:1400px;margin:0 auto;padding:20px}
+.toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.search{flex:1;min-width:200px;padding:10px 15px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:#fff;font-size:14px}
+.filter{padding:10px 15px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:#fff}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-weight:600;cursor:pointer;transition:all 0.2s}
+.btn-primary{background:#00ff88;color:#000}
+.btn-primary:hover{background:#00cc6a}
+.btn-secondary{background:#333;color:#fff}
+.btn-danger{background:#ff4757;color:#fff}
+
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:15px}
+.product-card{background:#111;border:1px solid #222;border-radius:12px;overflow:hidden;cursor:pointer;transition:all 0.2s}
+.product-card:hover{border-color:#00ff88;transform:translateY(-2px)}
+.product-image{width:100%;height:200px;object-fit:cover;background:#1a1a2e}
+.product-info{padding:15px}
+.product-title{font-size:13px;font-weight:600;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.product-sku{font-size:11px;color:#666;margin-bottom:10px}
+.product-meta{display:flex;justify-content:space-between;align-items:center}
+.product-price{font-size:16px;font-weight:bold;color:#00ff88}
+.product-variants{font-size:11px;color:#888}
+.seo-badge{padding:4px 10px;border-radius:20px;font-size:10px;font-weight:600}
+.seo-badge.excellent{background:#00ff8833;color:#00ff88}
+.seo-badge.good{background:#00ff8822;color:#00cc6a}
+.seo-badge.warning{background:#ffa50033;color:#ffa500}
+.seo-badge.poor{background:#ff475733;color:#ff4757}
+
+.loading{text-align:center;padding:60px}
+.spinner{width:40px;height:40px;border:3px solid #222;border-top-color:#00ff88;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 15px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.bar{position:fixed;top:0;left:0;right:0;background:#111;padding:10px 15px;border-bottom:2px solid #0f8;display:none;z-index:99;font-size:11px}
-.bar.on{display:block}
-.bar .tr{height:5px;background:#222;border-radius:3px;margin-top:6px}
-.bar .fl{height:100%;background:#0f8;border-radius:3px}
-.toast{position:fixed;bottom:15px;right:15px;padding:8px 14px;border-radius:5px;font-size:11px;z-index:100}
-.toast.s{background:#0f8;color:#000}
-.toast.e{background:#f55}
+
+.msg{padding:15px 20px;background:#00ff8815;color:#00ff88;border-radius:8px;margin-bottom:20px;display:none}
+.msg.on{display:block}
 </style>
 </head>
 <body>
-<div class="bar" id="bar">
-<div style="display:flex;justify-content:space-between"><span id="bm">...</span><span id="bc">0/0</span></div>
-<div class="tr"><div class="fl" id="bf"></div></div>
+<header class="header">
+<div class="header-content">
+<div class="logo">KP <span>SHOES</span></div>
+<nav class="nav">
+<a href="/" class="active">Produits</a>
+<a href="/seo">SEO Manager</a>
+</nav>
 </div>
-<div class="hd"><a href="/">Retour</a><b>SEO V4 Pro</b><span></span></div>
-<div class="stats">
-<div class="st"><div class="v g" id="s1">-</div><div class="l">OK</div></div>
-<div class="st"><div class="v o" id="s2">-</div><div class="l">PARTIEL</div></div>
-<div class="st"><div class="v r" id="s3">-</div><div class="l">MANQUE</div></div>
-<div class="st"><div class="v" id="s4">-</div><div class="l">TOTAL</div></div>
-<div class="pct" id="pct">-</div>
+</header>
+
+<div class="stats-bar">
+<div class="stats-content">
+<div class="stat-card"><div class="stat-value" id="totalProducts">-</div><div class="stat-label">PRODUITS</div></div>
+<div class="stat-card"><div class="stat-value" id="totalVariants">-</div><div class="stat-label">VARIANTES</div></div>
+<div class="stat-card"><div class="stat-value" id="seoScore">-</div><div class="stat-label">SCORE SEO</div></div>
+<div class="stat-card"><div class="stat-value" id="collections">-</div><div class="stat-label">COLLECTIONS</div></div>
 </div>
-<div class="ctrl">
-<input id="q" placeholder="Rechercher...">
-<select id="f"><option value="">Tous</option><option value="missing">Sans lien</option><option value="partial">Partiel</option><option value="complete">Complet</option></select>
-<button class="bs" onclick="reload()">Actualiser</button>
-<button class="bg" onclick="doSel()">Selection</button>
-<button class="br" onclick="doAll()">TOUT</button>
-<div class="info"><b id="sc">0</b> sel.</div>
 </div>
+
+<main class="main">
 <div class="msg" id="msg"></div>
-<div id="list"><div class="ld"><div class="sp"></div>Chargement...</div></div>
+<div class="toolbar">
+<input type="text" class="search" id="search" placeholder="Rechercher un produit...">
+<select class="filter" id="filterSeo">
+<option value="">Tous les SEO</option>
+<option value="excellent">Excellent (85+)</option>
+<option value="good">Bon (70-84)</option>
+<option value="warning">Moyen (50-69)</option>
+<option value="poor">Faible (-50)</option>
+</select>
+<button class="btn btn-secondary" onclick="reload()">Actualiser</button>
+</div>
+<div class="products-grid" id="products">
+<div class="loading"><div class="spinner"></div>Chargement des produits...</div>
+</div>
+</main>
+
 <script>
-var P=[];
-var C=[];
-var sel={};
-var sinceId=0;
-var loading=false;
+var P=[], C=[], sinceId=0, loading=false, totalVariants=0;
 
-// Collections MODELES (priorite 1)
-var MODEL_COL={
-    "jordan-4":["jordan 4"],
-    "jordan-1-high":["jordan 1 high","jordan 1 retro high"],
-    "jordan-1-low":["jordan 1 low"],
-    "jordan-1-mid":["jordan 1 mid"],
-    "nike-dunk":["dunk"],
-    "air-force-1":["air force 1"],
-    "nike-p-6000":["air max"],
-    "nike-vomero":["vomero"],
-    "nike-sacail":["sacai"],
-    "adidas-samba":["samba"],
-    "adidas-campus":["campus"],
-    "adidas-gazelle":["gazelle"],
-    "adidas-spezial":["spezial"],
-    "adidas-forum":["forum"],
-    "yeezy-slide":["yeezy slide"],
-    "yeezy-351":["yeezy 350","350 v2"],
-    "yeezy-350":["yeezy 700"],
-    "new-balance-550":["550"],
-    "new-balance-530":["530"],
-    "new-balance-2002r":["2002r"],
-    "new-balance-9060":["9060"],
-    "new-balance-740":["740"],
-    "asics-gel-1130":["gel-1130","gel 1130"],
-    "asics-gel-kayano":["kayano"],
-    "asics-gel-nyc":["gel-nyc","gel nyc"],
-    "ugg-tasman":["tasman"],
-    "ugg-tazz":["tazz"],
-    "ugg-ultra-mini":["ultra mini"],
-    "ugg-classic-mini":["classic mini"],
-    "travis-scott":["travis scott"],
-    "off-white":["off-white","off white"],
-    "supreme":["supreme"],
-    "patta":["patta"],
-    "dior":["dior"],
-    "bape":["bape"]
-};
-
-// Collections MARQUES (priorite 2)
-var BRAND_COL={
-    "jordan-1":["jordan"],
-    "nike-1":["nike","nocta","blazer"],
-    "adidas-1":["adidas"],
-    "yeezy-1":["yeezy","foam runner"],
-    "new-balance-1":["new balance"],
-    "asics-1":["asics"],
-    "ugg-1":["ugg"],
-    "puma-1":["puma"],
-    "crocs":["crocs"],
-    "birkenstock-1":["birkenstock"],
-    "converse":["converse"],
-    "salomon":["salomon"],
-    "timberland":["timberland"]
-};
-
-function loadMore(){
+function loadProducts(){
     if(loading) return;
     loading=true;
     showMsg("Chargement... "+P.length+" produits");
@@ -496,202 +418,348 @@ function loadMore(){
         .then(function(d){
             if(d.collections) C=d.collections;
             if(d.products && d.products.length>0){
-                for(var i=0;i<d.products.length;i++){
-                    var p=d.products[i];
+                d.products.forEach(function(p){
                     var b=(p.body_html||"").toLowerCase();
                     p._lk=b.indexOf("kpshoes.fr/collections/")>=0;
                     p._ds=(p.body_html||"").length>100;
                     p._sc=(p._ds?30:0)+(p._lk?70:0);
-                    p._st=p._sc>=70?"complete":p._sc>=30?"partial":"missing";
-                    p._co=findC(p.title);
+                    if(p._sc>=85) p._seo="excellent";
+                    else if(p._sc>=70) p._seo="good";
+                    else if(p._sc>=50) p._seo="warning";
+                    else p._seo="poor";
+                    totalVariants += (p.variants||[]).length;
                     P.push(p);
-                }
+                });
                 sinceId=d.products[d.products.length-1].id;
                 updateStats();
                 filter();
                 loading=false;
-                if(d.products.length>=50){
-                    setTimeout(loadMore,300);
-                }else{
-                    showMsg("");
-                }
+                if(d.products.length>=50) setTimeout(loadProducts,300);
+                else showMsg("");
             }else{
                 showMsg("");
                 loading=false;
                 filter();
             }
         })
-        .catch(function(e){
-            showMsg("Erreur: "+e.message);
-            loading=false;
-        });
-}
-
-function findC(t){
-    if(!t||!C.length) return null;
-    t=t.toLowerCase();
-    
-    var avail=[];
-    for(var i=0;i<C.length;i++){
-        avail.push(C[i].handle);
-    }
-    
-    // Chercher MODELE d'abord
-    for(var h in MODEL_COL){
-        if(avail.indexOf(h)>=0){
-            var kws=MODEL_COL[h];
-            for(var k=0;k<kws.length;k++){
-                if(t.indexOf(kws[k])>=0){
-                    var c=null;
-                    for(var j=0;j<C.length;j++){
-                        if(C[j].handle===h){c=C[j];break;}
-                    }
-                    if(c) return {h:h,n:c.title,t:"m"};
-                }
-            }
-        }
-    }
-    
-    // Puis chercher MARQUE
-    for(var h in BRAND_COL){
-        if(avail.indexOf(h)>=0){
-            var kws=BRAND_COL[h];
-            for(var k=0;k<kws.length;k++){
-                if(t.indexOf(kws[k])>=0){
-                    var c=null;
-                    for(var j=0;j<C.length;j++){
-                        if(C[j].handle===h){c=C[j];break;}
-                    }
-                    if(c) return {h:h,n:c.title,t:"b"};
-                }
-            }
-        }
-    }
-    
-    return null;
+        .catch(function(e){showMsg("Erreur: "+e.message);loading=false;});
 }
 
 function updateStats(){
-    var c1=0,c2=0,c3=0,i;
-    for(i=0;i<P.length;i++){
-        if(P[i]._st==="complete") c1++;
-        else if(P[i]._st==="partial") c2++;
-        else c3++;
-    }
-    document.getElementById("s1").textContent=c1;
-    document.getElementById("s2").textContent=c2;
-    document.getElementById("s3").textContent=c3;
-    document.getElementById("s4").textContent=P.length;
-    document.getElementById("pct").textContent=P.length?Math.round(c1/P.length*100)+"%":"0%";
+    document.getElementById("totalProducts").textContent=P.length;
+    document.getElementById("totalVariants").textContent=totalVariants;
+    document.getElementById("collections").textContent=C.length;
+    var avgSeo=0;
+    P.forEach(function(p){avgSeo+=p._sc;});
+    avgSeo=P.length?Math.round(avgSeo/P.length):0;
+    document.getElementById("seoScore").textContent=avgSeo+"%";
 }
 
 function showMsg(t){
     var m=document.getElementById("msg");
     m.textContent=t;
-    if(t){m.className="msg on";}else{m.className="msg";}
+    m.className=t?"msg on":"msg";
 }
 
 function filter(){
-    var q=document.getElementById("q").value.toLowerCase();
-    var f=document.getElementById("f").value;
-    var L=[],i,p;
-    for(i=0;i<P.length;i++){
-        p=P[i];
-        if(q && p.title.toLowerCase().indexOf(q)<0) continue;
-        if(f && p._st!==f) continue;
-        L.push(p);
-    }
+    var q=document.getElementById("search").value.toLowerCase();
+    var f=document.getElementById("filterSeo").value;
+    var L=P.filter(function(p){
+        if(q && p.title.toLowerCase().indexOf(q)<0) return false;
+        if(f && p._seo!==f) return false;
+        return true;
+    });
     render(L);
 }
 
 function render(L){
-    var el=document.getElementById("list");
+    var el=document.getElementById("products");
     if(!L.length && !loading){
-        el.innerHTML="<div class='ld'>Aucun produit</div>";
+        el.innerHTML="<div class='loading'>Aucun produit trouvé</div>";
         return;
     }
     var html="";
-    var max=Math.min(L.length,200);
-    var i,p,ck,sc,co,img,sku;
-    for(i=0;i<max;i++){
-        p=L[i];
-        ck=sel[p.id]?"on":"";
-        sc=p._sc>=70?"h":p._sc>=30?"m":"l";
-        co="<span class='co n'>-</span>";
-        if(p._co){
-            co="<span class='co "+(p._co.t==="m"?"g":"p")+"'>"+(p._co.t==="m"?"M":"B")+" "+esc(p._co.n)+"</span>";
-        }
-        img=(p.image && p.image.src)?p.image.src:"";
-        sku=(p.variants && p.variants[0] && p.variants[0].sku)?p.variants[0].sku:"-";
-        html+="<div class='pr'>";
-        html+="<div class='ck "+ck+"' data-id='"+p.id+"'></div>";
-        html+="<img class='im' src='"+img+"'>";
-        html+="<div class='ti'><h4>"+esc(p.title)+"</h4><div class='sk'>"+sku+"</div>"+co+"</div>";
-        html+="<div class='se'><div class='"+(p._ds?"ok":"no")+"'>"+(p._ds?"V":"X")+" Desc</div><div class='"+(p._lk?"ok":"no")+"'>"+(p._lk?"V":"X")+" Lien</div></div>";
-        html+="<div class='sc "+sc+"'>"+p._sc+"%</div>";
-        html+="<div><button class='bg' data-pid='"+p.id+"'>GO</button></div>";
-        html+="</div>";
-    }
-    if(L.length>200) html+="<div class='ld'>200 max</div>";
+    L.slice(0,100).forEach(function(p){
+        var img=(p.image&&p.image.src)?p.image.src:"";
+        var sku=(p.variants&&p.variants[0])?p.variants[0].sku||"":"";
+        var price=(p.variants&&p.variants[0])?p.variants[0].price:"0";
+        var nbVar=(p.variants||[]).length;
+        html+='<div class="product-card" onclick="openProduct('+p.id+')">';
+        html+='<img class="product-image" src="'+img+'">';
+        html+='<div class="product-info">';
+        html+='<div class="product-title">'+esc(p.title)+'</div>';
+        html+='<div class="product-sku">'+sku+'</div>';
+        html+='<div class="product-meta">';
+        html+='<span class="product-price">'+price+' EUR</span>';
+        html+='<span class="seo-badge '+p._seo+'">SEO '+p._sc+'%</span>';
+        html+='</div>';
+        html+='<div class="product-variants">'+nbVar+' variante'+(nbVar>1?'s':'')+'</div>';
+        html+='</div></div>';
+    });
+    if(L.length>100) html+="<div class='loading'>100 premiers affichés</div>";
     el.innerHTML=html;
-    
-    var cks=document.querySelectorAll(".ck");
-    for(i=0;i<cks.length;i++){
-        cks[i].onclick=function(){tog(parseInt(this.getAttribute("data-id")));};
-    }
-    var btns=document.querySelectorAll(".pr button");
-    for(i=0;i<btns.length;i++){
-        btns[i].onclick=function(){doOne(parseInt(this.getAttribute("data-pid")));};
-    }
 }
 
 function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
-function tog(id){if(sel[id]){delete sel[id];}else{sel[id]=true;}var cnt=0;for(var k in sel){if(sel.hasOwnProperty(k))cnt++;}document.getElementById("sc").textContent=cnt;filter();}
-function getSelIds(){var ids=[];for(var k in sel){if(sel.hasOwnProperty(k))ids.push(parseInt(k));}return ids;}
-function reload(){P=[];C=[];sinceId=0;sel={};document.getElementById("sc").textContent="0";document.getElementById("list").innerHTML="<div class='ld'><div class='sp'></div>Chargement...</div>";loadMore();}
 
-function doOne(id){
-    toast("Application...","s");
-    fetch("/api/seo/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:id})})
-        .then(function(r){return r.json();})
-        .then(function(d){
-            if(d.success){
-                toast("OK!","s");
-                for(var i=0;i<P.length;i++){if(P[i].id===id){P[i]._lk=true;P[i]._ds=true;P[i]._sc=100;P[i]._st="complete";break;}}
-                updateStats();filter();
-            }else{toast("Erreur","e");}
-        })
-        .catch(function(e){toast("Erreur","e");});
+function openProduct(id){
+    window.location.href="/product/"+id;
 }
 
-function doSel(){var ids=getSelIds();if(!ids.length){toast("Selectionnez","e");return;}batch(ids);}
-function doAll(){if(!confirm("Appliquer a "+P.length+" produits?"))return;var ids=[];for(var i=0;i<P.length;i++){ids.push(P[i].id);}batch(ids);}
-
-function batch(ids){
-    document.getElementById("bar").className="bar on";
-    fetch("/api/seo/batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_ids:ids})}).then(function(){checkProgress();});
+function reload(){
+    P=[];C=[];sinceId=0;totalVariants=0;
+    document.getElementById("products").innerHTML="<div class='loading'><div class='spinner'></div>Chargement...</div>";
+    loadProducts();
 }
 
-function checkProgress(){
-    fetch("/api/progress").then(function(r){return r.json();}).then(function(r){
-        var pct=r.total?Math.round(r.current/r.total*100):0;
-        document.getElementById("bf").style.width=pct+"%";
-        document.getElementById("bc").textContent=r.current+"/"+r.total;
-        document.getElementById("bm").textContent=r.message||"...";
-        if(!r.running){document.getElementById("bar").className="bar";toast("Termine!","s");sel={};document.getElementById("sc").textContent="0";reload();}
-        else{setTimeout(checkProgress,1000);}
-    });
-}
-
-function toast(m,t){var e=document.createElement("div");e.className="toast "+t;e.textContent=m;document.body.appendChild(e);setTimeout(function(){if(e.parentNode)e.parentNode.removeChild(e);},2000);}
-
-document.getElementById("q").oninput=filter;
-document.getElementById("f").onchange=filter;
-loadMore();
+document.getElementById("search").oninput=filter;
+document.getElementById("filterSeo").onchange=filter;
+loadProducts();
 </script>
 </body>
 </html>'''
 
+
+@app.route('/product/<int:product_id>')
+def product_detail(product_id):
+    return '''<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Détail Produit - KP SHOES</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0a0a0f;color:#fff;min-height:100vh}
+.header{background:#111;padding:15px 20px;border-bottom:1px solid #222;display:flex;align-items:center;gap:20px}
+.back{color:#888;text-decoration:none;display:flex;align-items:center;gap:5px}
+.back:hover{color:#fff}
+.header-title{font-size:18px;font-weight:bold;color:#00ff88}
+
+.main{max-width:1200px;margin:0 auto;padding:20px}
+.product-header{display:grid;grid-template-columns:400px 1fr;gap:30px;margin-bottom:30px}
+.gallery{background:#111;border-radius:12px;overflow:hidden}
+.main-image{width:100%;height:400px;object-fit:contain;background:#1a1a2e}
+.thumbnails{display:flex;gap:10px;padding:15px;overflow-x:auto}
+.thumb{width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent}
+.thumb:hover,.thumb.active{border-color:#00ff88}
+
+.product-details{display:flex;flex-direction:column;gap:20px}
+.product-title{font-size:24px;font-weight:bold}
+.product-sku{color:#666;font-size:14px}
+.product-price{font-size:28px;font-weight:bold;color:#00ff88}
+
+.section{background:#111;border-radius:12px;padding:20px;margin-bottom:20px}
+.section-title{font-size:16px;font-weight:bold;margin-bottom:15px;color:#00ff88;display:flex;align-items:center;gap:10px}
+.section-title .icon{font-size:20px}
+
+.seo-score{display:flex;align-items:center;gap:20px;margin-bottom:20px}
+.score-circle{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold}
+.score-circle.excellent{background:#00ff8833;color:#00ff88;border:3px solid #00ff88}
+.score-circle.good{background:#00cc6a33;color:#00cc6a;border:3px solid #00cc6a}
+.score-circle.warning{background:#ffa50033;color:#ffa500;border:3px solid #ffa500}
+.score-circle.poor{background:#ff475733;color:#ff4757;border:3px solid #ff4757}
+.score-label{font-size:14px;color:#888}
+
+.seo-checks{display:flex;flex-direction:column;gap:10px}
+.seo-check{display:flex;align-items:center;gap:15px;padding:12px 15px;background:#1a1a2e;border-radius:8px}
+.check-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px}
+.check-icon.success{background:#00ff8833;color:#00ff88}
+.check-icon.warning{background:#ffa50033;color:#ffa500}
+.check-icon.error{background:#ff475733;color:#ff4757}
+.check-info{flex:1}
+.check-name{font-weight:600;font-size:13px}
+.check-message{font-size:11px;color:#888;margin-top:2px}
+.check-points{font-weight:bold;font-size:12px}
+
+.meta-box{background:#1a1a2e;border-radius:8px;padding:15px;margin-bottom:15px}
+.meta-label{font-size:11px;color:#666;margin-bottom:5px}
+.meta-value{font-size:13px;word-break:break-all}
+
+.variants-table{width:100%;border-collapse:collapse}
+.variants-table th,.variants-table td{padding:12px 15px;text-align:left;border-bottom:1px solid #222}
+.variants-table th{background:#1a1a2e;font-size:11px;color:#888;font-weight:600}
+.variants-table td{font-size:13px}
+.variant-available{color:#00ff88}
+.variant-unavailable{color:#ff4757}
+.variant-price{font-weight:bold}
+
+.btn{padding:12px 24px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px}
+.btn-primary{background:#00ff88;color:#000}
+.btn-secondary{background:#333;color:#fff}
+.btn-group{display:flex;gap:10px;margin-top:20px}
+
+.loading{text-align:center;padding:60px;color:#888}
+.spinner{width:40px;height:40px;border:3px solid #222;border-top-color:#00ff88;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 15px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.toast{position:fixed;bottom:20px;right:20px;padding:12px 20px;border-radius:8px;font-size:13px;z-index:100}
+.toast.success{background:#00ff88;color:#000}
+.toast.error{background:#ff4757;color:#fff}
+</style>
+</head>
+<body>
+<header class="header">
+<a href="/" class="back">← Retour</a>
+<div class="header-title">Détail Produit</div>
+</header>
+
+<main class="main" id="main">
+<div class="loading"><div class="spinner"></div>Chargement du produit...</div>
+</main>
+
+<script>
+var productId = ''' + str(product_id) + ''';
+var product = null;
+var seoData = null;
+
+function loadProduct(){
+    fetch("/api/product/"+productId)
+        .then(function(r){return r.json();})
+        .then(function(d){
+            if(d.error){
+                document.getElementById("main").innerHTML="<div class='loading'>Produit non trouvé</div>";
+                return;
+            }
+            product=d.product;
+            seoData=d.seo;
+            render();
+        })
+        .catch(function(e){
+            document.getElementById("main").innerHTML="<div class='loading'>Erreur: "+e.message+"</div>";
+        });
+}
+
+function render(){
+    var p=product;
+    var seo=seoData;
+    var mainImg=(p.images&&p.images[0])?p.images[0].src:"";
+    var sku=(p.variants&&p.variants[0])?p.variants[0].sku||"N/A":"N/A";
+    var price=(p.variants&&p.variants[0])?p.variants[0].price:"0";
+    
+    var html='<div class="product-header">';
+    
+    // Gallery
+    html+='<div class="gallery">';
+    html+='<img class="main-image" id="mainImage" src="'+mainImg+'">';
+    if(p.images && p.images.length>1){
+        html+='<div class="thumbnails">';
+        p.images.forEach(function(img,i){
+            html+='<img class="thumb'+(i===0?" active":"")+'" src="'+img.src+'" onclick="changeImage(this,\''+img.src+'\')">';
+        });
+        html+='</div>';
+    }
+    html+='</div>';
+    
+    // Details
+    html+='<div class="product-details">';
+    html+='<div class="product-title">'+esc(p.title)+'</div>';
+    html+='<div class="product-sku">SKU: '+sku+' | ID: '+p.id+'</div>';
+    html+='<div class="product-price">'+price+' EUR</div>';
+    
+    // SEO Score
+    html+='<div class="seo-score">';
+    html+='<div class="score-circle '+seo.status+'">'+seo.score+'</div>';
+    html+='<div><div style="font-size:18px;font-weight:bold">Score SEO</div><div class="score-label">'+getStatusLabel(seo.status)+'</div></div>';
+    html+='</div>';
+    
+    html+='<div class="btn-group">';
+    html+='<button class="btn btn-primary" onclick="regenerateSeo()">Régénérer SEO</button>';
+    html+='<a href="https://'+window.location.hostname.replace("shopify-manager-yzj3.onrender.com","")+'capet-shop.myshopify.com/admin/products/'+p.id+'" target="_blank" class="btn btn-secondary">Voir sur Shopify</a>';
+    html+='</div>';
+    html+='</div></div>';
+    
+    // SEO Section
+    html+='<div class="section">';
+    html+='<div class="section-title"><span class="icon">🎯</span> Analyse SEO</div>';
+    html+='<div class="seo-checks">';
+    seo.checks.forEach(function(check){
+        html+='<div class="seo-check">';
+        html+='<div class="check-icon '+check.status+'">'+(check.status==="success"?"✓":check.status==="warning"?"!":"✗")+'</div>';
+        html+='<div class="check-info"><div class="check-name">'+check.name+'</div><div class="check-message">'+check.message+'</div></div>';
+        html+='<div class="check-points">'+check.points+'/'+check.max+'</div>';
+        html+='</div>';
+    });
+    html+='</div></div>';
+    
+    // Meta Data
+    html+='<div class="section">';
+    html+='<div class="section-title"><span class="icon">📝</span> Données SEO</div>';
+    html+='<div class="meta-box"><div class="meta-label">META TITLE</div><div class="meta-value">'+(seo.meta_title||"<em>Non défini</em>")+'</div></div>';
+    html+='<div class="meta-box"><div class="meta-label">META DESCRIPTION</div><div class="meta-value">'+(seo.meta_description||"<em>Non définie</em>")+'</div></div>';
+    html+='<div class="meta-box"><div class="meta-label">DESCRIPTION</div><div class="meta-value" style="max-height:200px;overflow-y:auto">'+(p.body_html||"<em>Non définie</em>")+'</div></div>';
+    html+='</div>';
+    
+    // Variants
+    html+='<div class="section">';
+    html+='<div class="section-title"><span class="icon">📦</span> Variantes ('+p.variants.length+')</div>';
+    html+='<table class="variants-table">';
+    html+='<thead><tr><th>Taille</th><th>SKU</th><th>Prix</th><th>Compare</th><th>Stock</th><th>Disponible</th></tr></thead>';
+    html+='<tbody>';
+    p.variants.forEach(function(v){
+        var available=v.inventory_quantity>0 || v.inventory_policy==="continue";
+        html+='<tr>';
+        html+='<td><strong>'+v.title+'</strong></td>';
+        html+='<td>'+v.sku+'</td>';
+        html+='<td class="variant-price">'+v.price+' EUR</td>';
+        html+='<td>'+(v.compare_at_price||"-")+'</td>';
+        html+='<td>'+v.inventory_quantity+'</td>';
+        html+='<td class="'+(available?"variant-available":"variant-unavailable")+'">'+(available?"Oui":"Non")+'</td>';
+        html+='</tr>';
+    });
+    html+='</tbody></table>';
+    html+='</div>';
+    
+    document.getElementById("main").innerHTML=html;
+}
+
+function getStatusLabel(status){
+    if(status==="excellent") return "Excellent - Très bien optimisé";
+    if(status==="good") return "Bon - Bien optimisé";
+    if(status==="warning") return "Moyen - À améliorer";
+    return "Faible - Optimisation requise";
+}
+
+function changeImage(thumb, src){
+    document.getElementById("mainImage").src=src;
+    document.querySelectorAll(".thumb").forEach(function(t){t.classList.remove("active");});
+    thumb.classList.add("active");
+}
+
+function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function regenerateSeo(){
+    toast("Régénération SEO...","success");
+    fetch("/api/seo/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:productId})})
+        .then(function(r){return r.json();})
+        .then(function(d){
+            if(d.success){
+                toast("SEO mis à jour!","success");
+                setTimeout(function(){location.reload();},1500);
+            }else{
+                toast("Erreur","error");
+            }
+        })
+        .catch(function(e){toast("Erreur: "+e.message,"error");});
+}
+
+function toast(msg,type){
+    var t=document.createElement("div");
+    t.className="toast "+type;
+    t.textContent=msg;
+    document.body.appendChild(t);
+    setTimeout(function(){t.remove();},3000);
+}
+
+loadProduct();
+</script>
+</body>
+</html>'''
+
+
+# ══════════════════════════════════════════════════════════════
+# ROUTES API
+# ══════════════════════════════════════════════════════════════
 
 @app.route('/api/products')
 def api_products():
@@ -700,6 +768,25 @@ def api_products():
     r = shopify_request(f'products.json?limit={limit}&since_id={since_id}')
     products = r.get('products', []) if r else []
     return jsonify({'products': products, 'collections': get_collections()})
+
+
+@app.route('/api/product/<int:product_id>')
+def api_product(product_id):
+    """Récupère un produit avec toutes ses infos + analyse SEO"""
+    r = shopify_request(f'products/{product_id}.json')
+    if not r or 'product' not in r:
+        return jsonify({'error': 'Product not found'}), 404
+    
+    product = r['product']
+    metafields = get_product_metafields(product_id)
+    seo_analysis = analyze_seo(product, metafields['meta_title'], metafields['meta_description'])
+    seo_analysis['meta_title'] = metafields['meta_title']
+    seo_analysis['meta_description'] = metafields['meta_description']
+    
+    return jsonify({
+        'product': product,
+        'seo': seo_analysis
+    })
 
 
 @app.route('/api/collections')
@@ -713,23 +800,23 @@ def api_progress():
 
 
 @app.route('/api/seo/apply', methods=['POST'])
-def api_apply():
+def api_apply_seo():
     pid = request.json.get('product_id')
     r = shopify_request(f'products/{pid}.json')
     if not r: return jsonify({'error': 'err'}), 404
     p = r['product']
-    col = find_collection(p.get('title', ''), get_collections())
-    update_seo(pid, {'meta_title': gen_title(p), 'meta_description': gen_desc(p), 'body_html': generate_description(p, col)})
-    return jsonify({'success': True, 'collection': col})
+    seo = generate_seo(p, get_collections())
+    update_product_seo(pid, seo)
+    return jsonify({'success': True, 'collection': seo.get('collection')})
 
 
 @app.route('/api/seo/batch', methods=['POST'])
-def api_batch():
+def api_batch_seo():
     global task_progress
     pids = request.json.get('product_ids', [])
     def run():
         global task_progress
-        task_progress = {'running': True, 'current': 0, 'total': len(pids), 'message': 'Demarrage...'}
+        task_progress = {'running': True, 'current': 0, 'total': len(pids), 'message': 'Démarrage...'}
         cols = get_collections()
         for i, pid in enumerate(pids):
             task_progress['current'] = i + 1
@@ -737,12 +824,18 @@ def api_batch():
             if r and 'product' in r:
                 p = r['product']
                 task_progress['message'] = p.get('title','')[:30]
-                col = find_collection(p.get('title', ''), cols)
-                update_seo(pid, {'meta_title': gen_title(p), 'meta_description': gen_desc(p), 'body_html': generate_description(p, col)})
+                seo = generate_seo(p, cols)
+                update_product_seo(pid, seo)
             time.sleep(1)
-        task_progress = {'running': False, 'current': len(pids), 'total': len(pids), 'message': 'Termine! '+str(len(pids))+' produits'}
+        task_progress = {'running': False, 'current': len(pids), 'total': len(pids), 'message': f'Terminé! {len(pids)} produits'}
     Thread(target=run, daemon=True).start()
     return jsonify({'ok': True})
+
+
+# Ancienne route SEO pour compatibilité
+@app.route('/seo')
+def seo_page():
+    return '''<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="refresh" content="0;url=/"></head><body>Redirection...</body></html>'''
 
 
 if __name__ == '__main__':
