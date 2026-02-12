@@ -1,8 +1,9 @@
 """
 KP SHOES - Plateforme de Gestion Shopify V6
+Avec comparaison prix StockX en temps réel
 """
 
-from flask import Flask, jsonify, request, render_template_string
+from flask import Flask, jsonify, request
 import json, os, time, re, ssl
 from urllib.request import Request, urlopen
 from urllib.parse import quote
@@ -61,7 +62,188 @@ def get_product_metafields(product_id):
     return {'meta_title': meta_title, 'meta_description': meta_description}
 
 
-# Collections mapping
+# ══════════════════════════════════════════════════════════════
+# STOCKX - Récupération des prix
+# ══════════════════════════════════════════════════════════════
+
+def get_stockx_prices(sku):
+    """Récupère les prix StockX pour un SKU"""
+    if not sku:
+        return None
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Origin': 'https://stockx.com',
+        'Referer': 'https://stockx.com/',
+    }
+    
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    
+    try:
+        # Recherche du produit par SKU
+        search_url = f"https://stockx.com/api/browse?_search={quote(sku)}"
+        req = Request(search_url, headers=headers)
+        
+        with urlopen(req, context=ctx, timeout=15) as r:
+            data = json.loads(r.read().decode('utf-8'))
+        
+        if not data.get('Products') or len(data['Products']) == 0:
+            print(f"[StockX] Aucun produit trouvé pour {sku}")
+            return None
+        
+        product = data['Products'][0]
+        url_key = product.get('urlKey')
+        
+        if not url_key:
+            return None
+        
+        # Récupérer les détails avec les prix par taille
+        detail_url = f"https://stockx.com/api/products/{url_key}?includes=market,360&currency=EUR&country=FR"
+        req2 = Request(detail_url, headers=headers)
+        
+        with urlopen(req2, context=ctx, timeout=15) as r:
+            detail = json.loads(r.read().decode('utf-8'))
+        
+        product_data = detail.get('Product', {})
+        
+        result = {
+            'name': product_data.get('title', ''),
+            'sku': product_data.get('styleId', sku),
+            'urlKey': url_key,
+            'image': product_data.get('media', {}).get('imageUrl', ''),
+            'sizes': {}
+        }
+        
+        # Extraire les prix par taille depuis children
+        children = product_data.get('children', {})
+        for size_key, size_data in children.items():
+            market = size_data.get('market', {})
+            shoe_size = size_data.get('shoeSize', '')
+            
+            # Prix le plus bas demandé (lowest ask) = prix d'achat
+            lowest_ask = market.get('lowestAsk', 0)
+            lowest_ask_eur = market.get('lowestAskFloat', lowest_ask)
+            
+            if lowest_ask_eur and lowest_ask_eur > 0:
+                # Conversion taille US -> EU approximative
+                try:
+                    us_size = float(shoe_size) if shoe_size else 0
+                    eu_size = us_size + 33 if us_size > 0 else 0
+                except:
+                    eu_size = 0
+                
+                result['sizes'][str(shoe_size)] = {
+                    'us': str(shoe_size),
+                    'eu': str(eu_size) if eu_size else '',
+                    'stockx_price': round(lowest_ask_eur, 2),
+                    'ideal_price': calculate_ideal_price(lowest_ask_eur)
+                }
+        
+        print(f"[StockX] Trouvé {len(result['sizes'])} tailles pour {sku}")
+        return result
+        
+    except Exception as e:
+        print(f"[StockX Error] {e}")
+        return None
+
+
+def calculate_ideal_price(stockx_price):
+    """Calcule le prix idéal selon les règles de marge"""
+    if not stockx_price or stockx_price <= 0:
+        return 0
+    
+    p = float(stockx_price)
+    
+    if p <= 125:
+        margin = 0.35
+    elif p <= 160:
+        margin = 0.30
+    elif p <= 200:
+        margin = 0.20
+    elif p <= 300:
+        margin = 0.14
+    elif p <= 400:
+        margin = 0.125
+    elif p <= 500:
+        margin = 0.115
+    elif p <= 550:
+        margin = 0.11
+    elif p <= 600:
+        margin = 0.105
+    elif p <= 650:
+        margin = 0.10
+    elif p <= 700:
+        margin = 0.095
+    elif p <= 750:
+        margin = 0.09
+    elif p <= 800:
+        margin = 0.085
+    elif p <= 850:
+        margin = 0.08
+    else:
+        margin = 0.075
+    
+    return round(p * (1 + margin), 2)
+
+
+def match_size(variant_title, stockx_sizes):
+    """Trouve la correspondance entre une taille Shopify et StockX"""
+    if not variant_title or not stockx_sizes:
+        return None
+    
+    # Nettoyer le titre de la variante
+    title = str(variant_title).strip().upper()
+    
+    # Extraire le nombre de la taille
+    match = re.search(r'(\d+[\.,]?\d*)', title)
+    if not match:
+        return None
+    
+    size_num = match.group(1).replace(',', '.')
+    
+    # Chercher correspondance directe (EU ou US)
+    for sx_size, sx_data in stockx_sizes.items():
+        # Match US direct
+        if sx_size == size_num:
+            return sx_data
+        # Match EU
+        if sx_data.get('eu') == size_num:
+            return sx_data
+        # Match avec décimales
+        try:
+            if float(sx_size) == float(size_num):
+                return sx_data
+            if sx_data.get('eu') and float(sx_data['eu']) == float(size_num):
+                return sx_data
+        except:
+            pass
+    
+    # Conversion EU -> US approximative et recherche
+    try:
+        eu_size = float(size_num)
+        if eu_size > 30:  # Probablement une taille EU
+            us_size = eu_size - 33
+            for sx_size, sx_data in stockx_sizes.items():
+                try:
+                    if abs(float(sx_size) - us_size) < 0.5:
+                        return sx_data
+                except:
+                    pass
+    except:
+        pass
+    
+    return None
+
+
+# ══════════════════════════════════════════════════════════════
+# Collections & SEO (inchangé)
+# ══════════════════════════════════════════════════════════════
+
 MODEL_COLLECTIONS = {
     'jordan-4': ['jordan 4'], 'jordan-1-high': ['jordan 1 high'], 'jordan-1-low': ['jordan 1 low'],
     'jordan-1-mid': ['jordan 1 mid'], 'nike-dunk': ['dunk'], 'air-force-1': ['air force 1'],
@@ -360,7 +542,6 @@ function render(L){
         var p=L[i];var img=(p.image&&p.image.src)?p.image.src:"";
         var sku=(p.variants&&p.variants[0])?p.variants[0].sku||"":"";
         var price=(p.variants&&p.variants[0])?p.variants[0].price:"0";
-        var nbV=(p.variants||[]).length;
         html+="<div class='card' onclick='go("+p.id+")'><img src='"+img+"'><div class='card-body'>";
         html+="<div class='card-title'>"+esc(p.title)+"</div><div class='card-sku'>"+sku+"</div>";
         html+="<div class='card-meta'><span class='card-price'>"+price+" EUR</span><span class='badge "+p._seo+"'>"+p._sc+"%</span></div>";
@@ -410,9 +591,9 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 .score.poor{background:#ff475733;color:#ff4757;border:3px solid #ff4757}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
 .btn{padding:10px 16px;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:12px;text-decoration:none}
-.btn-p{background:#00ff88;color:#000}.btn-s{background:#333;color:#fff}
+.btn-p{background:#00ff88;color:#000}.btn-s{background:#333;color:#fff}.btn-o{background:#ff9500;color:#000}
 .section{background:#111;border-radius:10px;padding:15px;margin-bottom:15px}
-.section-title{font-size:13px;font-weight:bold;margin-bottom:10px;color:#00ff88}
+.section-title{font-size:13px;font-weight:bold;margin-bottom:10px;color:#00ff88;display:flex;justify-content:space-between;align-items:center}
 .checks{display:flex;flex-direction:column;gap:6px}
 .check{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#1a1a2e;border-radius:6px;cursor:pointer;border:2px solid transparent}
 .check:hover{border-color:#333}.check.selected{border-color:#00ff88;background:#00ff8815}
@@ -434,6 +615,7 @@ th{background:#1a1a2e;font-size:9px;color:#888}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:6px;font-size:12px;z-index:100}
 .toast.success{background:#00ff88;color:#000}.toast.error{background:#ff4757}
+.stockx-info{font-size:10px;color:#888;font-weight:normal}
 @media(max-width:800px){.top{grid-template-columns:1fr}}
 </style>
 </head>
@@ -447,14 +629,93 @@ th{background:#1a1a2e;font-size:9px;color:#888}
 var pid=PRODUCT_ID_PLACEHOLDER;
 var P=null;
 var SEO=null;
+var SX=null;
 var SHOP_URL="SHOP_PLACEHOLDER";
 var selectedFields=[];
 
 function load(){
     fetch("/api/product/"+pid).then(function(r){return r.json();}).then(function(d){
         if(d.error){document.getElementById("main").innerHTML="<div class='loading'>Produit non trouve</div>";return;}
-        P=d.product;SEO=d.seo;render();
+        P=d.product;SEO=d.seo;render();loadStockX();
     }).catch(function(e){document.getElementById("main").innerHTML="<div class='loading'>Erreur: "+e.message+"</div>";});
+}
+
+function loadStockX(){
+    var sku=(P.variants&&P.variants[0])?P.variants[0].sku:"";
+    if(!sku){updateStockXColumn(null);return;}
+    fetch("/api/stockx?sku="+encodeURIComponent(sku)).then(function(r){return r.json();}).then(function(d){
+        SX=d.error?null:d;
+        updateStockXColumn(SX);
+    }).catch(function(){updateStockXColumn(null);});
+}
+
+function updateStockXColumn(sx){
+    var rows=document.querySelectorAll("#varTable tbody tr");
+    var infoEl=document.getElementById("sxInfo");
+    
+    if(!sx||!sx.sizes){
+        for(var i=0;i<rows.length;i++){
+            rows[i].querySelector(".sx-col").textContent="-";
+            rows[i].querySelector(".ideal-col").textContent="-";
+            rows[i].querySelector(".diff-col").textContent="-";
+        }
+        if(infoEl)infoEl.textContent="Non trouve sur StockX";
+        return;
+    }
+    
+    if(infoEl)infoEl.textContent=sx.name||"";
+    
+    for(var i=0;i<rows.length;i++){
+        var row=rows[i];
+        var size=row.getAttribute("data-size");
+        var myPrice=parseFloat(row.getAttribute("data-price"))||0;
+        var match=findSizeMatch(size,sx.sizes);
+        
+        if(match){
+            var sxPrice=match.stockx_price;
+            var idealPrice=match.ideal_price;
+            row.querySelector(".sx-col").innerHTML="<strong>"+sxPrice.toFixed(0)+" EUR</strong>";
+            row.querySelector(".ideal-col").textContent=idealPrice.toFixed(0)+" EUR";
+            
+            var diff=myPrice-idealPrice;
+            var pct=idealPrice>0?((diff/idealPrice)*100).toFixed(0):0;
+            if(diff>=0){
+                row.querySelector(".diff-col").innerHTML="<span class='ok'>+"+pct+"%</span>";
+            }else if(diff>-20){
+                row.querySelector(".diff-col").innerHTML="<span class='warn'>"+pct+"%</span>";
+            }else{
+                row.querySelector(".diff-col").innerHTML="<span class='bad'>"+pct+"%</span>";
+            }
+        }else{
+            row.querySelector(".sx-col").textContent="-";
+            row.querySelector(".ideal-col").textContent="-";
+            row.querySelector(".diff-col").textContent="-";
+        }
+    }
+}
+
+function findSizeMatch(variantSize,sxSizes){
+    if(!variantSize||!sxSizes)return null;
+    var s=String(variantSize).replace(/[^0-9.,]/g,"").replace(",",".");
+    var num=parseFloat(s);
+    if(!num)return null;
+    
+    for(var key in sxSizes){
+        var sx=sxSizes[key];
+        var usSize=parseFloat(key);
+        var euSize=parseFloat(sx.eu);
+        
+        if(Math.abs(usSize-num)<0.3)return sx;
+        if(euSize&&Math.abs(euSize-num)<0.3)return sx;
+    }
+    
+    if(num>30){
+        var guessUS=num-33;
+        for(var key in sxSizes){
+            if(Math.abs(parseFloat(key)-guessUS)<0.5)return sxSizes[key];
+        }
+    }
+    return null;
 }
 
 function render(){
@@ -476,7 +737,7 @@ function render(){
     h+="<a href='https://"+SHOP_URL+"/admin/products/"+p.id+"' target='_blank' class='btn btn-s'>Shopify</a>";
     h+="</div></div></div>";
     
-    h+="<div class='section'><div class='section-title'>Analyse SEO (cliquez pour selectionner)</div><div class='checks'>";
+    h+="<div class='section'><div class='section-title'>Analyse SEO <span style='font-size:10px;color:#888;font-weight:normal'>Cliquez pour selectionner</span></div><div class='checks'>";
     var fields=["meta_title","meta_description","body_html",""];
     for(var i=0;i<seo.checks.length;i++){
         var c=seo.checks[i];
@@ -489,18 +750,24 @@ function render(){
     }
     h+="</div></div>";
     
-    h+="<div class='section'><div class='section-title'>Donnees SEO actuelles</div>";
+    h+="<div class='section'><div class='section-title'>Donnees SEO</div>";
     h+="<div class='meta-box'><div class='meta-label'>META TITLE</div><div class='meta-value'>"+(seo.meta_title||"Non defini")+"</div></div>";
     h+="<div class='meta-box'><div class='meta-label'>META DESCRIPTION</div><div class='meta-value'>"+(seo.meta_description||"Non definie")+"</div></div>";
-    h+="<div class='meta-box'><div class='meta-label'>DESCRIPTION</div><div class='meta-value' style='max-height:100px;overflow-y:auto'>"+(p.body_html||"Non definie")+"</div></div>";
+    h+="<div class='meta-box'><div class='meta-label'>DESCRIPTION</div><div class='meta-value' style='max-height:80px;overflow-y:auto'>"+(p.body_html||"Non definie")+"</div></div>";
     h+="</div>";
     
-    h+="<div class='section'><div class='section-title'>Variantes ("+p.variants.length+")</div>";
-    h+="<table><thead><tr><th>Taille</th><th>SKU</th><th>Prix</th><th>Compare</th><th>Stock</th><th>Dispo</th></tr></thead><tbody>";
+    h+="<div class='section'><div class='section-title'>Variantes & Prix StockX ("+p.variants.length+") <span class='stockx-info' id='sxInfo'>Chargement StockX...</span></div>";
+    h+="<table id='varTable'><thead><tr><th>Taille</th><th>SKU</th><th>Mon Prix</th><th>StockX</th><th>Prix Ideal</th><th>Ecart</th><th>Stock</th></tr></thead><tbody>";
     for(var i=0;i<p.variants.length;i++){
         var v=p.variants[i];
-        var av=v.inventory_quantity>0||v.inventory_policy==="continue";
-        h+="<tr><td><strong>"+v.title+"</strong></td><td>"+(v.sku||"-")+"</td><td><strong>"+v.price+" EUR</strong></td><td>"+(v.compare_at_price||"-")+"</td><td>"+v.inventory_quantity+"</td><td class='"+(av?"ok":"bad")+"'>"+(av?"Oui":"Non")+"</td></tr>";
+        h+="<tr data-size='"+v.title+"' data-price='"+v.price+"' data-vid='"+v.id+"'>";
+        h+="<td><strong>"+v.title+"</strong></td>";
+        h+="<td>"+(v.sku||"-")+"</td>";
+        h+="<td><strong>"+v.price+" EUR</strong></td>";
+        h+="<td class='sx-col'>...</td>";
+        h+="<td class='ideal-col'>...</td>";
+        h+="<td class='diff-col'>...</td>";
+        h+="<td>"+v.inventory_quantity+"</td></tr>";
     }
     h+="</tbody></table></div>";
     
@@ -526,7 +793,7 @@ function regenSelected(){
         .then(function(r){return r.json();}).then(function(d){
             if(d.success){toast("Mis a jour!","success");setTimeout(function(){location.reload();},1500);}
             else{toast("Erreur","error");}
-        }).catch(function(e){toast("Erreur","error");});
+        }).catch(function(){toast("Erreur","error");});
 }
 
 function regenAll(){
@@ -535,7 +802,7 @@ function regenAll(){
         .then(function(r){return r.json();}).then(function(d){
             if(d.success){toast("SEO mis a jour!","success");setTimeout(function(){location.reload();},1500);}
             else{toast("Erreur","error");}
-        }).catch(function(e){toast("Erreur","error");});
+        }).catch(function(){toast("Erreur","error");});
 }
 
 function toast(m,t){var e=document.createElement("div");e.className="toast "+t;e.textContent=m;document.body.appendChild(e);setTimeout(function(){e.remove();},3000);}
@@ -582,6 +849,20 @@ def api_product(product_id):
     seo['meta_title'] = metafields['meta_title']
     seo['meta_description'] = metafields['meta_description']
     return jsonify({'product': product, 'seo': seo})
+
+
+@app.route('/api/stockx')
+def api_stockx():
+    """Récupère les prix StockX pour un SKU"""
+    sku = request.args.get('sku', '')
+    if not sku:
+        return jsonify({'error': 'No SKU'}), 400
+    
+    data = get_stockx_prices(sku)
+    if not data:
+        return jsonify({'error': 'Not found'}), 404
+    
+    return jsonify(data)
 
 
 @app.route('/api/collections')
@@ -655,10 +936,6 @@ def api_progress():
     return jsonify(task_progress)
 
 
-# ══════════════════════════════════════════════════════════════
-# VARIANT PRICE UPDATE (pour plus tard)
-# ══════════════════════════════════════════════════════════════
-
 @app.route('/api/variant/update', methods=['POST'])
 def api_update_variant():
     """Met à jour le prix d'une variante"""
@@ -675,7 +952,7 @@ def api_update_variant():
     result = shopify_request(f'variants/{variant_id}.json', 'PUT', update_data)
     if result and 'variant' in result:
         return jsonify({'success': True, 'variant': result['variant']})
-    return jsonify({'error': 'Failed to update'}), 400
+    return jsonify({'error': 'Failed'}), 400
 
 
 if __name__ == '__main__':
