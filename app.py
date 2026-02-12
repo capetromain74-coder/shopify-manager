@@ -1,12 +1,12 @@
 """
 KP SHOES - Plateforme de Gestion Shopify V6
-Avec comparaison prix StockX en temps réel
+Avec comparaison prix StockX (multiple methodes)
 """
 
 from flask import Flask, jsonify, request
 import json, os, time, re, ssl
 from urllib.request import Request, urlopen
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 from threading import Thread
 
 app = Flask(__name__)
@@ -63,37 +63,64 @@ def get_product_metafields(product_id):
 
 
 # ══════════════════════════════════════════════════════════════
-# STOCKX - Récupération des prix
+# STOCKX - Multiple méthodes de récupération des prix
 # ══════════════════════════════════════════════════════════════
 
 def get_stockx_prices(sku):
-    """Récupère les prix StockX pour un SKU"""
+    """Essaie plusieurs méthodes pour récupérer les prix StockX"""
     if not sku:
         return None
     
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Origin': 'https://stockx.com',
-        'Referer': 'https://stockx.com/',
-    }
+    # Méthode 1: API Browse avec headers complets
+    result = try_stockx_browse_api(sku)
+    if result:
+        return result
     
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    # Méthode 2: API Search publique
+    result = try_stockx_search_api(sku)
+    if result:
+        return result
     
+    # Méthode 3: Scraping de la page produit
+    result = try_stockx_scrape(sku)
+    if result:
+        return result
+    
+    print(f"[StockX] Toutes les méthodes ont échoué pour {sku}")
+    return None
+
+
+def try_stockx_browse_api(sku):
+    """Méthode 1: API Browse officielle"""
     try:
-        # Recherche du produit par SKU
-        search_url = f"https://stockx.com/api/browse?_search={quote(sku)}"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Origin': 'https://stockx.com',
+            'Referer': 'https://stockx.com/',
+            'sec-ch-ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+        }
+        
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        
+        # Recherche
+        search_url = f"https://stockx.com/api/browse?_search={quote(sku)}&dataType=product&country=FR&currency=EUR"
         req = Request(search_url, headers=headers)
         
         with urlopen(req, context=ctx, timeout=15) as r:
             data = json.loads(r.read().decode('utf-8'))
         
         if not data.get('Products') or len(data['Products']) == 0:
-            print(f"[StockX] Aucun produit trouvé pour {sku}")
+            print(f"[StockX Browse] Aucun produit pour {sku}")
             return None
         
         product = data['Products'][0]
@@ -102,53 +129,163 @@ def get_stockx_prices(sku):
         if not url_key:
             return None
         
-        # Récupérer les détails avec les prix par taille
-        detail_url = f"https://stockx.com/api/products/{url_key}?includes=market,360&currency=EUR&country=FR"
+        print(f"[StockX Browse] Trouvé: {product.get('title')} - {url_key}")
+        
+        # Détails du produit
+        detail_url = f"https://stockx.com/api/products/{url_key}?includes=market&currency=EUR&country=FR"
         req2 = Request(detail_url, headers=headers)
         
         with urlopen(req2, context=ctx, timeout=15) as r:
             detail = json.loads(r.read().decode('utf-8'))
         
+        return parse_stockx_response(detail, sku)
+        
+    except Exception as e:
+        print(f"[StockX Browse Error] {e}")
+        return None
+
+
+def try_stockx_search_api(sku):
+    """Méthode 2: API Search alternative"""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+            'Accept': '*/*',
+            'Accept-Language': 'fr-FR,fr;q=0.9',
+            'x-requested-with': 'XMLHttpRequest',
+        }
+        
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        
+        # Endpoint alternatif
+        search_url = f"https://stockx.com/api/browse?_search={quote(sku)}"
+        req = Request(search_url, headers=headers)
+        
+        with urlopen(req, context=ctx, timeout=10) as r:
+            data = json.loads(r.read().decode('utf-8'))
+        
+        if data.get('Products') and len(data['Products']) > 0:
+            product = data['Products'][0]
+            
+            # Essayer de récupérer le market data directement
+            market = product.get('market', {})
+            if market.get('lowestAsk'):
+                return {
+                    'name': product.get('title', ''),
+                    'sku': product.get('styleId', sku),
+                    'image': product.get('media', {}).get('thumbUrl', ''),
+                    'sizes': {
+                        'all': {
+                            'us': 'all',
+                            'eu': '',
+                            'stockx_price': market.get('lowestAsk', 0),
+                            'ideal_price': calculate_ideal_price(market.get('lowestAsk', 0))
+                        }
+                    }
+                }
+        
+        return None
+        
+    except Exception as e:
+        print(f"[StockX Search Error] {e}")
+        return None
+
+
+def try_stockx_scrape(sku):
+    """Méthode 3: Scraping de la page (fallback)"""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+        }
+        
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        
+        # Chercher la page du produit
+        search_url = f"https://stockx.com/search?s={quote(sku)}"
+        req = Request(search_url, headers=headers)
+        
+        with urlopen(req, context=ctx, timeout=10) as r:
+            html = r.read().decode('utf-8')
+        
+        # Chercher le JSON embarqué dans la page
+        match = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html)
+        if match:
+            data = json.loads(match.group(1))
+            # Parser les données...
+            props = data.get('props', {}).get('pageProps', {})
+            if props:
+                print(f"[StockX Scrape] Données trouvées")
+                # Extraire les infos...
+        
+        return None
+        
+    except Exception as e:
+        print(f"[StockX Scrape Error] {e}")
+        return None
+
+
+def parse_stockx_response(detail, sku):
+    """Parse la réponse StockX et extrait les prix par taille"""
+    try:
         product_data = detail.get('Product', {})
         
         result = {
             'name': product_data.get('title', ''),
             'sku': product_data.get('styleId', sku),
-            'urlKey': url_key,
+            'urlKey': product_data.get('urlKey', ''),
             'image': product_data.get('media', {}).get('imageUrl', ''),
             'sizes': {}
         }
         
         # Extraire les prix par taille depuis children
         children = product_data.get('children', {})
+        
         for size_key, size_data in children.items():
             market = size_data.get('market', {})
             shoe_size = size_data.get('shoeSize', '')
             
-            # Prix le plus bas demandé (lowest ask) = prix d'achat
             lowest_ask = market.get('lowestAsk', 0)
-            lowest_ask_eur = market.get('lowestAskFloat', lowest_ask)
             
-            if lowest_ask_eur and lowest_ask_eur > 0:
-                # Conversion taille US -> EU approximative
+            if lowest_ask and lowest_ask > 0:
+                # Conversion approximative US -> EU
                 try:
                     us_size = float(shoe_size) if shoe_size else 0
-                    eu_size = us_size + 33 if us_size > 0 else 0
+                    eu_size = round(us_size + 33, 1) if us_size > 0 else 0
                 except:
                     eu_size = 0
                 
                 result['sizes'][str(shoe_size)] = {
                     'us': str(shoe_size),
                     'eu': str(eu_size) if eu_size else '',
-                    'stockx_price': round(lowest_ask_eur, 2),
-                    'ideal_price': calculate_ideal_price(lowest_ask_eur)
+                    'stockx_price': round(float(lowest_ask), 2),
+                    'ideal_price': calculate_ideal_price(float(lowest_ask))
                 }
         
-        print(f"[StockX] Trouvé {len(result['sizes'])} tailles pour {sku}")
-        return result
+        if result['sizes']:
+            print(f"[StockX] {len(result['sizes'])} tailles trouvées pour {sku}")
+            return result
+        
+        # Si pas de children, essayer le market global
+        market = product_data.get('market', {})
+        if market.get('lowestAsk'):
+            result['sizes']['all'] = {
+                'us': 'all',
+                'eu': '',
+                'stockx_price': round(float(market['lowestAsk']), 2),
+                'ideal_price': calculate_ideal_price(float(market['lowestAsk']))
+            }
+            return result
+        
+        return None
         
     except Exception as e:
-        print(f"[StockX Error] {e}")
+        print(f"[StockX Parse Error] {e}")
         return None
 
 
@@ -189,55 +326,6 @@ def calculate_ideal_price(stockx_price):
         margin = 0.075
     
     return round(p * (1 + margin), 2)
-
-
-def match_size(variant_title, stockx_sizes):
-    """Trouve la correspondance entre une taille Shopify et StockX"""
-    if not variant_title or not stockx_sizes:
-        return None
-    
-    # Nettoyer le titre de la variante
-    title = str(variant_title).strip().upper()
-    
-    # Extraire le nombre de la taille
-    match = re.search(r'(\d+[\.,]?\d*)', title)
-    if not match:
-        return None
-    
-    size_num = match.group(1).replace(',', '.')
-    
-    # Chercher correspondance directe (EU ou US)
-    for sx_size, sx_data in stockx_sizes.items():
-        # Match US direct
-        if sx_size == size_num:
-            return sx_data
-        # Match EU
-        if sx_data.get('eu') == size_num:
-            return sx_data
-        # Match avec décimales
-        try:
-            if float(sx_size) == float(size_num):
-                return sx_data
-            if sx_data.get('eu') and float(sx_data['eu']) == float(size_num):
-                return sx_data
-        except:
-            pass
-    
-    # Conversion EU -> US approximative et recherche
-    try:
-        eu_size = float(size_num)
-        if eu_size > 30:  # Probablement une taille EU
-            us_size = eu_size - 33
-            for sx_size, sx_data in stockx_sizes.items():
-                try:
-                    if abs(float(sx_size) - us_size) < 0.5:
-                        return sx_data
-                except:
-                    pass
-    except:
-        pass
-    
-    return None
 
 
 # ══════════════════════════════════════════════════════════════
@@ -616,6 +704,7 @@ th{background:#1a1a2e;font-size:9px;color:#888}
 .toast{position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:6px;font-size:12px;z-index:100}
 .toast.success{background:#00ff88;color:#000}.toast.error{background:#ff4757}
 .stockx-info{font-size:10px;color:#888;font-weight:normal}
+.retry-btn{background:#ff9500;color:#000;border:none;padding:5px 10px;border-radius:4px;font-size:10px;cursor:pointer;margin-left:10px}
 @media(max-width:800px){.top{grid-template-columns:1fr}}
 </style>
 </head>
@@ -642,16 +731,32 @@ function load(){
 
 function loadStockX(){
     var sku=(P.variants&&P.variants[0])?P.variants[0].sku:"";
-    if(!sku){updateStockXColumn(null);return;}
+    if(!sku){
+        document.getElementById("sxInfo").innerHTML="Pas de SKU";
+        updateStockXColumn(null);
+        return;
+    }
+    document.getElementById("sxInfo").innerHTML="Chargement StockX pour "+sku+"...";
+    
     fetch("/api/stockx?sku="+encodeURIComponent(sku)).then(function(r){return r.json();}).then(function(d){
-        SX=d.error?null:d;
-        updateStockXColumn(SX);
-    }).catch(function(){updateStockXColumn(null);});
+        console.log("StockX response:", d);
+        if(d.error){
+            document.getElementById("sxInfo").innerHTML="StockX: "+d.error+" <button class='retry-btn' onclick='loadStockX()'>Reessayer</button>";
+            updateStockXColumn(null);
+        }else{
+            SX=d;
+            document.getElementById("sxInfo").innerHTML=d.name||"Trouve sur StockX";
+            updateStockXColumn(SX);
+        }
+    }).catch(function(e){
+        console.log("StockX error:", e);
+        document.getElementById("sxInfo").innerHTML="Erreur StockX <button class='retry-btn' onclick='loadStockX()'>Reessayer</button>";
+        updateStockXColumn(null);
+    });
 }
 
 function updateStockXColumn(sx){
     var rows=document.querySelectorAll("#varTable tbody tr");
-    var infoEl=document.getElementById("sxInfo");
     
     if(!sx||!sx.sizes){
         for(var i=0;i<rows.length;i++){
@@ -659,11 +764,8 @@ function updateStockXColumn(sx){
             rows[i].querySelector(".ideal-col").textContent="-";
             rows[i].querySelector(".diff-col").textContent="-";
         }
-        if(infoEl)infoEl.textContent="Non trouve sur StockX";
         return;
     }
-    
-    if(infoEl)infoEl.textContent=sx.name||"";
     
     for(var i=0;i<rows.length;i++){
         var row=rows[i];
@@ -700,6 +802,7 @@ function findSizeMatch(variantSize,sxSizes){
     var num=parseFloat(s);
     if(!num)return null;
     
+    // Match direct
     for(var key in sxSizes){
         var sx=sxSizes[key];
         var usSize=parseFloat(key);
@@ -709,12 +812,17 @@ function findSizeMatch(variantSize,sxSizes){
         if(euSize&&Math.abs(euSize-num)<0.3)return sx;
     }
     
+    // Conversion EU -> US
     if(num>30){
         var guessUS=num-33;
         for(var key in sxSizes){
-            if(Math.abs(parseFloat(key)-guessUS)<0.5)return sxSizes[key];
+            if(Math.abs(parseFloat(key)-guessUS)<0.6)return sxSizes[key];
         }
     }
+    
+    // Si une seule taille "all", l'utiliser
+    if(sxSizes["all"])return sxSizes["all"];
+    
     return null;
 }
 
@@ -756,7 +864,7 @@ function render(){
     h+="<div class='meta-box'><div class='meta-label'>DESCRIPTION</div><div class='meta-value' style='max-height:80px;overflow-y:auto'>"+(p.body_html||"Non definie")+"</div></div>";
     h+="</div>";
     
-    h+="<div class='section'><div class='section-title'>Variantes & Prix StockX ("+p.variants.length+") <span class='stockx-info' id='sxInfo'>Chargement StockX...</span></div>";
+    h+="<div class='section'><div class='section-title'>Variantes & Prix ("+p.variants.length+") <span class='stockx-info' id='sxInfo'>Chargement...</span></div>";
     h+="<table id='varTable'><thead><tr><th>Taille</th><th>SKU</th><th>Mon Prix</th><th>StockX</th><th>Prix Ideal</th><th>Ecart</th><th>Stock</th></tr></thead><tbody>";
     for(var i=0;i<p.variants.length;i++){
         var v=p.variants[i];
@@ -858,9 +966,11 @@ def api_stockx():
     if not sku:
         return jsonify({'error': 'No SKU'}), 400
     
+    print(f"[API] Recherche StockX pour: {sku}")
     data = get_stockx_prices(sku)
+    
     if not data:
-        return jsonify({'error': 'Not found'}), 404
+        return jsonify({'error': 'Non trouve sur StockX', 'sku': sku}), 404
     
     return jsonify(data)
 
@@ -938,7 +1048,6 @@ def api_progress():
 
 @app.route('/api/variant/update', methods=['POST'])
 def api_update_variant():
-    """Met à jour le prix d'une variante"""
     variant_id = request.json.get('variant_id')
     price = request.json.get('price')
     compare_at_price = request.json.get('compare_at_price')
