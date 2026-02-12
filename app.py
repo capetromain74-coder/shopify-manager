@@ -282,8 +282,8 @@ def generate_meta_description(product):
     title = product.get('title', '')
     sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
     if sku:
-        return f"Achetez {title} ({sku}) sur {SITE_NAME}. 100% Authentique, vérifié par nos experts. Livraison rapide et paiement sécurisé."[:155]
-    return f"Achetez {title} sur {SITE_NAME}. 100% Authentique, vérifié par nos experts. Livraison rapide et paiement sécurisé."[:155]
+        return f"Achetez la {title} ({sku}) sur {SITE_NAME}. 100% Authentique, vérifié par nos experts. Livraison rapide et paiement sécurisé."[:155]
+    return f"Achetez la {title} sur {SITE_NAME}. 100% Authentique, vérifié par nos experts. Livraison rapide et paiement sécurisé."[:155]
 
 
 def generate_body_html(product, collections):
@@ -656,7 +656,7 @@ function openGoat(){
     if(!sku){toast("Pas de SKU","error");return;}
     
     document.getElementById("goatPreview").classList.add("show");
-    document.getElementById("goatStatus").textContent="Recherche pour "+sku+"...";
+    document.getElementById("goatStatus").innerHTML="🔍 Recherche pour <strong>"+sku+"</strong>...<br><small style='color:#888'>(peut prendre 30-60s si le serveur est en veille)</small>";
     document.getElementById("goatImages").innerHTML="<div class='spinner'></div>";
     goatImages=[];
     
@@ -664,12 +664,12 @@ function openGoat(){
         .then(function(r){return r.json();})
         .then(function(d){
             if(d.error){
-                document.getElementById("goatStatus").textContent="Erreur: "+d.error;
+                document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ "+d.error+"</span>";
                 document.getElementById("goatImages").innerHTML="";
                 return;
             }
             goatImages=d.images||[];
-            document.getElementById("goatStatus").textContent="Trouve: "+d.name+" - "+goatImages.length+" photos";
+            document.getElementById("goatStatus").innerHTML="✅ <strong>"+d.name+"</strong> - "+goatImages.length+" photos trouvées<br><small style='color:#888'>Cliquez sur une image pour la désélectionner</small>";
             var html="";
             for(var i=0;i<goatImages.length;i++){
                 html+="<img src='"+goatImages[i]+"' class='selected' onclick='toggleGoatImg(this,"+i+")'>";
@@ -677,7 +677,7 @@ function openGoat(){
             document.getElementById("goatImages").innerHTML=html;
         })
         .catch(function(e){
-            document.getElementById("goatStatus").textContent="Erreur: "+e.message;
+            document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+e.message+"</span>";
             document.getElementById("goatImages").innerHTML="";
         });
 }
@@ -698,7 +698,11 @@ function applyGoatImages(){
     }
     if(selected.length===0){toast("Selectionnez au moins une image","error");return;}
     
-    toast("Remplacement en cours...","success");
+    // Désactiver le bouton et montrer le loader
+    var btn=document.querySelector(".goat-content .btn-p");
+    btn.disabled=true;
+    btn.innerHTML="<span class='spinner' style='width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px'></span>Remplacement en cours...";
+    document.getElementById("goatStatus").textContent="⏳ Suppression des anciennes photos et ajout des nouvelles ("+selected.length+" photos)...";
     
     fetch("/api/goat/apply",{
         method:"POST",
@@ -708,14 +712,24 @@ function applyGoatImages(){
     .then(function(r){return r.json();})
     .then(function(d){
         if(d.success){
-            toast("Photos remplacees!","success");
-            closeGoat();
-            setTimeout(function(){location.reload();},1500);
+            document.getElementById("goatStatus").innerHTML="<span style='color:#00ff88;font-size:16px'>✅ "+d.added+" photos remplacées avec succès!</span>";
+            btn.innerHTML="✅ Terminé!";
+            btn.style.background="#00ff88";
+            toast("Photos remplacees! Rechargement...","success");
+            setTimeout(function(){location.reload();},2000);
         }else{
+            document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+d.error+"</span>";
+            btn.disabled=false;
+            btn.innerHTML="Remplacer les photos";
             toast("Erreur: "+d.error,"error");
         }
     })
-    .catch(function(e){toast("Erreur: "+e.message,"error");});
+    .catch(function(e){
+        document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+e.message+"</span>";
+        btn.disabled=false;
+        btn.innerHTML="Remplacer les photos";
+        toast("Erreur: "+e.message,"error");
+    });
 }
 
 function toast(m,t){var e=document.createElement("div");e.className="toast "+t;e.textContent=m;document.body.appendChild(e);setTimeout(function(){e.remove();},3000);}
