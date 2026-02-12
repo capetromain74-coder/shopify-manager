@@ -317,22 +317,40 @@ def analyze_seo(product, meta_title, meta_description):
 
 
 MODEL_DESCRIPTIONS = {
-    'jordan 4': "Concue par Tinker Hatfield en 1989, la Air Jordan 4 est une silhouette emblematique.",
-    'jordan 1 high': "La Air Jordan 1 High, creee en 1985, est la sneaker qui a tout commence.",
-    'jordan 1 low': "Version basse de la Air Jordan 1, parfaite pour un style quotidien.",
-    'dunk': "Creee en 1985, la Nike Dunk est une icone de la culture sneakers.",
-    'air force 1': "La Nike Air Force 1, creee en 1982, est un classique intemporel.",
-    'samba': "L Adidas Samba, nee en 1950, est une legende du style casual.",
-    'campus': "L Adidas Campus revisite le classique des annees 80.",
-    'yeezy slide': "La Yeezy Slide a redefini la sandale de luxe.",
-    'yeezy 350': "La Yeezy 350 V2, une piece collector.",
-    'new balance 550': "La NB 550, design basketball vintage.",
-    'gel-1130': "L Asics Gel-1130, must-have streetwear.",
-    'tasman': "La UGG Tasman, confort incomparable.",
-    'crocs': "Les Crocs, confort et legerete.",
+    'jordan 4': "Conçue par Tinker Hatfield en 1989, la Air Jordan 4 est une silhouette emblématique qui a marqué l'histoire du basketball et de la culture streetwear.",
+    'jordan 3': "La Air Jordan 3, première collaboration entre Michael Jordan et Tinker Hatfield en 1988, a révolutionné le design des sneakers avec son fameux elephant print.",
+    'jordan 6': "La Air Jordan 6, portée par MJ lors de son premier titre NBA en 1991, est reconnaissable à son spoiler arrière unique et son design avant-gardiste.",
+    'jordan 1 high': "La Air Jordan 1 High, créée en 1985, est la sneaker qui a tout commencé. Un modèle iconique qui a défié les règles de la NBA et lancé un empire.",
+    'jordan 1 low': "Version basse de la légendaire Air Jordan 1, parfaite pour un style quotidien sans compromis sur le look emblématique.",
+    'jordan 1 mid': "La Air Jordan 1 Mid offre le parfait équilibre entre la High et la Low, avec un style polyvalent adapté à toutes les occasions.",
+    'dunk': "Créée en 1985 pour le basketball universitaire, la Nike Dunk est devenue une icône de la culture sneakers et du skateboarding.",
+    'dunk low': "La Nike Dunk Low, version basse du classique de 1985, est devenue un incontournable du streetwear moderne.",
+    'dunk high': "La Nike Dunk High conserve l'ADN original du modèle de 1985 avec sa silhouette montante reconnaissable entre toutes.",
+    'air force 1': "La Nike Air Force 1, créée en 1982, est un classique intemporel. Première sneaker à intégrer la technologie Air, elle reste une référence absolue.",
+    'air max': "La gamme Air Max de Nike révolutionne le confort avec sa bulle d'air visible, alliant technologie de pointe et design audacieux.",
+    'samba': "L'Adidas Samba, née en 1950 pour le football en salle, est devenue une légende du style casual et une icône de la mode.",
+    'campus': "L'Adidas Campus revisite le classique des années 80 avec son design épuré en daim, parfait pour un look rétro-moderne.",
+    'gazelle': "L'Adidas Gazelle, créée en 1966, est un modèle vintage intemporel qui traverse les décennies sans prendre une ride.",
+    'spezial': "L'Adidas Spezial, née dans les années 70 pour le handball, incarne l'esprit terrace culture et le style casual européen.",
+    'yeezy slide': "La Yeezy Slide de Kanye West a redéfini la sandale de luxe avec son design minimaliste et son confort incomparable.",
+    'yeezy 350': "La Yeezy 350 V2, collaboration iconique entre Kanye West et Adidas, est devenue une pièce collector incontournable.",
+    'yeezy 700': "La Yeezy 700 Wave Runner marque le retour du chunky sneaker avec son design audacieux et ses multiples textures.",
+    'new balance 550': "La New Balance 550, ressortie des archives de 1989, incarne le revival du design basketball vintage des années 80.",
+    'new balance 530': "La New Balance 530, avec son design running rétro des années 90, offre un look chunky très tendance.",
+    'new balance 2002r': "La New Balance 2002R combine le confort moderne avec l'esthétique classique des années 2000.",
+    'new balance 9060': "La New Balance 9060 représente la nouvelle génération de sneakers avec son design futuriste et ses lignes audacieuses.",
+    'gel-1130': "L'Asics Gel-1130, modèle running de 2008 ressuscité, est devenue un must-have du streetwear contemporain.",
+    'gel-kayano': "L'Asics Gel-Kayano combine performance technique et style streetwear avec son design distinctif.",
+    'gel-nyc': "L'Asics Gel-NYC fusionne plusieurs modèles iconiques pour créer une silhouette unique et contemporaine.",
+    'tasman': "La UGG Tasman, avec sa doublure en peau de mouton et son design slip-on, offre un confort incomparable.",
+    'tazz': "La UGG Tazz revisite le classique Tasman avec une semelle plateforme tendance.",
+    'ultra mini': "La UGG Ultra Mini est la version compacte et moderne du classique boot UGG.",
+    'crocs': "Les Crocs, avec leur design unique en Croslite, offrent un confort et une légèreté incomparables.",
+    'travis scott': "Les collaborations Travis Scott x Nike sont devenues des pièces de collection très recherchées.",
+    'off-white': "Les collaborations Off-White x Nike de Virgil Abloh ont révolutionné le monde des sneakers avec leur esthétique déconstructiviste.",
 }
 
-DEFAULT_DESC = "Un modele alliant design contemporain et qualite premium."
+DEFAULT_DESC = "Un modèle qui allie design contemporain et qualité premium."
 
 
 def get_model_description(title):
@@ -354,8 +372,8 @@ def generate_meta_description(product):
     title = product.get('title', '')
     sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
     if sku:
-        return ('Achetez ' + title + ' (' + sku + ') | 100% Authentique | Livraison rapide | ' + SITE_NAME)[:155]
-    return ('Achetez ' + title + ' | 100% Authentique | Livraison rapide | ' + SITE_NAME)[:155]
+        return f"Achetez {title} ({sku}) sur {SITE_NAME}. 100% Authentique, vérifié par nos experts. Livraison rapide et paiement sécurisé."[:155]
+    return f"Achetez {title} sur {SITE_NAME}. 100% Authentique, vérifié par nos experts. Livraison rapide et paiement sécurisé."[:155]
 
 
 def generate_body_html(product, collections):
@@ -366,15 +384,26 @@ def generate_body_html(product, collections):
     model_desc = get_model_description(title)
     
     lines = []
+    
+    # Paragraphe 1: Introduction avec lien collection
     if collection:
-        lines.append('<p>Decouvrez la <strong>' + title + '</strong> disponible sur ' + SITE_NAME + '. Retrouvez ce modele dans notre collection <a href="' + collection['url'] + '">' + collection['title'] + '</a>.</p>')
+        lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}. Retrouvez ce modèle et bien d\'autres dans notre collection <a href="{collection["url"]}">{collection["title"]}</a>.</p>')
     else:
-        lines.append('<p>Decouvrez la <strong>' + title + '</strong> disponible sur ' + SITE_NAME + '.</p>')
-    lines.append('<p>' + model_desc + '</p>')
-    tech = ['<strong>Marque</strong> : ' + brand]
-    if sku: tech.insert(0, '<strong>Reference</strong> : ' + sku)
-    lines.append('<p>' + '<br>'.join(tech) + '</p>')
-    lines.append('<p>Chez <strong>' + SITE_NAME + '</strong>, nous garantissons l authenticite de chaque paire.</p>')
+        lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}.</p>')
+    
+    # Paragraphe 2: Description du modèle + texte générique
+    lines.append(f'<p>{model_desc} Cette paire se distingue par ses finitions soignées et son confort au quotidien. Une pièce polyvalente qui s\'adapte à tous les styles.</p>')
+    
+    # Paragraphe 3: Caractéristiques techniques
+    tech_lines = []
+    if sku:
+        tech_lines.append(f'<strong>Référence</strong> : {sku}')
+    tech_lines.append(f'<strong>Marque</strong> : {brand}')
+    lines.append('<p>' + '<br>'.join(tech_lines) + '</p>')
+    
+    # Paragraphe 4: Garanties KP SHOES
+    lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque paire. Toutes nos sneakers sont vérifiées par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
+    
     return '\n\n'.join(lines)
 
 
