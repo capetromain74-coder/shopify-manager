@@ -113,14 +113,14 @@ class GoatScraper:
             return None
     
     def search(self, sku):
-        """Recherche un produit par SKU via Algolia."""
+        """Recherche un produit par SKU via Algolia et récupère toutes les images."""
         log.info(f"[GOAT] Searching for SKU: {sku}")
         try:
             url = f"{self.ALGOLIA_URL}?x-algolia-application-id={self.ALGOLIA_APP_ID}&x-algolia-api-key={self.ALGOLIA_API_KEY}"
             payload = {
                 "requests": [{
                     "indexName": "product_variants_v2",
-                    "params": f"distinct=true&maxValuesPerFacet=1&page=0&query={sku}"
+                    "params": f"distinct=true&maxValuesPerFacet=1&page=0&query={sku}&hitsPerPage=20"
                 }]
             }
             
@@ -149,27 +149,57 @@ class GoatScraper:
             
             slug = best.get("slug", "")
             name = best.get("name", "")
-            main_image = best.get("original_picture_url", "") or best.get("main_picture_url", "")
             
-            log.info(f"[GOAT] Found: {name} (slug: {slug})")
+            # Récupérer toutes les images depuis Algolia
+            images = []
+            
+            # Image principale
+            main_img = best.get("original_picture_url", "") or best.get("main_picture_url", "")
+            if main_img and main_img not in images:
+                images.append(main_img)
+            
+            # Image principale glow
+            main_glow = best.get("main_glow_picture_url", "")
+            if main_glow and main_glow not in images:
+                images.append(main_glow)
+            
+            # Grid pictures
+            grid_pics = best.get("grid_pictures", [])
+            if isinstance(grid_pics, list):
+                for pic in grid_pics:
+                    if isinstance(pic, str) and pic not in images:
+                        images.append(pic)
+                    elif isinstance(pic, dict):
+                        pic_url = pic.get("url", "") or pic.get("main_picture_url", "")
+                        if pic_url and pic_url not in images:
+                            images.append(pic_url)
+            
+            # Picture URL simple
+            pic_url = best.get("picture_url", "")
+            if pic_url and pic_url not in images:
+                images.append(pic_url)
+            
+            log.info(f"[GOAT] Found: {name} (slug: {slug}) with {len(images)} images from Algolia")
             
             return {
                 "name": name,
                 "sku": best.get("sku", sku),
                 "slug": slug,
                 "brand": best.get("brand_name", ""),
-                "main_image": main_image,
+                "main_image": main_img,
+                "images": images,
             }
         except Exception as e:
             log.error(f"[GOAT] Search error: {e}")
             return None
     
     def get_product_images(self, slug):
-        """Récupère toutes les images d'un produit."""
+        """Récupère les images via web-api (fallback, souvent bloqué)."""
         log.info(f"[GOAT] Fetching images for: {slug}")
         try:
             raw = self._get(f"{self.PRODUCT_API_URL}/{slug}")
             if not raw:
+                log.warning(f"[GOAT] web-api blocked, using Algolia images only")
                 return []
             
             data = json.loads(raw)
@@ -182,7 +212,7 @@ class GoatScraper:
                 if url and url not in images:
                     images.append(url)
             
-            log.info(f"[GOAT] Found {len(images)} images")
+            log.info(f"[GOAT] Found {len(images)} images from web-api")
             return images
         except Exception as e:
             log.error(f"[GOAT] Product API error: {e}")
@@ -938,13 +968,21 @@ def api_goat_images():
     
     scraper = get_goat_scraper()
     
-    # Search product
+    # Search product (includes images from Algolia)
     product = scraper.search(sku)
     if not product:
         return jsonify({'error': 'Produit non trouve sur GOAT'}), 404
     
-    # Get images
-    images = scraper.get_product_images(product['slug'])
+    # Get images from Algolia first
+    images = product.get('images', [])
+    
+    # Try to get more images from web-api (often blocked but worth trying)
+    if product.get('slug'):
+        web_api_images = scraper.get_product_images(product['slug'])
+        for img in web_api_images:
+            if img not in images:
+                images.append(img)
+    
     if not images:
         return jsonify({'error': 'Aucune image trouvee'}), 404
     
