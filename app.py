@@ -1,15 +1,18 @@
 """
-KP SHOES - Plateforme de Gestion Shopify V6
-Avec comparaison prix StockX (multiple methodes)
+KP SHOES - Plateforme de Gestion Shopify V8
+Avec import photos GOAT via curl_cffi
 """
 
 from flask import Flask, jsonify, request
-import json, os, time, re, ssl
+import json, os, time, re, ssl, logging
 from urllib.request import Request, urlopen
-from urllib.parse import quote, urlencode
+from urllib.parse import quote
 from threading import Thread
 
 app = Flask(__name__)
+
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 
 SHOP = os.environ.get('SHOPIFY_SHOP', 'capet-shop.myshopify.com')
 ACCESS_TOKEN = os.environ.get('SHOPIFY_ACCESS_TOKEN', '')
@@ -63,273 +66,145 @@ def get_product_metafields(product_id):
 
 
 # ══════════════════════════════════════════════════════════════
-# STOCKX - Multiple méthodes de récupération des prix
+# GOAT IMAGE SCRAPER (avec curl_cffi)
 # ══════════════════════════════════════════════════════════════
 
-def get_stockx_prices(sku):
-    """Essaie plusieurs méthodes pour récupérer les prix StockX"""
-    if not sku:
-        return None
+class GoatScraper:
+    """Récupère les images produit depuis GOAT via Algolia + web-api."""
     
-    # Méthode 1: API Browse avec headers complets
-    result = try_stockx_browse_api(sku)
-    if result:
-        return result
+    ALGOLIA_URL = "https://2fwotdvm2o-dsn.algolia.net/1/indexes/*/queries"
+    ALGOLIA_APP_ID = "2FWOTDVM2O"
+    ALGOLIA_API_KEY = "ac96de6fef0e02bb95d433d8d5c7038a"
+    PRODUCT_API_URL = "https://www.goat.com/web-api/v1/product_templates"
     
-    # Méthode 2: API Search publique
-    result = try_stockx_search_api(sku)
-    if result:
-        return result
+    def __init__(self):
+        self._session = None
+        try:
+            from curl_cffi.requests import Session
+            self._session = Session(impersonate="chrome")
+            log.info("[GOAT] Using curl_cffi with Chrome TLS impersonation")
+        except ImportError:
+            log.warning("[GOAT] curl_cffi not available!")
     
-    # Méthode 3: Scraping de la page produit
-    result = try_stockx_scrape(sku)
-    if result:
-        return result
-    
-    print(f"[StockX] Toutes les méthodes ont échoué pour {sku}")
-    return None
-
-
-def try_stockx_browse_api(sku):
-    """Méthode 1: API Browse officielle"""
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Accept': 'application/json',
-            'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Origin': 'https://stockx.com',
-            'Referer': 'https://stockx.com/',
-            'sec-ch-ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"macOS"',
-            'sec-fetch-dest': 'empty',
-            'sec-fetch-mode': 'cors',
-            'sec-fetch-site': 'same-origin',
-        }
-        
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        
-        # Recherche
-        search_url = f"https://stockx.com/api/browse?_search={quote(sku)}&dataType=product&country=FR&currency=EUR"
-        req = Request(search_url, headers=headers)
-        
-        with urlopen(req, context=ctx, timeout=15) as r:
-            data = json.loads(r.read().decode('utf-8'))
-        
-        if not data.get('Products') or len(data['Products']) == 0:
-            print(f"[StockX Browse] Aucun produit pour {sku}")
+    def _get(self, url):
+        if not self._session:
             return None
-        
-        product = data['Products'][0]
-        url_key = product.get('urlKey')
-        
-        if not url_key:
+        try:
+            resp = self._session.get(url, timeout=30)
+            log.info(f"[GOAT] GET {url[:60]}... -> {resp.status_code}")
+            if resp.status_code == 200:
+                return resp.text
             return None
-        
-        print(f"[StockX Browse] Trouvé: {product.get('title')} - {url_key}")
-        
-        # Détails du produit
-        detail_url = f"https://stockx.com/api/products/{url_key}?includes=market&currency=EUR&country=FR"
-        req2 = Request(detail_url, headers=headers)
-        
-        with urlopen(req2, context=ctx, timeout=15) as r:
-            detail = json.loads(r.read().decode('utf-8'))
-        
-        return parse_stockx_response(detail, sku)
-        
-    except Exception as e:
-        print(f"[StockX Browse Error] {e}")
-        return None
-
-
-def try_stockx_search_api(sku):
-    """Méthode 2: API Search alternative"""
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
-            'Accept': '*/*',
-            'Accept-Language': 'fr-FR,fr;q=0.9',
-            'x-requested-with': 'XMLHttpRequest',
-        }
-        
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        
-        # Endpoint alternatif
-        search_url = f"https://stockx.com/api/browse?_search={quote(sku)}"
-        req = Request(search_url, headers=headers)
-        
-        with urlopen(req, context=ctx, timeout=10) as r:
-            data = json.loads(r.read().decode('utf-8'))
-        
-        if data.get('Products') and len(data['Products']) > 0:
-            product = data['Products'][0]
-            
-            # Essayer de récupérer le market data directement
-            market = product.get('market', {})
-            if market.get('lowestAsk'):
-                return {
-                    'name': product.get('title', ''),
-                    'sku': product.get('styleId', sku),
-                    'image': product.get('media', {}).get('thumbUrl', ''),
-                    'sizes': {
-                        'all': {
-                            'us': 'all',
-                            'eu': '',
-                            'stockx_price': market.get('lowestAsk', 0),
-                            'ideal_price': calculate_ideal_price(market.get('lowestAsk', 0))
-                        }
-                    }
-                }
-        
-        return None
-        
-    except Exception as e:
-        print(f"[StockX Search Error] {e}")
-        return None
-
-
-def try_stockx_scrape(sku):
-    """Méthode 3: Scraping de la page (fallback)"""
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
-        }
-        
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        
-        # Chercher la page du produit
-        search_url = f"https://stockx.com/search?s={quote(sku)}"
-        req = Request(search_url, headers=headers)
-        
-        with urlopen(req, context=ctx, timeout=10) as r:
-            html = r.read().decode('utf-8')
-        
-        # Chercher le JSON embarqué dans la page
-        match = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.+?)</script>', html)
-        if match:
-            data = json.loads(match.group(1))
-            # Parser les données...
-            props = data.get('props', {}).get('pageProps', {})
-            if props:
-                print(f"[StockX Scrape] Données trouvées")
-                # Extraire les infos...
-        
-        return None
-        
-    except Exception as e:
-        print(f"[StockX Scrape Error] {e}")
-        return None
-
-
-def parse_stockx_response(detail, sku):
-    """Parse la réponse StockX et extrait les prix par taille"""
-    try:
-        product_data = detail.get('Product', {})
-        
-        result = {
-            'name': product_data.get('title', ''),
-            'sku': product_data.get('styleId', sku),
-            'urlKey': product_data.get('urlKey', ''),
-            'image': product_data.get('media', {}).get('imageUrl', ''),
-            'sizes': {}
-        }
-        
-        # Extraire les prix par taille depuis children
-        children = product_data.get('children', {})
-        
-        for size_key, size_data in children.items():
-            market = size_data.get('market', {})
-            shoe_size = size_data.get('shoeSize', '')
-            
-            lowest_ask = market.get('lowestAsk', 0)
-            
-            if lowest_ask and lowest_ask > 0:
-                # Conversion approximative US -> EU
-                try:
-                    us_size = float(shoe_size) if shoe_size else 0
-                    eu_size = round(us_size + 33, 1) if us_size > 0 else 0
-                except:
-                    eu_size = 0
-                
-                result['sizes'][str(shoe_size)] = {
-                    'us': str(shoe_size),
-                    'eu': str(eu_size) if eu_size else '',
-                    'stockx_price': round(float(lowest_ask), 2),
-                    'ideal_price': calculate_ideal_price(float(lowest_ask))
-                }
-        
-        if result['sizes']:
-            print(f"[StockX] {len(result['sizes'])} tailles trouvées pour {sku}")
-            return result
-        
-        # Si pas de children, essayer le market global
-        market = product_data.get('market', {})
-        if market.get('lowestAsk'):
-            result['sizes']['all'] = {
-                'us': 'all',
-                'eu': '',
-                'stockx_price': round(float(market['lowestAsk']), 2),
-                'ideal_price': calculate_ideal_price(float(market['lowestAsk']))
+        except Exception as e:
+            log.error(f"[GOAT] GET error: {e}")
+            return None
+    
+    def _post(self, url, json_data):
+        if not self._session:
+            return None
+        try:
+            resp = self._session.post(url, json=json_data, timeout=30)
+            log.info(f"[GOAT] POST {url[:60]}... -> {resp.status_code}")
+            if resp.status_code == 200:
+                return resp.text
+            return None
+        except Exception as e:
+            log.error(f"[GOAT] POST error: {e}")
+            return None
+    
+    def search(self, sku):
+        """Recherche un produit par SKU via Algolia."""
+        log.info(f"[GOAT] Searching for SKU: {sku}")
+        try:
+            url = f"{self.ALGOLIA_URL}?x-algolia-application-id={self.ALGOLIA_APP_ID}&x-algolia-api-key={self.ALGOLIA_API_KEY}"
+            payload = {
+                "requests": [{
+                    "indexName": "product_variants_v2",
+                    "params": f"distinct=true&maxValuesPerFacet=1&page=0&query={sku}"
+                }]
             }
-            return result
-        
-        return None
-        
-    except Exception as e:
-        print(f"[StockX Parse Error] {e}")
-        return None
+            
+            raw = self._post(url, payload)
+            if not raw:
+                return None
+            
+            data = json.loads(raw)
+            hits = data.get("results", [{}])[0].get("hits", [])
+            
+            if not hits:
+                log.warning(f"[GOAT] No results for SKU: {sku}")
+                return None
+            
+            # Find best match by SKU
+            best = None
+            sku_clean = sku.replace("-", " ").replace("  ", " ").upper()
+            for h in hits:
+                h_sku = h.get("sku", "").upper()
+                if h_sku == sku_clean or h_sku == sku.upper():
+                    best = h
+                    break
+            
+            if not best:
+                best = hits[0]
+            
+            slug = best.get("slug", "")
+            name = best.get("name", "")
+            main_image = best.get("original_picture_url", "") or best.get("main_picture_url", "")
+            
+            log.info(f"[GOAT] Found: {name} (slug: {slug})")
+            
+            return {
+                "name": name,
+                "sku": best.get("sku", sku),
+                "slug": slug,
+                "brand": best.get("brand_name", ""),
+                "main_image": main_image,
+            }
+        except Exception as e:
+            log.error(f"[GOAT] Search error: {e}")
+            return None
+    
+    def get_product_images(self, slug):
+        """Récupère toutes les images d'un produit."""
+        log.info(f"[GOAT] Fetching images for: {slug}")
+        try:
+            raw = self._get(f"{self.PRODUCT_API_URL}/{slug}")
+            if not raw:
+                return []
+            
+            data = json.loads(raw)
+            images = []
+            
+            # Gallery images
+            ext_pics = data.get("productTemplateExternalPictures", [])
+            for pic in ext_pics:
+                url = pic.get("mainPictureUrl", "")
+                if url and url not in images:
+                    images.append(url)
+            
+            log.info(f"[GOAT] Found {len(images)} images")
+            return images
+        except Exception as e:
+            log.error(f"[GOAT] Product API error: {e}")
+            return []
+    
+    def close(self):
+        if self._session:
+            self._session.close()
 
 
-def calculate_ideal_price(stockx_price):
-    """Calcule le prix idéal selon les règles de marge"""
-    if not stockx_price or stockx_price <= 0:
-        return 0
-    
-    p = float(stockx_price)
-    
-    if p <= 125:
-        margin = 0.35
-    elif p <= 160:
-        margin = 0.30
-    elif p <= 200:
-        margin = 0.20
-    elif p <= 300:
-        margin = 0.14
-    elif p <= 400:
-        margin = 0.125
-    elif p <= 500:
-        margin = 0.115
-    elif p <= 550:
-        margin = 0.11
-    elif p <= 600:
-        margin = 0.105
-    elif p <= 650:
-        margin = 0.10
-    elif p <= 700:
-        margin = 0.095
-    elif p <= 750:
-        margin = 0.09
-    elif p <= 800:
-        margin = 0.085
-    elif p <= 850:
-        margin = 0.08
-    else:
-        margin = 0.075
-    
-    return round(p * (1 + margin), 2)
+# Instance globale
+goat_scraper = None
+
+def get_goat_scraper():
+    global goat_scraper
+    if goat_scraper is None:
+        goat_scraper = GoatScraper()
+    return goat_scraper
 
 
 # ══════════════════════════════════════════════════════════════
-# Collections & SEO (inchangé)
+# Collections & SEO
 # ══════════════════════════════════════════════════════════════
 
 MODEL_COLLECTIONS = {
@@ -562,7 +437,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <body>
 <header class="hd">
 <div class="logo">KP SHOES</div>
-<div style="color:#666;font-size:12px">Gestion Shopify V6</div>
+<div style="color:#666;font-size:12px">Gestion Shopify V8</div>
 </header>
 <div class="stats">
 <div class="st"><div class="v" id="totalP">-</div><div class="l">PRODUITS</div></div>
@@ -679,7 +554,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 .score.poor{background:#ff475733;color:#ff4757;border:3px solid #ff4757}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
 .btn{padding:10px 16px;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:12px;text-decoration:none}
-.btn-p{background:#00ff88;color:#000}.btn-s{background:#333;color:#fff}.btn-o{background:#ff9500;color:#000}
+.btn-p{background:#00ff88;color:#000}.btn-s{background:#333;color:#fff}.btn-o{background:#ff9500;color:#000}.btn-g{background:#3b82f6;color:#fff}
 .section{background:#111;border-radius:10px;padding:15px;margin-bottom:15px}
 .section-title{font-size:13px;font-weight:bold;margin-bottom:10px;color:#00ff88;display:flex;justify-content:space-between;align-items:center}
 .checks{display:flex;flex-direction:column;gap:6px}
@@ -697,14 +572,18 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 table{width:100%;border-collapse:collapse}
 th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #222;font-size:11px}
 th{background:#1a1a2e;font-size:9px;color:#888}
-.ok{color:#00ff88}.bad{color:#ff4757}.warn{color:#ffa500}
 .loading{text-align:center;padding:40px;color:#666}
 .spinner{width:30px;height:30px;border:3px solid #222;border-top-color:#00ff88;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 10px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:6px;font-size:12px;z-index:100}
 .toast.success{background:#00ff88;color:#000}.toast.error{background:#ff4757}
-.stockx-info{font-size:10px;color:#888;font-weight:normal}
-.retry-btn{background:#ff9500;color:#000;border:none;padding:5px 10px;border-radius:4px;font-size:10px;cursor:pointer;margin-left:10px}
+.goat-preview{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:200;overflow-y:auto;padding:20px}
+.goat-preview.show{display:block}
+.goat-content{max-width:800px;margin:0 auto;background:#111;border-radius:10px;padding:20px}
+.goat-close{position:absolute;top:20px;right:20px;background:#333;border:none;color:#fff;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px}
+.goat-images{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:20px 0}
+.goat-images img{width:100%;height:150px;object-fit:contain;background:#1a1a2e;border-radius:8px;border:2px solid transparent}
+.goat-images img.selected{border-color:#00ff88}
 @media(max-width:800px){.top{grid-template-columns:1fr}}
 </style>
 </head>
@@ -714,116 +593,34 @@ th{background:#1a1a2e;font-size:9px;color:#888}
 <div class="hd-title">Detail Produit</div>
 </header>
 <main class="main" id="main"><div class="loading"><div class="spinner"></div>Chargement...</div></main>
+
+<!-- Modal GOAT Preview -->
+<div class="goat-preview" id="goatPreview">
+<button class="goat-close" onclick="closeGoat()">×</button>
+<div class="goat-content">
+<h2 style="margin-bottom:10px">Photos GOAT</h2>
+<p id="goatStatus" style="color:#888;font-size:12px;margin-bottom:15px">Recherche en cours...</p>
+<div class="goat-images" id="goatImages"></div>
+<div style="display:flex;gap:10px;margin-top:15px">
+<button class="btn btn-p" onclick="applyGoatImages()">Remplacer les photos</button>
+<button class="btn btn-s" onclick="closeGoat()">Annuler</button>
+</div>
+</div>
+</div>
+
 <script>
 var pid=PRODUCT_ID_PLACEHOLDER;
 var P=null;
 var SEO=null;
-var SX=null;
 var SHOP_URL="SHOP_PLACEHOLDER";
 var selectedFields=[];
+var goatImages=[];
 
 function load(){
     fetch("/api/product/"+pid).then(function(r){return r.json();}).then(function(d){
         if(d.error){document.getElementById("main").innerHTML="<div class='loading'>Produit non trouve</div>";return;}
-        P=d.product;SEO=d.seo;render();loadStockX();
+        P=d.product;SEO=d.seo;render();
     }).catch(function(e){document.getElementById("main").innerHTML="<div class='loading'>Erreur: "+e.message+"</div>";});
-}
-
-function loadStockX(){
-    var sku=(P.variants&&P.variants[0])?P.variants[0].sku:"";
-    if(!sku){
-        document.getElementById("sxInfo").innerHTML="Pas de SKU";
-        updateStockXColumn(null);
-        return;
-    }
-    document.getElementById("sxInfo").innerHTML="Chargement StockX pour "+sku+"...";
-    
-    fetch("/api/stockx?sku="+encodeURIComponent(sku)).then(function(r){return r.json();}).then(function(d){
-        console.log("StockX response:", d);
-        if(d.error){
-            document.getElementById("sxInfo").innerHTML="StockX: "+d.error+" <button class='retry-btn' onclick='loadStockX()'>Reessayer</button>";
-            updateStockXColumn(null);
-        }else{
-            SX=d;
-            document.getElementById("sxInfo").innerHTML=d.name||"Trouve sur StockX";
-            updateStockXColumn(SX);
-        }
-    }).catch(function(e){
-        console.log("StockX error:", e);
-        document.getElementById("sxInfo").innerHTML="Erreur StockX <button class='retry-btn' onclick='loadStockX()'>Reessayer</button>";
-        updateStockXColumn(null);
-    });
-}
-
-function updateStockXColumn(sx){
-    var rows=document.querySelectorAll("#varTable tbody tr");
-    
-    if(!sx||!sx.sizes){
-        for(var i=0;i<rows.length;i++){
-            rows[i].querySelector(".sx-col").textContent="-";
-            rows[i].querySelector(".ideal-col").textContent="-";
-            rows[i].querySelector(".diff-col").textContent="-";
-        }
-        return;
-    }
-    
-    for(var i=0;i<rows.length;i++){
-        var row=rows[i];
-        var size=row.getAttribute("data-size");
-        var myPrice=parseFloat(row.getAttribute("data-price"))||0;
-        var match=findSizeMatch(size,sx.sizes);
-        
-        if(match){
-            var sxPrice=match.stockx_price;
-            var idealPrice=match.ideal_price;
-            row.querySelector(".sx-col").innerHTML="<strong>"+sxPrice.toFixed(0)+" EUR</strong>";
-            row.querySelector(".ideal-col").textContent=idealPrice.toFixed(0)+" EUR";
-            
-            var diff=myPrice-idealPrice;
-            var pct=idealPrice>0?((diff/idealPrice)*100).toFixed(0):0;
-            if(diff>=0){
-                row.querySelector(".diff-col").innerHTML="<span class='ok'>+"+pct+"%</span>";
-            }else if(diff>-20){
-                row.querySelector(".diff-col").innerHTML="<span class='warn'>"+pct+"%</span>";
-            }else{
-                row.querySelector(".diff-col").innerHTML="<span class='bad'>"+pct+"%</span>";
-            }
-        }else{
-            row.querySelector(".sx-col").textContent="-";
-            row.querySelector(".ideal-col").textContent="-";
-            row.querySelector(".diff-col").textContent="-";
-        }
-    }
-}
-
-function findSizeMatch(variantSize,sxSizes){
-    if(!variantSize||!sxSizes)return null;
-    var s=String(variantSize).replace(/[^0-9.,]/g,"").replace(",",".");
-    var num=parseFloat(s);
-    if(!num)return null;
-    
-    // Match direct
-    for(var key in sxSizes){
-        var sx=sxSizes[key];
-        var usSize=parseFloat(key);
-        var euSize=parseFloat(sx.eu);
-        
-        if(Math.abs(usSize-num)<0.3)return sx;
-        if(euSize&&Math.abs(euSize-num)<0.3)return sx;
-    }
-    
-    // Conversion EU -> US
-    if(num>30){
-        var guessUS=num-33;
-        for(var key in sxSizes){
-            if(Math.abs(parseFloat(key)-guessUS)<0.6)return sxSizes[key];
-        }
-    }
-    
-    // Si une seule taille "all", l'utiliser
-    if(sxSizes["all"])return sxSizes["all"];
-    
-    return null;
 }
 
 function render(){
@@ -842,6 +639,7 @@ function render(){
     h+="<div class='btns'>";
     h+="<button class='btn btn-p' onclick='regenSelected()'>Modifier Selection</button>";
     h+="<button class='btn btn-s' onclick='regenAll()'>Tout Regenerer</button>";
+    h+="<button class='btn btn-g' onclick='openGoat()'>📷 Photos GOAT</button>";
     h+="<a href='https://"+SHOP_URL+"/admin/products/"+p.id+"' target='_blank' class='btn btn-s'>Shopify</a>";
     h+="</div></div></div>";
     
@@ -864,18 +662,18 @@ function render(){
     h+="<div class='meta-box'><div class='meta-label'>DESCRIPTION</div><div class='meta-value' style='max-height:80px;overflow-y:auto'>"+(p.body_html||"Non definie")+"</div></div>";
     h+="</div>";
     
-    h+="<div class='section'><div class='section-title'>Variantes & Prix ("+p.variants.length+") <span class='stockx-info' id='sxInfo'>Chargement...</span></div>";
-    h+="<table id='varTable'><thead><tr><th>Taille</th><th>SKU</th><th>Mon Prix</th><th>StockX</th><th>Prix Ideal</th><th>Ecart</th><th>Stock</th></tr></thead><tbody>";
+    h+="<div class='section'><div class='section-title'>Images ("+p.images.length+")</div>";
+    h+="<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px'>";
+    for(var i=0;i<p.images.length;i++){
+        h+="<img src='"+p.images[i].src+"' style='width:100%;height:100px;object-fit:contain;background:#1a1a2e;border-radius:6px'>";
+    }
+    h+="</div></div>";
+    
+    h+="<div class='section'><div class='section-title'>Variantes ("+p.variants.length+")</div>";
+    h+="<table><thead><tr><th>Taille</th><th>SKU</th><th>Prix</th><th>Stock</th></tr></thead><tbody>";
     for(var i=0;i<p.variants.length;i++){
         var v=p.variants[i];
-        h+="<tr data-size='"+v.title+"' data-price='"+v.price+"' data-vid='"+v.id+"'>";
-        h+="<td><strong>"+v.title+"</strong></td>";
-        h+="<td>"+(v.sku||"-")+"</td>";
-        h+="<td><strong>"+v.price+" EUR</strong></td>";
-        h+="<td class='sx-col'>...</td>";
-        h+="<td class='ideal-col'>...</td>";
-        h+="<td class='diff-col'>...</td>";
-        h+="<td>"+v.inventory_quantity+"</td></tr>";
+        h+="<tr><td><strong>"+v.title+"</strong></td><td>"+(v.sku||"-")+"</td><td>"+v.price+" EUR</td><td>"+v.inventory_quantity+"</td></tr>";
     }
     h+="</tbody></table></div>";
     
@@ -911,6 +709,74 @@ function regenAll(){
             if(d.success){toast("SEO mis a jour!","success");setTimeout(function(){location.reload();},1500);}
             else{toast("Erreur","error");}
         }).catch(function(){toast("Erreur","error");});
+}
+
+// ===== GOAT Functions =====
+function openGoat(){
+    var sku=(P.variants&&P.variants[0])?P.variants[0].sku:"";
+    if(!sku){toast("Pas de SKU","error");return;}
+    
+    document.getElementById("goatPreview").classList.add("show");
+    document.getElementById("goatStatus").textContent="Recherche pour "+sku+"...";
+    document.getElementById("goatImages").innerHTML="<div class='spinner'></div>";
+    goatImages=[];
+    
+    fetch("/api/goat/images?sku="+encodeURIComponent(sku))
+        .then(function(r){return r.json();})
+        .then(function(d){
+            if(d.error){
+                document.getElementById("goatStatus").textContent="Erreur: "+d.error;
+                document.getElementById("goatImages").innerHTML="";
+                return;
+            }
+            goatImages=d.images||[];
+            document.getElementById("goatStatus").textContent="Trouve: "+d.name+" - "+goatImages.length+" photos";
+            var html="";
+            for(var i=0;i<goatImages.length;i++){
+                html+="<img src='"+goatImages[i]+"' class='selected' onclick='toggleGoatImg(this,"+i+")'>";
+            }
+            document.getElementById("goatImages").innerHTML=html;
+        })
+        .catch(function(e){
+            document.getElementById("goatStatus").textContent="Erreur: "+e.message;
+            document.getElementById("goatImages").innerHTML="";
+        });
+}
+
+function closeGoat(){
+    document.getElementById("goatPreview").classList.remove("show");
+}
+
+function toggleGoatImg(el,idx){
+    el.classList.toggle("selected");
+}
+
+function applyGoatImages(){
+    var selected=[];
+    var imgs=document.querySelectorAll("#goatImages img.selected");
+    for(var i=0;i<imgs.length;i++){
+        selected.push(imgs[i].src);
+    }
+    if(selected.length===0){toast("Selectionnez au moins une image","error");return;}
+    
+    toast("Remplacement en cours...","success");
+    
+    fetch("/api/goat/apply",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({product_id:pid,images:selected})
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.success){
+            toast("Photos remplacees!","success");
+            closeGoat();
+            setTimeout(function(){location.reload();},1500);
+        }else{
+            toast("Erreur: "+d.error,"error");
+        }
+    })
+    .catch(function(e){toast("Erreur: "+e.message,"error");});
 }
 
 function toast(m,t){var e=document.createElement("div");e.className="toast "+t;e.textContent=m;document.body.appendChild(e);setTimeout(function(){e.remove();},3000);}
@@ -957,22 +823,6 @@ def api_product(product_id):
     seo['meta_title'] = metafields['meta_title']
     seo['meta_description'] = metafields['meta_description']
     return jsonify({'product': product, 'seo': seo})
-
-
-@app.route('/api/stockx')
-def api_stockx():
-    """Récupère les prix StockX pour un SKU"""
-    sku = request.args.get('sku', '')
-    if not sku:
-        return jsonify({'error': 'No SKU'}), 400
-    
-    print(f"[API] Recherche StockX pour: {sku}")
-    data = get_stockx_prices(sku)
-    
-    if not data:
-        return jsonify({'error': 'Non trouve sur StockX', 'sku': sku}), 404
-    
-    return jsonify(data)
 
 
 @app.route('/api/collections')
@@ -1046,22 +896,77 @@ def api_progress():
     return jsonify(task_progress)
 
 
-@app.route('/api/variant/update', methods=['POST'])
-def api_update_variant():
-    variant_id = request.json.get('variant_id')
-    price = request.json.get('price')
-    compare_at_price = request.json.get('compare_at_price')
+# ══════════════════════════════════════════════════════════════
+# GOAT API ROUTES
+# ══════════════════════════════════════════════════════════════
+
+@app.route('/api/goat/images')
+def api_goat_images():
+    """Recherche les images GOAT pour un SKU"""
+    sku = request.args.get('sku', '').strip()
+    if not sku:
+        return jsonify({'error': 'SKU requis'}), 400
     
-    update_data = {'variant': {'id': variant_id}}
-    if price is not None:
-        update_data['variant']['price'] = str(price)
-    if compare_at_price is not None:
-        update_data['variant']['compare_at_price'] = str(compare_at_price)
+    scraper = get_goat_scraper()
     
-    result = shopify_request(f'variants/{variant_id}.json', 'PUT', update_data)
-    if result and 'variant' in result:
-        return jsonify({'success': True, 'variant': result['variant']})
-    return jsonify({'error': 'Failed'}), 400
+    # Search product
+    product = scraper.search(sku)
+    if not product:
+        return jsonify({'error': 'Produit non trouve sur GOAT'}), 404
+    
+    # Get images
+    images = scraper.get_product_images(product['slug'])
+    if not images:
+        return jsonify({'error': 'Aucune image trouvee'}), 404
+    
+    return jsonify({
+        'name': product.get('name', ''),
+        'sku': product.get('sku', sku),
+        'slug': product.get('slug', ''),
+        'images': images
+    })
+
+
+@app.route('/api/goat/apply', methods=['POST'])
+def api_goat_apply():
+    """Remplace les images d'un produit par celles de GOAT"""
+    data = request.json
+    product_id = data.get('product_id')
+    images = data.get('images', [])
+    
+    if not product_id or not images:
+        return jsonify({'error': 'product_id et images requis'}), 400
+    
+    try:
+        # Get current product
+        r = shopify_request(f'products/{product_id}.json')
+        if not r or 'product' not in r:
+            return jsonify({'error': 'Produit non trouve'}), 404
+        
+        product = r['product']
+        
+        # Delete existing images
+        for img in product.get('images', []):
+            shopify_request(f'products/{product_id}/images/{img["id"]}.json', 'DELETE')
+            time.sleep(0.3)
+        
+        # Add new images
+        added = 0
+        for i, img_url in enumerate(images):
+            result = shopify_request(f'products/{product_id}/images.json', 'POST', {
+                'image': {'src': img_url, 'position': i + 1}
+            })
+            if result:
+                added += 1
+            time.sleep(0.3)
+        
+        log.info(f"[GOAT Apply] Added {added} images to product {product_id}")
+        
+        return jsonify({'success': True, 'added': added})
+        
+    except Exception as e:
+        log.error(f"[GOAT Apply] Error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
