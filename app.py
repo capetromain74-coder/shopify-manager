@@ -919,5 +919,83 @@ def api_goat_apply():
         return jsonify({'error': str(e)}), 500
 
 
+# ══════════════════════════════════════════════════════════════
+# BLOG API
+# ══════════════════════════════════════════════════════════════
+
+@app.route('/api/blogs')
+def api_blogs():
+    """Liste tous les blogs Shopify"""
+    r = shopify_request('blogs.json')
+    if not r:
+        return jsonify({'error': 'Impossible de récupérer les blogs. Vérifiez les permissions API (scope: read_content)'}), 403
+    return jsonify(r)
+
+
+@app.route('/api/blogs/<int:blog_id>/articles')
+def api_blog_articles(blog_id):
+    """Liste les articles d'un blog"""
+    r = shopify_request(f'blogs/{blog_id}/articles.json')
+    if not r:
+        return jsonify({'error': 'Impossible de récupérer les articles'}), 403
+    return jsonify(r)
+
+
+@app.route('/api/blogs/<int:blog_id>/articles', methods=['POST'])
+def api_create_article(blog_id):
+    """Crée un nouvel article de blog"""
+    data = request.json
+    
+    article_data = {
+        'article': {
+            'title': data.get('title', ''),
+            'author': data.get('author', 'KP SHOES'),
+            'body_html': data.get('body_html', ''),
+            'published': data.get('published', True),
+            'tags': data.get('tags', '')
+        }
+    }
+    
+    # Ajouter image si fournie
+    if data.get('image_url'):
+        article_data['article']['image'] = {'src': data.get('image_url')}
+    
+    r = shopify_request(f'blogs/{blog_id}/articles.json', 'POST', article_data)
+    if not r:
+        return jsonify({'error': 'Impossible de créer l\'article. Vérifiez les permissions API (scope: write_content)'}), 403
+    return jsonify({'success': True, 'article': r.get('article', {})})
+
+
+@app.route('/api/blogs/<int:blog_id>/articles/<int:article_id>', methods=['PUT'])
+def api_update_article(blog_id, article_id):
+    """Met à jour un article de blog"""
+    data = request.json
+    
+    article_data = {
+        'article': {
+            'id': article_id,
+            'title': data.get('title'),
+            'body_html': data.get('body_html'),
+            'published': data.get('published'),
+            'tags': data.get('tags')
+        }
+    }
+    
+    # Nettoyer les None
+    article_data['article'] = {k: v for k, v in article_data['article'].items() if v is not None}
+    
+    r = shopify_request(f'blogs/{blog_id}/articles/{article_id}.json', 'PUT', article_data)
+    if not r:
+        return jsonify({'error': 'Impossible de modifier l\'article'}), 403
+    return jsonify({'success': True, 'article': r.get('article', {})})
+
+
+@app.route('/api/blogs/<int:blog_id>/articles/<int:article_id>', methods=['DELETE'])
+def api_delete_article(blog_id, article_id):
+    """Supprime un article de blog"""
+    r = shopify_request(f'blogs/{blog_id}/articles/{article_id}.json', 'DELETE')
+    return jsonify({'success': True})
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
