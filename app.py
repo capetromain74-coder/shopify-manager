@@ -263,6 +263,235 @@ MODEL_DESCRIPTIONS = {
 DEFAULT_DESC = "Un modèle qui allie design contemporain et qualité premium."
 
 
+# ══════════════════════════════════════════════════════════════
+# BASE DE DONNÉES SNEAKERS ENRICHIE (pour le blog)
+# ══════════════════════════════════════════════════════════════
+
+SNEAKER_DATABASE = {
+    'jordan 1': {
+        'full_name': 'Air Jordan 1', 'brand': 'Jordan / Nike', 'year': 1985, 'designer': 'Peter Moore',
+        'materials': ['cuir pleine fleur', 'cuir synthétique', 'nubuck selon les éditions'],
+        'technology': 'Semelle Air-Sole pour un amorti léger',
+        'sizing': {'fit': 'taille normalement', 'advice': 'Prenez votre taille habituelle Nike. Le cuir se détend légèrement avec le temps. Les pieds larges peuvent prendre une demi-taille au-dessus.', 'vs_af1': 'même taille', 'vs_dunk': 'même taille', 'vs_adidas': 'une demi-taille au-dessus en Adidas', 'vs_nb': 'même taille'},
+        'history': "Créée par Peter Moore en 1985 pour Michael Jordan, rookie aux Chicago Bulls, la Air Jordan 1 a été bannie par la NBA pour violation du code vestimentaire. Nike payait l'amende de 5 000 $ à chaque match, transformant cette interdiction en coup marketing légendaire. Le modèle a lancé la marque Jordan qui génère aujourd'hui des milliards de dollars.",
+        'cultural_moments': ["Bannissement NBA en 1985", "Adoption par le hip-hop new-yorkais dans les 90s", "Collaboration Off-White x Virgil Abloh 'The Ten' (2017)", "Collaboration Travis Scott avec Swoosh inversé (2019)", "Explosion post-documentaire 'The Last Dance' (2020)"],
+        'iconic_colorways': ['Chicago (rouge/blanc/noir)', 'Bred (noir/rouge)', 'Royal Blue', 'Shadow (gris/noir)', 'Mocha (marron/blanc)', 'University Blue'],
+        'retail_price': '140€ - 180€',
+        'care': {'main_material': 'cuir', 'tips': "Nettoyez le cuir avec un chiffon humide et du savon doux. Crème nourrissante tous les 2-3 mois. Les versions nubuck nécessitent une brosse spéciale à sec.", 'avoid': "Ne jamais mettre en machine, éviter la javel, ne pas sécher au radiateur"},
+        'style': {'looks': ['Streetwear : jean baggy + hoodie oversize + AJ1', 'Casual chic : chino beige + t-shirt blanc + AJ1', 'Urbain : pantalon cargo + bomber + AJ1']},
+        'comfort_rating': 3, 'style_rating': 5, 'durability_rating': 4, 'versatility_rating': 5,
+    },
+    'jordan 4': {
+        'full_name': 'Air Jordan 4', 'brand': 'Jordan / Nike', 'year': 1989, 'designer': 'Tinker Hatfield',
+        'materials': ['cuir', 'nubuck', 'mesh latéral', 'ailes plastique (wing eyelets)'],
+        'technology': 'Air-Sole visible au talon, semelle herringbone',
+        'sizing': {'fit': 'taille normalement à légèrement grand', 'advice': 'Prenez votre taille habituelle. Les pieds fins peuvent descendre d\'une demi-taille. La mesh latérale offre de la flexibilité.', 'vs_af1': 'même taille ou demi-taille en dessous', 'vs_dunk': 'même taille', 'vs_adidas': 'une demi-taille au-dessus en Adidas', 'vs_nb': 'même taille'},
+        'history': "Dessinée par Tinker Hatfield en 1989, la AJ4 a été portée par MJ lors du célèbre 'The Shot' contre Cleveland en playoffs. Hatfield s'est inspiré des filets de construction et de l'aviation pour les wing eyelets. Le film 'Do The Right Thing' de Spike Lee (1989) a scellé son statut culturel avec la scène où Buggin' Out se fait marcher sur ses AJ4.",
+        'cultural_moments': ["'The Shot' de MJ contre Cleveland (1989)", "Film 'Do The Right Thing' de Spike Lee (1989)", "Collaboration Eminem x Carhartt (2015, ultra rare)", "Collaboration Travis Scott 'Cactus Jack' (2018-2019)", "Collaboration Off-White (2020)"],
+        'iconic_colorways': ['Bred (noir/rouge)', 'White Cement', 'Military Black', 'Fire Red', 'Lightning (jaune)', 'University Blue'],
+        'retail_price': '200€ - 225€',
+        'care': {'main_material': 'nubuck/mesh', 'tips': "Le nubuck se nettoie à sec avec une brosse spéciale. La mesh avec une brosse douce humide et savon. Les wing eyelets avec un chiffon. Spray imperméabilisant sur le nubuck.", 'avoid': "Éviter l'eau sur le nubuck, ne pas frotter trop fort la mesh, jamais en machine"},
+        'style': {'looks': ['Streetwear : jean loose + t-shirt graphique + AJ4', 'Casual : jogger technique + sweat + AJ4', 'Audacieux : cargo + veste en jean + AJ4']},
+        'comfort_rating': 4, 'style_rating': 5, 'durability_rating': 4, 'versatility_rating': 4,
+    },
+    'jordan 3': {
+        'full_name': 'Air Jordan 3', 'brand': 'Jordan / Nike', 'year': 1988, 'designer': 'Tinker Hatfield',
+        'materials': ['cuir pleine fleur', 'elephant print emblématique', 'mesh sur la languette'],
+        'technology': 'Première Jordan avec Air visible au talon',
+        'sizing': {'fit': 'taille normalement', 'advice': 'Prenez votre taille habituelle Nike. Le cuir est rigide au début mais se détend.', 'vs_af1': 'même taille', 'vs_dunk': 'même taille', 'vs_adidas': 'une demi-taille au-dessus en Adidas', 'vs_nb': 'même taille'},
+        'history': "Née d'un moment crucial : MJ envisageait de quitter Nike pour Adidas. Tinker Hatfield a créé un modèle révolutionnaire avec l'elephant print, le Jumpman logo (remplaçant le Wings), et la première bulle Air visible sur une Jordan. MJ est resté chez Nike.",
+        'cultural_moments': ["Première Jordan avec le logo Jumpman (1988)", "MJ remporte le concours de dunks 1988 avec les AJ3", "MJ convaincu de rester chez Nike grâce à ce modèle", "Retro 'A Ma Maniére' acclamée (2021)"],
+        'iconic_colorways': ['White Cement', 'Black Cement', 'True Blue', 'Fire Red', 'Infrared 23'],
+        'retail_price': '200€ - 220€',
+        'care': {'main_material': 'cuir', 'tips': "L'elephant print se nettoie avec un chiffon doux légèrement humide. Crème nourrissante sur le cuir lisse. Semelle blanche : bicarbonate de soude.", 'avoid': "Ne pas frotter l'elephant print trop fort, éviter les produits chimiques"},
+        'style': {'looks': ['Classique : jean slim bleu + t-shirt blanc + AJ3 White Cement', 'Streetwear : cargo + hoodie + AJ3 Black Cement', 'Smart casual : chino + polo + AJ3']},
+        'comfort_rating': 3, 'style_rating': 5, 'durability_rating': 4, 'versatility_rating': 4,
+    },
+    'dunk low': {
+        'full_name': 'Nike Dunk Low', 'brand': 'Nike', 'year': 1985, 'designer': "Programme 'Be True To Your School'",
+        'materials': ['cuir', 'cuir synthétique', 'parfois suède ou toile'],
+        'technology': 'Semelle vulcanisée, rembourrage au col',
+        'sizing': {'fit': 'taille normalement', 'advice': 'Taille fidèlement. Le toebox peut être étroit en cuir : pieds larges, prenez une demi-taille au-dessus.', 'vs_af1': 'même taille (AF1 plus large)', 'vs_dunk': '-', 'vs_adidas': 'une demi-taille au-dessus en Adidas', 'vs_nb': 'même taille que NB 550'},
+        'history': "Née en 1985 dans le programme 'Be True To Your School' avec des coloris universitaires (UNLV, Michigan, Kentucky...). Redécouverte par les skateurs dans les 2000s (Dunk SB). En 2020-2021, retour massif : LA sneaker la plus demandée au monde.",
+        'cultural_moments': ["Programme 'Be True To Your School' (1985)", "Adoption par la culture skate (2000s)", "Collaboration Supreme x Nike SB Dunk (2002)", "Collaboration Travis Scott (2020)", "Off-White 'The 50' (50 coloris, 2021)"],
+        'iconic_colorways': ['Panda (noir/blanc)', 'Syracuse (orange/blanc)', 'UNC (bleu/blanc)', "Valentine's Day (rose)", 'Grey Fog', 'Medium Curry'],
+        'retail_price': '110€ - 130€',
+        'care': {'main_material': 'cuir', 'tips': "Cuir lisse : chiffon humide + savon de Marseille. Suède : brosse spéciale. Semelle blanche : bicarbonate ou produit anti-jaunissement.", 'avoid': "Ne pas tremper, éviter la machine, pas de javel sur les semelles"},
+        'style': {'looks': ['Quotidien : jean + t-shirt + Dunk Low Panda', 'Streetwear : cargo + sweat oversize + Dunk Low colorée', 'Été : short + polo + Dunk Low', 'Féminin : jupe midi + Dunk Low pastel']},
+        'comfort_rating': 3, 'style_rating': 5, 'durability_rating': 4, 'versatility_rating': 5,
+    },
+    'air force 1': {
+        'full_name': 'Nike Air Force 1', 'brand': 'Nike', 'year': 1982, 'designer': 'Bruce Kilgore',
+        'materials': ['cuir pleine fleur premium', 'cuir synthétique sur certaines versions'],
+        'technology': 'Première sneaker avec technologie Air encapsulée',
+        'sizing': {'fit': 'taille grand', 'advice': 'Taille GRAND. Prenez une demi-taille en dessous. Le cuir est rigide au début mais se forme. Les pieds larges peuvent garder leur taille.', 'vs_af1': '-', 'vs_dunk': 'demi-taille en dessous par rapport à la Dunk', 'vs_adidas': 'même taille que votre Adidas', 'vs_nb': 'demi-taille en dessous par rapport à la NB'},
+        'history': "Première sneaker Nike Air (1982), créée pour le basketball (portée par Moses Malone). Adoptée par le hip-hop de Harlem et Baltimore dans les 80-90s. Nelly lui dédie 'Air Force Ones' (2002). Plus de 2000 coloris, sneaker la plus vendue de l'histoire Nike. Collaboration Virgil Abloh x Louis Vuitton (2022).",
+        'cultural_moments': ["Première sneaker Nike Air (1982)", "Culture hip-hop Harlem & Baltimore", "Chanson 'Air Force Ones' de Nelly (2002)", "Plus de 2000 coloris produits", "Collaboration Virgil Abloh x Louis Vuitton (2022)"],
+        'iconic_colorways': ['Triple White', 'Triple Black', 'White/Black', 'Wheat', 'Flax', 'University Red'],
+        'retail_price': '110€ - 130€',
+        'care': {'main_material': 'cuir', 'tips': "Cuir blanc : savon de Marseille + eau tiède. Taches tenaces : pâte de bicarbonate. Semelle : vinaigre blanc. Lingettes nettoyantes pour entretien rapide.", 'avoid': "Jamais en machine, pas de javel (jaunit), pas sous la pluie battante"},
+        'style': {'looks': ['Classique : jean slim + t-shirt blanc + AF1 white', 'Streetwear : survêtement + AF1 white', 'Smart casual : chino + blazer + AF1 white', 'Féminin : robe midi + AF1 white']},
+        'comfort_rating': 3, 'style_rating': 5, 'durability_rating': 5, 'versatility_rating': 5,
+    },
+    'samba': {
+        'full_name': 'Adidas Samba', 'brand': 'Adidas', 'year': 1950, 'designer': 'Adi Dassler',
+        'materials': ['cuir pleine fleur', 'suède sur le toecap', 'semelle gomme caramel'],
+        'technology': 'Semelle gomme pour adhérence en salle',
+        'sizing': {'fit': 'taille grand', 'advice': "Taillent grand d'une demi-taille. Prenez une demi-taille en dessous. Le cuir se détend avec le port.", 'vs_af1': 'même taille que votre AF1', 'vs_dunk': 'demi-taille en dessous de votre Dunk', 'vs_adidas': 'standard Adidas, demi-taille en dessous', 'vs_nb': 'demi-taille en dessous de votre NB'},
+        'history': "Créée en 1950 pour le football en salle sur sol gelé. Plus de 35 millions de paires vendues. Adoptée par la terrace culture UK (supporters foot anglais, années 80). Bob Marley photographié en Samba. Comeback massif 2023-2024, sneaker de l'année. Collaborations Wales Bonner, Pharrell.",
+        'cultural_moments': ["Football en salle (1950)", "Terrace culture UK (années 80)", "Bob Marley en Samba", "Comeback 2023-2024, sneaker de l'année", "Collaborations Wales Bonner, Pharrell", "35+ millions de paires vendues"],
+        'iconic_colorways': ['OG White/Black (gomme)', 'OG Black/White', 'Wales Bonner (crème/vert)', 'Cloud White', 'Dark Brown'],
+        'retail_price': '100€ - 120€',
+        'care': {'main_material': 'cuir/suède', 'tips': "Cuir : chiffon humide + savon doux. Toecap suède : brosser à sec. Semelle gomme : gomme magique. Crème nourrissante régulièrement.", 'avoid': "Ne pas tremper le suède du toe cap, pas de produits chimiques sur la gomme"},
+        'style': {'looks': ['Casual chic : pantalon à pinces + chemise + Samba', 'Quotidien : jean straight + t-shirt + Samba', 'Féminin : jupe midi + Samba + chaussettes apparentes', 'Smart : blazer + pantalon fluide + Samba']},
+        'comfort_rating': 3, 'style_rating': 5, 'durability_rating': 5, 'versatility_rating': 5,
+    },
+    'campus': {
+        'full_name': 'Adidas Campus', 'brand': 'Adidas', 'year': 1983, 'designer': 'Adidas',
+        'materials': ['suède premium', 'semelle caoutchouc'],
+        'technology': 'Construction suède, semelle vulcanisée',
+        'sizing': {'fit': 'taille grand', 'advice': "Demi-taille en dessous. Le suède ne se détend pas beaucoup.", 'vs_af1': 'même taille que votre AF1', 'vs_dunk': 'demi-taille en dessous de votre Dunk', 'vs_adidas': 'standard Adidas', 'vs_nb': 'demi-taille en dessous de votre NB'},
+        'history': "À l'origine 'Tournament' dans les 70s, renommée Campus en 1983. Adoptée par les Beastie Boys dans les 80s, symbole hip-hop old school. Le modèle Campus 00s, modernisé avec semelle plus épaisse, a relancé l'engouement en 2023-2024. Collaboration Bad Bunny (2023).",
+        'cultural_moments': ["Beastie Boys (années 80)", "Symbole hip-hop new-yorkais", "Retour avec Campus 00s (2023)", "Collaboration Bad Bunny (2023)", "Tendance 'quiet luxury'"],
+        'iconic_colorways': ['Dark Green', 'Core Black', 'Grey', 'Burgundy', 'Light Blue'],
+        'retail_price': '100€ - 110€',
+        'care': {'main_material': 'suède', 'tips': "Brossez à sec avec brosse suède. Gomme à suède pour les taches. Spray imperméabilisant dès l'achat. Séchage naturel.", 'avoid': "NE JAMAIS mouiller, éviter la pluie, pas de savon liquide sur le suède"},
+        'style': {'looks': ['Rétro : jean large + t-shirt vintage + Campus', 'Casual : jogger + sweat + Campus', 'Féminin : jupe plissée + Campus + chaussettes hautes']},
+        'comfort_rating': 3, 'style_rating': 4, 'durability_rating': 3, 'versatility_rating': 4,
+    },
+    'gazelle': {
+        'full_name': 'Adidas Gazelle', 'brand': 'Adidas', 'year': 1966, 'designer': 'Adidas',
+        'materials': ['suède premium', 'semelle caoutchouc', 'doublure textile'],
+        'technology': 'Construction légère en suède, semelle plate gomme',
+        'sizing': {'fit': 'taille grand', 'advice': "Demi-taille en dessous. La Gazelle est assez étroite, les pieds larges gardent leur taille.", 'vs_af1': 'même taille que votre AF1', 'vs_dunk': 'demi-taille en dessous de votre Dunk', 'vs_adidas': 'standard Adidas (même que Samba)', 'vs_nb': 'demi-taille en dessous de votre NB'},
+        'history': "Lancée en 1966, un des plus anciens modèles Adidas encore en production. Adoptée par les mods (60s), punks (70s), terrace culture (80s), Britpop/Oasis (90s). Gazelle Bold avec semelle plateforme (2023-2024). Jennie de Blackpink ambassadrice.",
+        'cultural_moments': ["Mods britanniques (1960s)", "Punks (1970s)", "Terrace culture UK (1980s)", "Oasis / Gallagher (1990s)", "Gazelle Bold plateforme (2023-2024)", "Jennie de Blackpink ambassadrice"],
+        'iconic_colorways': ['Bold Red/White', 'Core Black/White', 'Collegiate Green', 'Bold Blue', 'Pink/White'],
+        'retail_price': '100€ - 110€',
+        'care': {'main_material': 'suède', 'tips': "Brossage à sec, spray imperméabilisant. Utilisez des embauchoirs car le suède marque les plis.", 'avoid': "Éviter pluie et humidité, pas de chiffon mouillé"},
+        'style': {'looks': ['British : jean slim + polo + Gazelle', 'Casual chic : pantalon tailleur + blazer + Gazelle', 'Féminin : robe courte + Gazelle Bold', 'Indie : jean délavé + t-shirt band + Gazelle']},
+        'comfort_rating': 3, 'style_rating': 5, 'durability_rating': 3, 'versatility_rating': 5,
+    },
+    'yeezy 350': {
+        'full_name': 'Yeezy Boost 350 V2', 'brand': 'Adidas / Yeezy', 'year': 2015, 'designer': 'Kanye West',
+        'materials': ['Primeknit (tricot technique)', 'semelle Boost TPU', 'bande SPLY-350'],
+        'technology': 'Boost (billes TPU, retour énergie maximal), tige Primeknit extensible',
+        'sizing': {'fit': 'taille petit', 'advice': "Taille PETIT. Prenez une demi-taille voire une taille au-dessus. Le Primeknit est extensible mais le toebox est serré.", 'vs_af1': 'une taille au-dessus de votre AF1', 'vs_dunk': 'demi-taille au-dessus de votre Dunk', 'vs_adidas': 'demi-taille au-dessus de votre Adidas habituelle', 'vs_nb': 'demi-taille au-dessus de votre NB'},
+        'history': "Collaboration Kanye West x Adidas (2015). La Turtle Dove originale est devenue la sneaker la plus convoitée de la décennie. V2 avec bande SPLY-350 (2016). Fin 2022, Adidas rompt avec Kanye suite à ses controverses. Le stock restant vendu sous 'Adidas Yeezy' (2023-2024).",
+        'cultural_moments': ["Turtle Dove vendue en secondes (2015)", "V2 Beluga lance la série (2016)", "Démocratisation avec restocks (2019-2020)", "Rupture Adidas x Kanye (2022)", "Vente stock restant (2023-2024)"],
+        'iconic_colorways': ['Zebra (blanc/noir)', 'Beluga (gris/orange)', 'Bred (noir/rouge)', 'Cream White', 'Sesame', 'Black Static'],
+        'retail_price': '230€ - 260€',
+        'care': {'main_material': 'primeknit', 'tips': "Primeknit : brosse douce + eau tiède savonneuse. Semelle Boost jaunit : produit anti-jaunissement. Aérer après chaque port.", 'avoid': "Jamais en machine (Boost se déforme), pas de javel, pas de sèche-linge"},
+        'style': {'looks': ['Athleisure : jogger + t-shirt + Yeezy 350', 'Minimaliste : jean slim noir + hoodie noir + Yeezy 350', 'Streetwear : cargo + sweat oversize + Yeezy 350']},
+        'comfort_rating': 5, 'style_rating': 4, 'durability_rating': 3, 'versatility_rating': 3,
+    },
+    'new balance 550': {
+        'full_name': 'New Balance 550', 'brand': 'New Balance', 'year': 1989, 'designer': 'New Balance',
+        'materials': ['cuir', 'cuir synthétique', 'mesh perforé'],
+        'technology': 'Semelle encapsulée, design basketball rétro',
+        'sizing': {'fit': 'taille normalement', 'advice': "Taille fidèlement. Cuir rigide au début, temps de rodage. Les pieds larges apprécient le fit NB généreux.", 'vs_af1': 'demi-taille au-dessus de votre AF1', 'vs_dunk': 'même taille', 'vs_adidas': 'demi-taille au-dessus de votre Adidas', 'vs_nb': 'standard NB'},
+        'history': "Sortie en 1989 sous le nom P550 et oubliée. Ressuscitée par la collaboration Aimé Leon Dore (ALD) en 2020. Teddy Santis (fondateur ALD) nommé directeur créatif NB Made in USA. Devenue LA sneaker 'quiet luxury' et du style preppy moderne.",
+        'cultural_moments': ["Sortie oubliée (1989)", "Collaboration Aimé Leon Dore (2020) = le tournant", "Teddy Santis directeur créatif NB", "Tendance 'quiet luxury' et preppy (2021-2024)", "Portée par mannequins et influenceurs mode"],
+        'iconic_colorways': ['White/Green', 'White/Navy', 'White/Red', 'White/Natural', 'ALD exclusifs'],
+        'retail_price': '130€ - 150€',
+        'care': {'main_material': 'cuir', 'tips': "Cuir : chiffon humide + savon doux. Semelle : bicarbonate. Mesh perforé : brosse douce. Crème nourrissante pour le cuir rigide.", 'avoid': "Pas de machine, pas de javel, pas de soleil direct"},
+        'style': {'looks': ['Preppy : chino + chemise Oxford + NB 550', 'Casual : jean droit + t-shirt + NB 550', 'Féminin : jupe plissée + NB 550 + chaussettes', 'Smart : pantalon à pinces + pull + NB 550']},
+        'comfort_rating': 3, 'style_rating': 5, 'durability_rating': 4, 'versatility_rating': 5,
+    },
+    'new balance 2002r': {
+        'full_name': 'New Balance 2002R', 'brand': 'New Balance', 'year': 2010, 'designer': 'New Balance',
+        'materials': ['suède premium', 'mesh', 'N-ERGY dans la semelle'],
+        'technology': 'N-ERGY (mousse premium), ABZORB SBS au talon',
+        'sizing': {'fit': 'taille normalement', 'advice': "Taille habituelle. Fit confortable et spacieux, pieds larges à l'aise.", 'vs_af1': 'demi-taille au-dessus de votre AF1', 'vs_dunk': 'même taille', 'vs_adidas': 'demi-taille au-dessus de votre Adidas', 'vs_nb': 'standard NB'},
+        'history': "Héritière de la 2002 (running premium 2000s). Relancée en 2020. Collaboration JJJJound (2021, coloris minimalistes) = grail. Edition 'Protection Pack' aspect usé/déconstruit = buzz. Segment premium de NB, populaire dans la mode parisienne et japonaise.",
+        'cultural_moments': ["Running premium original (2010)", "Collaboration JJJJound minimaliste (2021)", "Protection Pack 'destroyed' (2022)", "Mode parisienne et japonaise"],
+        'iconic_colorways': ['Rain Cloud (gris)', 'Protection Pack (déconstruit)', 'JJJJound Grey/Green', 'Black/Phantom', 'Incense'],
+        'retail_price': '140€ - 160€',
+        'care': {'main_material': 'suède/mesh', 'tips': "Suède premium : brosser à sec. Mesh : eau tiède. Embauchoirs en cèdre recommandés.", 'avoid': "Ne pas mouiller le suède, pas de machine"},
+        'style': {'looks': ['Premium casual : pantalon à pinces + pull maille + 2002R', 'Streetwear élevé : cargo + hoodie + 2002R', 'Minimaliste : tout noir ou gris + 2002R']},
+        'comfort_rating': 5, 'style_rating': 5, 'durability_rating': 4, 'versatility_rating': 4,
+    },
+    'new balance 9060': {
+        'full_name': 'New Balance 9060', 'brand': 'New Balance', 'year': 2022, 'designer': 'New Balance',
+        'materials': ['suède', 'mesh', 'cuir synthétique', 'semelle FuelCell'],
+        'technology': 'FuelCell (mousse ultra réactive), SBS au talon',
+        'sizing': {'fit': 'taille normalement', 'advice': "Taille habituelle. Volume intérieur généreux grâce à la silhouette chunky.", 'vs_af1': 'demi-taille au-dessus de votre AF1', 'vs_dunk': 'même taille', 'vs_adidas': 'demi-taille au-dessus de votre Adidas', 'vs_nb': 'standard NB'},
+        'history': "Création récente (2022) fusionnant les 990, 860 et 960. Collaboration Joe Freshgoods 'Inside Voices' = succès immédiat. Semelle FuelCell = confort exceptionnel. Nouvelle icône NB.",
+        'cultural_moments': ["Joe Freshgoods 'Inside Voices' (2022)", "Fusion 990/860/960", "Semelle FuelCell premium", "Nouvelle icône NB"],
+        'iconic_colorways': ["Joe Freshgoods Inside Voices", 'Sea Salt', 'Rain Cloud', 'Arctic Grey', 'Mushroom'],
+        'retail_price': '150€ - 170€',
+        'care': {'main_material': 'suède/mesh', 'tips': "Suède : brosser à sec. Mesh : brosse douce humide. Semelle FuelCell sensible : éviter terrains abrasifs.", 'avoid': "Surfaces rugueuses usent la FuelCell, ne pas tremper"},
+        'style': {'looks': ['Futuriste : pantalon tech + NB 9060 + veste technique', 'Casual : jean large + t-shirt oversize + NB 9060', 'Monochrome : tenue ton sur ton + NB 9060 colorée']},
+        'comfort_rating': 5, 'style_rating': 5, 'durability_rating': 4, 'versatility_rating': 3,
+    },
+    'gel-1130': {
+        'full_name': 'Asics Gel-1130', 'brand': 'Asics', 'year': 2008, 'designer': 'Asics',
+        'materials': ['mesh technique', 'cuir synthétique', 'overlays réfléchissants'],
+        'technology': 'GEL Technology (talon + avant-pied), Trusstic System (stabilité)',
+        'sizing': {'fit': 'taille normalement à petit', 'advice': "Asics taille un peu petit et étroit. Pieds larges : demi-taille au-dessus. Pieds standards : taille habituelle.", 'vs_af1': 'même taille ou demi-taille au-dessus vs AF1', 'vs_dunk': 'même taille ou demi-taille au-dessus', 'vs_adidas': 'une taille au-dessus de votre Adidas', 'vs_nb': 'même taille que NB'},
+        'history': "Modèle running 2008 passé inaperçu. Mis en lumière par la tendance retro-running 2022-2024. Look technique Y2K + détails réfléchissants. Collaborations Kith, Cecilie Bahnsen. Alternative accessible aux Salomon XT-6.",
+        'cultural_moments': ["Running discret (2008)", "Tendance retro-running (2022)", "Collabs Kith, Cecilie Bahnsen", "Esthétique Y2K/tech", "Alternative aux Salomon XT-6"],
+        'iconic_colorways': ['White/Clay Canyon', 'Silver/White', 'White/Midnight', 'Oyster Grey', 'Cream/Sage'],
+        'retail_price': '120€ - 140€',
+        'care': {'main_material': 'mesh', 'tips': "Mesh : brosse douce + eau savonneuse. Détails réfléchissants : chiffon doux. Retirer semelles après chaque port.", 'avoid': "Pas de machine, pas de produits abrasifs sur les réfléchissants"},
+        'style': {'looks': ['Tech : pantalon technique + Gel-1130 + Gore-Tex', 'Casual : jean slim + t-shirt + Gel-1130 silver', 'Gorpcore : cargo + polaire + Gel-1130']},
+        'comfort_rating': 4, 'style_rating': 4, 'durability_rating': 4, 'versatility_rating': 4,
+    },
+    'tasman': {
+        'full_name': 'UGG Tasman', 'brand': 'UGG', 'year': 2003, 'designer': 'UGG',
+        'materials': ['suède extérieur', 'doublure peau de mouton', 'coutures tressées'],
+        'technology': 'UGGplush (laine/lyocell), semelle Treadlite',
+        'sizing': {'fit': 'taille normalement à grand', 'advice': "Slip-on, fit plus lâche. Entre deux tailles : taille inférieure. La doublure mouton se comprime et s'adapte.", 'vs_af1': 'même taille que AF1', 'vs_dunk': 'même taille ou demi-taille en dessous', 'vs_adidas': 'même taille', 'vs_nb': 'même taille ou demi-taille en dessous'},
+        'history': "Existe depuis 2003, virale en 2022-2023. Portée par Kardashian, adoptée par Gen Z. Passée de pantoufle d'intérieur à chaussure de rue tendance. Symbole de la tendance 'comfort first'. Pénuries et listes d'attente en hiver 2023.",
+        'cultural_moments': ["Existence discrète (2003)", "Virale TikTok (2022-2023)", "Portée par Gigi Hadid, Kendall Jenner", "Tendance 'cozy/comfort first'", "Pénurie hiver 2023"],
+        'iconic_colorways': ['Chestnut', 'Sand', 'Black', 'Mustard Seed', 'Shaded Clover'],
+        'retail_price': '110€ - 130€',
+        'care': {'main_material': 'suède/peau de mouton', 'tips': "Suède : brosser à sec. Doublure mouton : produit spécial UGG ou vinaigre blanc dilué. Séchage naturel. Spray imperméabilisant UGG.", 'avoid': "NE JAMAIS mouiller complètement, pas de machine, pas de radiateur (mouton rétrécit)"},
+        'style': {'looks': ['Cozy : jogging + hoodie + UGG Tasman', 'Casual : jean + pull + UGG Tasman', 'Été : short + UGG Tasman']},
+        'comfort_rating': 5, 'style_rating': 3, 'durability_rating': 3, 'versatility_rating': 3,
+    },
+    'tazz': {
+        'full_name': 'UGG Tazz', 'brand': 'UGG', 'year': 2022, 'designer': 'UGG',
+        'materials': ['suède', 'doublure peau de mouton', 'semelle plateforme EVA'],
+        'technology': 'UGGplush, semelle plateforme surélevée (+3cm)',
+        'sizing': {'fit': 'taille normalement', 'advice': "Similaire à la Tasman. Entre deux tailles : taille inférieure. Semelle plateforme ajoute ~3cm.", 'vs_af1': 'même taille', 'vs_dunk': 'même taille', 'vs_adidas': 'même taille', 'vs_nb': 'même taille'},
+        'history': "Version plateforme de la Tasman (2022). Semelle surélevée conquiert Gen Z. Plus populaire que la Tasman originale. Symbole du 'platform trend' 2023-2024.",
+        'cultural_moments': ["Lancement 2022, succès immédiat", "Évolution plateforme de la Tasman", "Portée par célébrités et influenceurs", "Symbole 'platform trend' 2023-2024"],
+        'iconic_colorways': ['Chestnut', 'Sand', 'Black', 'Mustard Seed', 'Seal'],
+        'retail_price': '130€ - 150€',
+        'care': {'main_material': 'suède/peau de mouton', 'tips': "Même entretien que Tasman. Semelle plateforme : chiffon humide.", 'avoid': "Mêmes précautions que Tasman"},
+        'style': {'looks': ['Cozy chic : jean + pull cachemire + UGG Tazz', 'Streetwear : jogging + cropped hoodie + UGG Tazz', 'Féminin : jupe midi + UGG Tazz']},
+        'comfort_rating': 5, 'style_rating': 4, 'durability_rating': 3, 'versatility_rating': 3,
+    },
+}
+
+
+def get_sneaker_data(subject):
+    """Trouve les données enrichies correspondant au sujet dans SNEAKER_DATABASE"""
+    if not subject:
+        return None
+    s = subject.lower()
+    best_match = None
+    best_score = 0
+    for key, data in SNEAKER_DATABASE.items():
+        score = 0
+        if key in s or s in key:
+            score = len(key) + 10
+        elif data.get('full_name', '').lower() in s or s in data.get('full_name', '').lower():
+            score = len(data.get('full_name', '')) + 10
+        else:
+            key_parts = key.split()
+            for part in key_parts:
+                if len(part) > 1 and part in s:
+                    score += len(part)
+        if score > best_score:
+            best_score = score
+            best_match = data
+    return best_match
+
+
+
+
 def get_model_description(title):
     t = title.lower()
     for key, desc in MODEL_DESCRIPTIONS.items():
@@ -1654,81 +1883,168 @@ def generate_sizing_guide(subject, product_links, collection_link, tone):
 
 
 def generate_release_article(subject, product_links, collection_link, tone):
-    """Génère un article sur les sorties"""
+    """Génère un article sur les sorties enrichi avec SNEAKER_DATABASE"""
     import datetime
+    data = get_sneaker_data(subject)
+    full_name = data['full_name'] if data else subject
     month = datetime.datetime.now().strftime('%B %Y')
     
-    title = f"Sorties {subject} {month} : Calendrier et dates de release"
-    meta_title = f"Sorties {subject} 2026 : Dates et calendrier | KP SHOES"[:70]
-    meta_description = f"Découvrez toutes les sorties {subject} prévues en 2026. Calendrier des releases, dates de sortie et conseils pour cop les paires limitées."[:160]
-    summary = f"Toutes les sorties {subject} à ne pas manquer. Calendrier des releases, dates clés et conseils pour réussir vos achats."
+    title = f"Sorties {full_name} 2026 : Calendrier des releases et dates de sortie"
+    meta_title = f"Sorties {full_name} 2026 : Dates releases | KP SHOES"[:70]
+    meta_description = f"Découvrez toutes les sorties {full_name} prévues en 2026. Calendrier des releases, coloris attendus et conseils pour cop les paires limitées."[:160]
+    summary = f"Toutes les sorties {full_name} à ne pas manquer en 2026. Calendrier, coloris attendus et conseils d'achat."
+    
+    # Colorways depuis la base
+    colorways_html = ""
+    if data and data.get('iconic_colorways'):
+        colorways_html = f"<h2>Les coloris les plus recherchés de la {full_name}</h2>"
+        colorways_html += "<p>Voici les coloris qui génèrent la plus forte demande :</p><ul>"
+        for cw in data['iconic_colorways']:
+            colorways_html += f"<li><strong>{cw}</strong></li>"
+        colorways_html += "</ul>"
+        colorways_html += f"<p>En 2026, de nouvelles déclinaisons et collaborations inédites sont attendues.</p>"
+    else:
+        colorways_html = f"<h2>Les coloris les plus attendus</h2>\n<p>Les versions OG, collaborations et éditions limitées de la {full_name} restent les plus recherchées.</p>"
+    
+    # Collabs
+    collabs_html = ""
+    if data and data.get('cultural_moments'):
+        collabs = [m for m in data['cultural_moments'] if any(w in m.lower() for w in ['collab', ' x ', 'travis', 'off-white', 'virgil', 'jjjjound', 'aimé', 'wales'])]
+        if collabs:
+            collabs_html = f"<h2>Les collaborations marquantes de la {full_name}</h2><ul>"
+            for c in collabs:
+                collabs_html += f"<li>{c}</li>"
+            collabs_html += "</ul><p>De nouvelles collaborations sont régulièrement annoncées.</p>"
+    
+    retail_price = data.get('retail_price', '110€ - 200€') if data else '110€ - 200€'
+    brand_name = data.get('brand', 'la marque') if data else 'la marque'
     
     body = f"""
-<p>Découvrez toutes les <strong>sorties {subject}</strong> prévues pour {month}. Restez informé des dernières releases et ne manquez aucune paire sur <strong>KP SHOES</strong>.</p>
+<p>Découvrez toutes les <strong>sorties {full_name}</strong> prévues pour 2026. Restez informé des dernières releases et ne manquez aucune paire sur <strong>KP SHOES</strong>.</p>
 
-<h2>Les releases {subject} à ne pas manquer</h2>
-<p>L'année 2026 s'annonce riche en sorties pour les fans de {subject}. Voici les dates clés à retenir.</p>
+<h2>Les releases {full_name} à ne pas manquer en 2026</h2>
+<p>L'année 2026 s'annonce riche en sorties pour la {full_name}. Entre rééditions de coloris classiques, nouvelles collaborations et éditions limitées, les occasions ne manqueront pas. {brand_name} continue d'alimenter la hype avec des drops réguliers.</p>
 
-<h2>Comment cop les {subject} en édition limitée ?</h2>
+{colorways_html}
+
+{collabs_html}
+
+<h2>Comment cop les {full_name} en édition limitée ?</h2>
 <ul>
-<li><strong>Suivez les comptes officiels</strong> : Nike SNKRS, Jordan, et les réseaux sociaux des marques</li>
-<li><strong>Activez les notifications</strong> : Soyez alerté dès l'annonce d'une nouvelle release</li>
-<li><strong>Préparez vos comptes</strong> : Créez vos profils sur les apps de raffle à l'avance</li>
-<li><strong>Achetez sur des sites de confiance</strong> : KP SHOES garantit l'authenticité de chaque paire</li>
+<li><strong>Suivez les comptes officiels</strong> : Les annonces passent d'abord par les réseaux sociaux de {brand_name}</li>
+<li><strong>Utilisez les apps de raffle</strong> : SNKRS (Nike), Confirmed (Adidas), ou les raffles boutiques</li>
+<li><strong>Préparez-vous à l'avance</strong> : Comptes créés, paiement enregistré, notifications activées</li>
+<li><strong>Misez sur les revendeurs de confiance</strong> : <strong>KP SHOES</strong> garantit l'authenticité de chaque paire</li>
 </ul>
 
 {collection_link}
 
-<h2>Les coloris les plus attendus</h2>
-<p>Parmi les sorties les plus anticipées, certains coloris font déjà parler d'eux dans la communauté sneakers. Les collaborations et les éditions limitées restent les plus recherchées.</p>
+<h2>Prix et disponibilité</h2>
+<p>Le prix retail de la {full_name} se situe entre <strong>{retail_price}</strong>. Sur le marché du resell, certains coloris (collaborations, éditions limitées) atteignent 2 à 10 fois le prix retail.</p>
+<p>Sur <strong>KP SHOES</strong>, nous proposons ces modèles au meilleur prix avec <strong>garantie d'authenticité 100%</strong>.</p>
 
 {product_links}
 
-<h2>Prix et disponibilité</h2>
-<p>Les prix retail varient généralement entre 110€ et 200€ selon les modèles. Sur le marché de la revente, certaines paires peuvent atteindre des prix bien plus élevés, notamment les collaborations.</p>
-
-<p><strong>Sur KP SHOES, retrouvez ces modèles 100% authentiques avec livraison rapide et paiement sécurisé.</strong></p>
+<p><strong>Sur KP SHOES, retrouvez les {full_name} 100% authentiques avec livraison rapide et paiement sécurisé.</strong></p>
 """
     
     return {
-        'title': title,
-        'body_html': body,
-        'tags': f'sortie, release, {subject}, calendrier, 2026',
+        'title': title, 'body_html': body,
+        'tags': f'sortie, release, {subject}, calendrier, 2026, {full_name}',
         'handle': f'sorties-{subject.lower().replace(" ", "-")}-2026',
-        'meta_title': meta_title,
-        'meta_description': meta_description,
-        'summary_html': summary,
-        'needs_image': True,
-        'image_search_term': subject
+        'meta_title': meta_title, 'meta_description': meta_description,
+        'summary_html': summary, 'needs_image': True, 'image_search_term': subject
     }
 
-
 def generate_trend_article(subject, product_links, collection_link, tone, matching_products):
-    """Génère un article sur les tendances"""
-    title = "Sneakers tendance 2026 : Les modèles les plus hype du moment"
-    meta_title = "Sneakers tendance 2026 : Les modèles incontournables | KP SHOES"
-    meta_description = "Découvrez les sneakers les plus tendance en 2026. Running rétro, classiques indémodables et collaborations de luxe. Notre sélection des modèles hype."
-    summary = "Quelles sont les sneakers les plus tendance en 2026 ? Découvrez notre sélection des modèles incontournables : running rétro, classiques et collaborations."
+    """Génère un article sur les tendances enrichi avec SNEAKER_DATABASE"""
+    data = get_sneaker_data(subject) if subject else None
     
-    if subject:
-        title = f"{subject} : Pourquoi c'est LA sneaker tendance de 2026"
-        meta_title = f"{subject} : La sneaker tendance 2026 | KP SHOES"[:70]
-        meta_description = f"Découvrez pourquoi la {subject} est LA sneaker tendance de 2026. Style, confort et hype : tout ce qu'il faut savoir."[:160]
-        summary = f"La {subject} s'impose comme l'une des sneakers les plus tendance de 2026. Découvrez pourquoi elle fait l'unanimité."
+    if subject and data:
+        full_name = data['full_name']
+        title = f"{full_name} : Pourquoi c'est LA sneaker tendance de 2026"
+        meta_title = f"{full_name} : Sneaker tendance 2026 | KP SHOES"[:70]
+        meta_description = f"Découvrez pourquoi la {full_name} est LA sneaker tendance de 2026. Histoire, style et conseils pour l'adopter."[:160]
+        summary = f"La {full_name} s'impose comme l'une des sneakers les plus tendance de 2026."
+    else:
+        full_name = subject or 'Sneakers'
+        title = "Sneakers tendance 2026 : Les modèles les plus hype du moment"
+        meta_title = "Sneakers tendance 2026 : Les incontournables | KP SHOES"[:70]
+        meta_description = "Découvrez les sneakers les plus tendance en 2026. Running rétro, classiques et collaborations. Notre sélection."[:160]
+        summary = "Quelles sont les sneakers les plus tendance en 2026 ? Notre sélection des modèles incontournables."
     
-    body = f"""
-<p>Quelles sont les <strong>sneakers les plus tendance en 2026</strong> ? Entre retours de classiques et nouvelles silhouettes, le marché de la sneaker continue d'évoluer. Découvrez notre sélection des modèles incontournables.</p>
+    # Construire le contenu spécifique si on a les données
+    specific_html = ""
+    if data:
+        year = data.get('year', '')
+        cultural = data.get('cultural_moments', [])
+        style_info = data.get('style', {})
+        looks = style_info.get('looks', [])
+        colorways = data.get('iconic_colorways', [])
+        
+        cultural_html = ""
+        if cultural:
+            cultural_html = f"<h2>Pourquoi la {full_name} est-elle si hype ?</h2><p>Son parcours explique son statut iconique :</p><ul>"
+            for c in cultural[-5:]:
+                cultural_html += f"<li>{c}</li>"
+            cultural_html += "</ul>"
+        
+        looks_html = ""
+        if looks:
+            looks_html = f"<h2>Comment porter la {full_name} en 2026</h2><ul>"
+            for look in looks:
+                parts = look.split(' : ', 1)
+                if len(parts) == 2:
+                    looks_html += f"<li><strong>{parts[0]}</strong> : {parts[1]}</li>"
+                else:
+                    looks_html += f"<li>{look}</li>"
+            looks_html += "</ul>"
+        
+        colorways_html = ""
+        if colorways:
+            colorways_html = f"<h2>Les coloris les plus recherchés</h2><ul>"
+            for cw in colorways[:5]:
+                colorways_html += f"<li><strong>{cw}</strong></li>"
+            colorways_html += "</ul>"
+        
+        history_snippet = data.get('history', '')
+        if len(history_snippet) > 300:
+            history_snippet = history_snippet[:300] + '...'
+        
+        specific_html = f"""
+<h2>L'histoire derrière le succès</h2>
+<p>{history_snippet}</p>
 
+{cultural_html}
+
+{colorways_html}
+
+{looks_html}
+"""
+    else:
+        specific_html = """
 <h2>Les tendances sneakers 2026</h2>
 
 <h3>1. Le retour du running rétro</h3>
-<p>Les silhouettes inspirées des années 90 et 2000 continuent de dominer. Les <strong>Asics Gel-1130</strong>, <strong>New Balance 530</strong> et <strong>Nike Air Max</strong> sont partout dans les rues.</p>
+<p>Les silhouettes des années 90-2000 dominent. Les <strong>Asics Gel-1130</strong>, <strong>New Balance 530</strong> et <strong>New Balance 2002R</strong> sont partout dans les rues, portées par la tendance Y2K et gorpcore.</p>
 
-<h3>2. Les classiques indémodables</h3>
-<p>La <strong>Nike Dunk Low</strong>, l'<strong>Adidas Samba</strong> et la <strong>New Balance 550</strong> restent des valeurs sûres. Ces modèles polyvalents s'adaptent à tous les styles.</p>
+<h3>2. Les classiques Adidas</h3>
+<p>La <strong>Samba</strong>, la <strong>Gazelle</strong> et la <strong>Campus</strong> continuent leur règne. Portées par la terrace culture et le style casual chic européen, elles ne montrent aucun signe de ralentissement.</p>
 
-<h3>3. Les collaborations de luxe</h3>
-<p>Les partenariats entre marques de sport et maisons de luxe continuent de faire sensation. Les drops limités créent une forte demande sur le marché du resell.</p>
+<h3>3. Les indémodables Nike</h3>
+<p>La <strong>Nike Dunk Low</strong>, la <strong>Air Force 1</strong> et les <strong>Air Jordan 1</strong> restent des valeurs sûres. Universelles et faciles à porter, elles s'adaptent à tous les styles.</p>
+
+<h3>4. New Balance, la marque du moment</h3>
+<p>Avec la <strong>550</strong> (style preppy), la <strong>2002R</strong> (premium casual) et la <strong>9060</strong> (futuriste), New Balance domine le segment mode. La marque attire les amateurs de 'quiet luxury'.</p>
+
+<h3>5. Les collaborations et éditions limitées</h3>
+<p>Les partenariats avec des designers et artistes (Travis Scott, Wales Bonner, JJJJound, Aimé Leon Dore) créent des pièces collector ultra recherchées.</p>
+"""
+    
+    body = f"""
+<p>Quelles sont les <strong>sneakers les plus tendance en 2026</strong> ? Entre retours de classiques, nouvelles silhouettes et collaborations exceptionnelles, le marché de la sneaker ne cesse d'évoluer.</p>
+
+{specific_html}
 
 {collection_link}
 
@@ -1737,203 +2053,351 @@ def generate_trend_article(subject, product_links, collection_link, tone, matchi
 
 <h2>Comment adopter la tendance ?</h2>
 <ul>
-<li><strong>Investissez dans des classiques</strong> : Ils ne se démodent jamais</li>
-<li><strong>Osez les couleurs</strong> : Les coloris audacieux sont très recherchés</li>
-<li><strong>Privilégiez la qualité</strong> : Une paire authentique dure plus longtemps</li>
+<li><strong>Investissez dans des classiques</strong> : Les modèles iconiques ne se démodent jamais et prennent même de la valeur</li>
+<li><strong>Osez les couleurs</strong> : Les coloris audacieux sont très recherchés et permettent de se démarquer</li>
+<li><strong>Mixez les styles</strong> : N'hésitez pas à porter des sneakers techniques avec une tenue habillée, c'est la tendance</li>
+<li><strong>Privilégiez l'authenticité</strong> : Une paire authentique dure plus longtemps et conserve sa valeur</li>
 </ul>
 
 <p><strong>Chez KP SHOES, retrouvez tous les modèles tendance 100% authentiques.</strong> Notre équipe vérifie chaque paire avant expédition.</p>
 """
     
+    handle = f'{subject.lower().replace(" ", "-")}-tendance-2026' if subject else 'sneakers-tendance-2026'
+    
     return {
-        'title': title,
-        'body_html': body,
-        'tags': 'tendance, sneakers 2026, hype, mode, streetwear',
-        'handle': 'sneakers-tendance-2026',
-        'meta_title': meta_title,
-        'meta_description': meta_description,
-        'summary_html': summary,
-        'needs_image': True,
+        'title': title, 'body_html': body,
+        'tags': f'tendance, sneakers 2026, hype, mode, {subject}',
+        'handle': handle,
+        'meta_title': meta_title, 'meta_description': meta_description,
+        'summary_html': summary, 'needs_image': True,
         'image_search_term': subject if subject else 'Nike Dunk Low'
     }
 
-
 def generate_comparison_article(subject, product_links, collection_link, tone):
-    """Génère un article comparatif"""
-    # Parser le sujet pour extraire les 2 modèles
+    """Génère un article comparatif enrichi avec SNEAKER_DATABASE"""
     models = subject.split(' vs ') if ' vs ' in subject else [subject, 'Nike Dunk Low']
     model1 = models[0].strip()
     model2 = models[1].strip() if len(models) > 1 else 'Nike Dunk Low'
     
-    title = f"{model1} vs {model2} : Quelle sneaker choisir en 2026 ?"
-    meta_title = f"{model1} vs {model2} : Comparatif 2026 | KP SHOES"[:70]
-    meta_description = f"Comparatif {model1} vs {model2}. Confort, style, prix : on vous aide à choisir la sneaker faite pour vous."[:160]
-    summary = f"Vous hésitez entre {model1} et {model2} ? Notre comparatif détaillé vous aide à faire le bon choix."
+    data1 = get_sneaker_data(model1)
+    data2 = get_sneaker_data(model2)
+    
+    name1 = data1['full_name'] if data1 else model1
+    name2 = data2['full_name'] if data2 else model2
+    
+    title = f"{name1} vs {name2} : Quelle sneaker choisir en 2026 ?"
+    meta_title = f"{name1} vs {name2} : Comparatif 2026 | KP SHOES"[:70]
+    meta_description = f"Comparatif {name1} vs {name2}. Confort, style, taille, prix : on vous aide à choisir la sneaker faite pour vous."[:160]
+    summary = f"Vous hésitez entre {name1} et {name2} ? Notre comparatif détaillé vous aide à faire le bon choix."
+    
+    # Ratings
+    def stars(rating):
+        return '⭐' * rating + '☆' * (5 - rating) if rating else '⭐⭐⭐⭐'
+    
+    c1 = data1.get('comfort_rating', 4) if data1 else 4
+    c2 = data2.get('comfort_rating', 4) if data2 else 4
+    s1 = data1.get('style_rating', 4) if data1 else 4
+    s2 = data2.get('style_rating', 4) if data2 else 4
+    d1 = data1.get('durability_rating', 4) if data1 else 4
+    d2 = data2.get('durability_rating', 4) if data2 else 4
+    v1 = data1.get('versatility_rating', 4) if data1 else 4
+    v2 = data2.get('versatility_rating', 4) if data2 else 4
+    
+    # Infos spécifiques
+    year1 = data1.get('year', '?') if data1 else '?'
+    year2 = data2.get('year', '?') if data2 else '?'
+    price1 = data1.get('retail_price', '~150€') if data1 else '~150€'
+    price2 = data2.get('retail_price', '~150€') if data2 else '~150€'
+    mat1 = ', '.join(data1.get('materials', ['cuir'])) if data1 else 'cuir'
+    mat2 = ', '.join(data2.get('materials', ['cuir'])) if data2 else 'cuir'
+    fit1 = data1['sizing']['fit'] if data1 and data1.get('sizing') else 'taille normalement'
+    fit2 = data2['sizing']['fit'] if data2 and data2.get('sizing') else 'taille normalement'
+    
+    # Points forts/faibles spécifiques
+    def get_pros_cons(data, name):
+        pros = []
+        cons = []
+        if data:
+            if data.get('comfort_rating', 0) >= 4: pros.append("Confort exceptionnel au quotidien")
+            elif data.get('comfort_rating', 0) <= 2: cons.append("Confort limité, nécessite un temps de rodage")
+            
+            if data.get('style_rating', 0) >= 4: pros.append("Design iconique très recherché")
+            if data.get('versatility_rating', 0) >= 4: pros.append("Ultra polyvalente, s'accorde avec tout")
+            elif data.get('versatility_rating', 0) <= 3: cons.append("Moins polyvalente, style plus spécifique")
+            
+            if data.get('durability_rating', 0) >= 4: pros.append("Matériaux durables, excellente longévité")
+            elif data.get('durability_rating', 0) <= 3: cons.append("Matériaux plus fragiles, nécessite un entretien régulier")
+            
+            if data.get('history'): pros.append(f"Riche héritage culturel depuis {data.get('year', '?')}")
+            
+            if 'petit' in fit1 if data == data1 else 'petit' in fit2: cons.append("Taille petit, attention au sizing")
+            if 'grand' in fit1 if data == data1 else 'grand' in fit2: cons.append("Taille grand, prendre une demi-taille en dessous")
+        
+        if not pros: pros = ["Design apprécié", "Large choix de coloris", "Bonne qualité"]
+        if not cons: cons = ["Certains coloris difficiles à trouver"]
+        return pros[:4], cons[:3]
+    
+    pros1, cons1 = get_pros_cons(data1, name1)
+    pros2, cons2 = get_pros_cons(data2, name2)
+    
+    # Verdict
+    score1 = c1 + s1 + d1 + v1
+    score2 = c2 + s2 + d2 + v2
+    if score1 > score2:
+        verdict = f"Sur l'ensemble de nos critères, la <strong>{name1}</strong> prend un léger avantage grâce à {'son confort supérieur' if c1 > c2 else 'sa plus grande polyvalence' if v1 > v2 else 'son design iconique'}. Cependant, la <strong>{name2}</strong> reste un excellent choix{', surtout si vous recherchez plus de polyvalence' if v2 > v1 else ', notamment pour son rapport qualité-prix' if 'moins' in price2.lower() else ''}."
+    elif score2 > score1:
+        verdict = f"La <strong>{name2}</strong> se démarque légèrement grâce à {'son confort supérieur' if c2 > c1 else 'sa plus grande polyvalence' if v2 > v1 else 'son design iconique'}. Mais la <strong>{name1}</strong> n'est pas en reste{', avec un style unique et reconnaissable' if s1 >= 4 else ''}."
+    else:
+        verdict = f"Les deux modèles sont au coude à coude ! La <strong>{name1}</strong> et la <strong>{name2}</strong> sont toutes deux d'excellents choix. Votre décision dépendra de votre style personnel et de l'usage que vous comptez en faire."
     
     body = f"""
-<p>Vous hésitez entre la <strong>{model1}</strong> et la <strong>{model2}</strong> ? Ce comparatif détaillé vous aide à faire le bon choix selon vos besoins et votre style.</p>
+<p>Vous hésitez entre la <strong>{name1}</strong> et la <strong>{name2}</strong> ? Ce comparatif détaillé basé sur notre expertise vous aide à faire le bon choix.</p>
 
-<h2>Tableau comparatif</h2>
+<h2>Tableau comparatif détaillé</h2>
 <table style="width:100%;border-collapse:collapse;margin:20px 0">
-<tr style="background:#f5f5f5"><th style="padding:12px;border:1px solid #ddd">Critère</th><th style="padding:12px;border:1px solid #ddd">{model1}</th><th style="padding:12px;border:1px solid #ddd">{model2}</th></tr>
-<tr><td style="padding:10px;border:1px solid #ddd"><strong>Confort</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td></tr>
-<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd"><strong>Style</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐⭐</td></tr>
-<tr><td style="padding:10px;border:1px solid #ddd"><strong>Polyvalence</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐⭐</td></tr>
-<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd"><strong>Durabilité</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td></tr>
+<tr style="background:#f5f5f5"><th style="padding:12px;border:1px solid #ddd">Critère</th><th style="padding:12px;border:1px solid #ddd">{name1}</th><th style="padding:12px;border:1px solid #ddd">{name2}</th></tr>
+<tr><td style="padding:10px;border:1px solid #ddd"><strong>Année de création</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">{year1}</td><td style="padding:10px;border:1px solid #ddd;text-align:center">{year2}</td></tr>
+<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd"><strong>Confort</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">{stars(c1)}</td><td style="padding:10px;border:1px solid #ddd;text-align:center">{stars(c2)}</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd"><strong>Style</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">{stars(s1)}</td><td style="padding:10px;border:1px solid #ddd;text-align:center">{stars(s2)}</td></tr>
+<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd"><strong>Polyvalence</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">{stars(v1)}</td><td style="padding:10px;border:1px solid #ddd;text-align:center">{stars(v2)}</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd"><strong>Durabilité</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">{stars(d1)}</td><td style="padding:10px;border:1px solid #ddd;text-align:center">{stars(d2)}</td></tr>
+<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd"><strong>Matériaux</strong></td><td style="padding:10px;border:1px solid #ddd">{mat1}</td><td style="padding:10px;border:1px solid #ddd">{mat2}</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd"><strong>Taille</strong></td><td style="padding:10px;border:1px solid #ddd">{fit1}</td><td style="padding:10px;border:1px solid #ddd">{fit2}</td></tr>
+<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd"><strong>Prix retail</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">{price1}</td><td style="padding:10px;border:1px solid #ddd;text-align:center">{price2}</td></tr>
 </table>
 
-<h2>{model1} : Points forts et faibles</h2>
+<h2>{name1} : Points forts et faibles</h2>
 <h3>✅ Avantages</h3>
-<ul>
-<li>Design iconique et reconnaissable</li>
-<li>Large choix de coloris</li>
-<li>Bonne qualité de fabrication</li>
-</ul>
+<ul>""" + ''.join(f'<li>{p}</li>' for p in pros1) + f"""</ul>
 <h3>❌ Inconvénients</h3>
-<ul>
-<li>Prix parfois élevé sur le marché du resell</li>
-<li>Certains coloris difficiles à trouver</li>
-</ul>
+<ul>""" + ''.join(f'<li>{c}</li>' for c in cons1) + f"""</ul>
 
-<h2>{model2} : Points forts et faibles</h2>
+<h2>{name2} : Points forts et faibles</h2>
 <h3>✅ Avantages</h3>
-<ul>
-<li>Silhouette polyvalente</li>
-<li>Confort au quotidien</li>
-<li>S'accorde avec de nombreuses tenues</li>
-</ul>
+<ul>""" + ''.join(f'<li>{p}</li>' for p in pros2) + f"""</ul>
 <h3>❌ Inconvénients</h3>
-<ul>
-<li>Très populaire, donc moins original</li>
-</ul>
+<ul>""" + ''.join(f'<li>{c}</li>' for c in cons2) + f"""</ul>
 
 {collection_link}
 
 <h2>Notre verdict</h2>
-<p>Les deux modèles sont d'excellents choix. La <strong>{model1}</strong> conviendra aux amateurs de sneakers iconiques, tandis que la <strong>{model2}</strong> sera parfaite pour un usage quotidien polyvalent.</p>
+<p>{verdict}</p>
+<p>Dans les deux cas, <strong>achetez toujours authentique</strong>. Les contrefaçons n'offrent ni le même confort, ni la même durabilité, ni la même satisfaction.</p>
 
 {product_links}
 
-<p><strong>Retrouvez ces deux modèles sur KP SHOES, 100% authentiques et vérifiés.</strong></p>
+<p><strong>Retrouvez ces deux modèles sur KP SHOES, 100% authentiques et vérifiés par nos experts.</strong></p>
 """
     
     return {
-        'title': title,
-        'body_html': body,
+        'title': title, 'body_html': body,
         'tags': f'comparatif, {model1}, {model2}, versus, guide achat',
         'handle': f'comparatif-{model1.lower().replace(" ", "-")}-vs-{model2.lower().replace(" ", "-")}',
-        'meta_title': meta_title,
-        'meta_description': meta_description,
-        'summary_html': summary,
-        'needs_image': True,
-        'image_search_term': model1
+        'meta_title': meta_title, 'meta_description': meta_description,
+        'summary_html': summary, 'needs_image': True, 'image_search_term': model1
     }
 
-
 def generate_history_article(subject, product_links, collection_link, tone):
-    """Génère un article sur l'histoire d'un modèle"""
-    title = f"L'histoire de la {subject} : De sa création à aujourd'hui"
-    meta_title = f"Histoire de la {subject} : Origines et évolution | KP SHOES"[:70]
-    meta_description = f"Découvrez l'histoire fascinante de la {subject}. De ses origines à son statut d'icône streetwear, retour sur un modèle légendaire."[:160]
-    summary = f"La {subject} est bien plus qu'une sneaker. Découvrez son histoire fascinante, de sa création à son statut d'icône culturelle."
+    """Génère un article histoire enrichi avec SNEAKER_DATABASE"""
+    data = get_sneaker_data(subject)
+    full_name = data['full_name'] if data else subject
     
-    body = f"""
-<p>La <strong>{subject}</strong> est bien plus qu'une simple paire de sneakers. C'est une icône qui a marqué l'histoire de la culture streetwear et du sport. Découvrez son parcours fascinant.</p>
-
-<h2>Les origines</h2>
-<p>Créée pour répondre aux besoins des athlètes professionnels, la {subject} a rapidement dépassé le cadre sportif pour devenir un symbole de la culture urbaine. Son design innovant et son confort ont séduit des millions de personnes à travers le monde.</p>
-
-<h2>L'évolution à travers les décennies</h2>
-<h3>Les années de lancement</h3>
-<p>À ses débuts, la {subject} était portée principalement sur les terrains de sport. Sa technologie de pointe pour l'époque en faisait une référence en matière de performance.</p>
-
-<h3>La consécration streetwear</h3>
-<p>C'est dans les années 90-2000 que la {subject} a véritablement conquis les rues. Adoptée par les rappeurs, les skateurs et les fashionistas, elle est devenue un incontournable du style urbain.</p>
-
-<h3>Aujourd'hui</h3>
-<p>En 2026, la {subject} continue de fasciner. Les rééditions et les collaborations avec des artistes et designers maintiennent l'engouement autour de ce modèle légendaire.</p>
-
-{collection_link}
-
-<h2>Les coloris emblématiques</h2>
+    title = f"L'histoire de la {full_name} : De sa création à aujourd'hui"
+    meta_title = f"Histoire de la {full_name} : Origines et évolution | KP SHOES"[:70]
+    meta_description = f"Découvrez l'histoire fascinante de la {full_name}. De ses origines à son statut d'icône streetwear, retour sur un modèle légendaire."[:160]
+    summary = f"La {full_name} est bien plus qu'une sneaker. Découvrez son histoire, de sa création à son statut d'icône culturelle."
+    
+    # Contenu enrichi depuis la base
+    if data:
+        year = data.get('year', '')
+        designer = data.get('designer', '')
+        history = data.get('history', '')
+        cultural = data.get('cultural_moments', [])
+        colorways = data.get('iconic_colorways', [])
+        materials = ', '.join(data.get('materials', []))
+        tech = data.get('technology', '')
+        brand = data.get('brand', '')
+        
+        # Section origines
+        origins_html = f"""<h2>Les origines ({year})</h2>
+<p>{history}</p>
+<p>Créée par <strong>{designer}</strong>{' pour ' + brand if brand else ''}, la {full_name} était construite avec {materials}. Sa technologie : {tech}.</p>"""
+        
+        # Section moments culturels
+        cultural_html = ""
+        if cultural:
+            cultural_html = f"<h2>Les moments clés de la {full_name}</h2><p>Chronologie des événements qui ont forgé sa légende :</p><ul>"
+            for c in cultural:
+                cultural_html += f"<li><strong>{c}</strong></li>"
+            cultural_html += "</ul>"
+        
+        # Section colorways
+        colorways_html = ""
+        if colorways:
+            colorways_html = f"<h2>Les coloris emblématiques</h2><p>Certains coloris sont devenus des légendes à part entière :</p><ul>"
+            for cw in colorways:
+                colorways_html += f"<li><strong>{cw}</strong></li>"
+            colorways_html += "</ul>"
+            colorways_html += "<p>Les coloris OG (originaux) restent les plus recherchés par les collectionneurs, tandis que les collaborations limitées atteignent des prix records sur le marché du resell.</p>"
+        
+    else:
+        origins_html = f"""<h2>Les origines</h2>
+<p>Créée pour répondre aux besoins des athlètes professionnels, la {full_name} a rapidement dépassé le cadre sportif pour devenir un symbole de la culture urbaine. Son design innovant et son confort ont séduit des millions de personnes.</p>"""
+        cultural_html = ""
+        colorways_html = f"""<h2>Les coloris emblématiques</h2>
 <ul>
 <li>Les versions OG (Original) restent les plus recherchées</li>
 <li>Les collaborations limitées atteignent des prix records</li>
 <li>Les coloris rétro séduisent les collectionneurs</li>
-</ul>
+</ul>"""
+    
+    body = f"""
+<p>La <strong>{full_name}</strong> est bien plus qu'une simple paire de sneakers. C'est une icône qui a marqué l'histoire de la culture streetwear et du sport. Découvrez son parcours fascinant.</p>
+
+{origins_html}
+
+<h2>L'évolution à travers les décennies</h2>
+<h3>Les premières années</h3>
+<p>À ses débuts, la {full_name} était avant tout un produit technique. Sa conception répondait à des critères de performance stricts. Mais son design distinctif a rapidement attiré l'attention au-delà du sport.</p>
+
+<h3>La consécration streetwear</h3>
+<p>C'est dans les années 90-2000 que la {full_name} a véritablement conquis les rues. Adoptée par les rappeurs, les skateurs et les amateurs de mode, elle est devenue un incontournable du style urbain. Les célébrités et les artistes l'ont portée sur scène et dans leurs clips, amplifiant son influence culturelle.</p>
+
+<h3>Aujourd'hui</h3>
+<p>En 2026, la {full_name} continue de fasciner. Les rééditions, les collaborations avec des designers de renom et les éditions limitées maintiennent l'engouement. Elle reste l'une des silhouettes les plus recherchées au monde.</p>
+
+{cultural_html}
+
+{colorways_html}
+
+{collection_link}
 
 {product_links}
 
-<h2>Pourquoi la {subject} est-elle si populaire ?</h2>
+<h2>Pourquoi la {full_name} est-elle si populaire ?</h2>
 <ul>
-<li><strong>Un design intemporel</strong> : Ses lignes n'ont pas pris une ride</li>
-<li><strong>Une qualité reconnue</strong> : Des matériaux premium pour une durabilité optimale</li>
-<li><strong>Un héritage culturel</strong> : Portée par des légendes du sport et de la musique</li>
+<li><strong>Un design intemporel</strong> : Ses lignes n'ont pas pris une ride depuis sa création</li>
+<li><strong>Un héritage culturel fort</strong> : Portée par des légendes du sport, de la musique et de la mode</li>
+<li><strong>Une qualité reconnue</strong> : Des matériaux premium pour une durabilité éprouvée</li>
+<li><strong>Une communauté passionnée</strong> : Des millions de fans et collectionneurs à travers le monde</li>
 </ul>
 
-<p><strong>Retrouvez la {subject} sur KP SHOES. Chaque paire est 100% authentique et vérifiée par nos experts.</strong></p>
+<p><strong>Retrouvez la {full_name} sur KP SHOES. Chaque paire est 100% authentique et vérifiée par nos experts.</strong></p>
 """
     
     return {
-        'title': title,
-        'body_html': body,
-        'tags': f'histoire, {subject}, culture sneaker, légende, heritage',
+        'title': title, 'body_html': body,
+        'tags': f'histoire, {subject}, culture sneaker, héritage, {full_name}',
         'handle': f'histoire-{subject.lower().replace(" ", "-")}',
-        'meta_title': meta_title,
-        'meta_description': meta_description,
-        'summary_html': summary,
-        'needs_image': True,
-        'image_search_term': subject
+        'meta_title': meta_title, 'meta_description': meta_description,
+        'summary_html': summary, 'needs_image': True, 'image_search_term': subject
     }
 
-
 def generate_care_article(subject, product_links, collection_link, tone):
-    """Génère un article sur l'entretien"""
-    title = f"Comment nettoyer et entretenir ses {subject} ? Guide complet"
-    meta_title = f"Comment nettoyer ses {subject} ? Guide entretien | KP SHOES"[:70]
-    meta_description = f"Découvrez comment nettoyer et entretenir vos {subject}. Conseils d'experts, erreurs à éviter et astuces pour prolonger leur durée de vie."[:160]
-    summary = f"Vos {subject} méritent le meilleur entretien. Découvrez nos conseils d'experts pour les garder impeccables."
+    """Génère un article entretien enrichi avec SNEAKER_DATABASE"""
+    data = get_sneaker_data(subject)
+    full_name = data['full_name'] if data else subject
     
-    body = f"""
-<p>Vos <strong>{subject}</strong> méritent un entretien régulier pour rester impeccables. Découvrez nos conseils d'experts pour nettoyer, protéger et prolonger la vie de vos sneakers.</p>
-
-<h2>Le matériel nécessaire</h2>
+    title = f"Comment nettoyer et entretenir ses {full_name} ? Guide complet"
+    meta_title = f"Comment nettoyer ses {full_name} ? Guide entretien | KP SHOES"[:70]
+    meta_description = f"Découvrez comment nettoyer et entretenir vos {full_name}. Conseils d'experts adaptés aux matériaux, erreurs à éviter."[:160]
+    summary = f"Vos {full_name} méritent le meilleur entretien. Découvrez nos conseils d'experts adaptés à leurs matériaux."
+    
+    # Infos spécifiques
+    if data and data.get('care'):
+        care = data['care']
+        main_material = care.get('main_material', 'cuir')
+        specific_tips = care.get('tips', '')
+        avoid = care.get('avoid', '')
+        materials = data.get('materials', [])
+        materials_str = ', '.join(materials) if materials else 'cuir et textile'
+    else:
+        main_material = 'cuir'
+        specific_tips = "Nettoyez avec un chiffon humide et du savon doux."
+        avoid = "Ne jamais mettre en machine, éviter la javel"
+        materials_str = 'cuir et textile'
+    
+    # Section spécifique au matériau principal
+    material_section = ""
+    if 'suède' in main_material.lower() or 'suede' in main_material.lower() or 'nubuck' in main_material.lower():
+        material_section = f"""
+<h2>Entretien spécifique du suède/nubuck de la {full_name}</h2>
+<p>Le suède est le matériau dominant de la {full_name}. Il nécessite un entretien particulier :</p>
 <ul>
-<li>Une brosse à poils doux</li>
+<li><strong>Brossage régulier</strong> : Utilisez une brosse à suède (poils en crêpe ou laiton) pour éliminer la poussière et raviver le velours. Brossez toujours dans le même sens.</li>
+<li><strong>Taches sèches</strong> : Utilisez une gomme à suède (ou une gomme d'écolier propre) en frottant délicatement la zone tachée.</li>
+<li><strong>Taches humides</strong> : Tamponnez immédiatement avec un chiffon sec. Ne frottez JAMAIS une tache humide sur du suède.</li>
+<li><strong>Protection</strong> : Appliquez un spray imperméabilisant spécial suède <strong>dès l'achat</strong>, avant même de les porter. Renouvelez toutes les 2-3 semaines.</li>
+</ul>
+<p><strong>⚠️ Règle d'or</strong> : Le suède et l'eau ne font pas bon ménage. Évitez de porter vos {full_name} par temps de pluie.</p>"""
+
+    elif 'primeknit' in main_material.lower() or 'mesh' in main_material.lower():
+        material_section = f"""
+<h2>Entretien spécifique du {'Primeknit' if 'primeknit' in main_material.lower() else 'mesh'} de la {full_name}</h2>
+<p>La tige en {'Primeknit' if 'primeknit' in main_material.lower() else 'mesh technique'} est plus facile à entretenir que le cuir ou le suède :</p>
+<ul>
+<li><strong>Nettoyage courant</strong> : Brosse douce (brosse à dents souple) avec de l'eau tiède et un peu de savon de Marseille ou de liquide vaisselle doux.</li>
+<li><strong>Taches tenaces</strong> : Appliquez du bicarbonate de soude en pâte, laissez agir 15 minutes, puis brossez doucement.</li>
+<li><strong>Séchage</strong> : Bourrez l'intérieur de papier journal et laissez sécher à l'air libre, loin de toute source de chaleur.</li>
+<li><strong>La semelle {'Boost' if 'primeknit' in main_material.lower() else ''}</strong> : {'Elle jaunit avec le temps. Utilisez un produit anti-jaunissement ou du peroxyde d hydrogène au soleil.' if 'primeknit' in main_material.lower() else 'Nettoyez-la avec un chiffon humide.'}</li>
+</ul>"""
+
+    elif 'cuir' in main_material.lower():
+        material_section = f"""
+<h2>Entretien spécifique du cuir de la {full_name}</h2>
+<p>Le cuir est un matériau noble qui récompense un bon entretien :</p>
+<ul>
+<li><strong>Nettoyage courant</strong> : Chiffon microfibre légèrement humide avec une goutte de savon de Marseille. Essuyez en mouvements circulaires.</li>
+<li><strong>Nourrissage</strong> : Appliquez une crème nourrissante pour cuir tous les 2-3 mois pour éviter le dessèchement et les craquelures.</li>
+<li><strong>Cuir blanc</strong> : Pour les taches, faites une pâte de bicarbonate de soude + eau. Appliquez, laissez sécher, puis brossez doucement.</li>
+<li><strong>Plis du cuir</strong> : Utilisez des embauchoirs en cèdre pour maintenir la forme entre les ports.</li>
+</ul>"""
+
+    elif 'peau de mouton' in main_material.lower() or 'mouton' in main_material.lower():
+        material_section = f"""
+<h2>Entretien spécifique de la peau de mouton de la {full_name}</h2>
+<p>La doublure en peau de mouton est délicate mais peut durer des années avec un bon entretien :</p>
+<ul>
+<li><strong>Intérieur</strong> : Saupoudrez de bicarbonate de soude, laissez agir toute la nuit, puis secouez. Cela absorbe les odeurs et l'humidité.</li>
+<li><strong>Extérieur en suède</strong> : Brossez à sec avec une brosse à suède. Pas d'eau !</li>
+<li><strong>Odeurs</strong> : Utilisez du vinaigre blanc dilué (1:1 avec de l'eau) en spray léger sur l'intérieur.</li>
+<li><strong>Protection</strong> : Spray imperméabilisant UGG ou équivalent dès l'achat.</li>
+</ul>
+<p><strong>⚠️ Important</strong> : Ne JAMAIS tremper ni passer en machine. La peau de mouton rétrécit à la chaleur.</p>"""
+
+    body = f"""
+<p>Vos <strong>{full_name}</strong> méritent un entretien adapté à leurs matériaux ({materials_str}). Découvrez nos conseils d'experts pour les garder impeccables le plus longtemps possible.</p>
+
+<h2>Ce qu'il vous faut</h2>
+<ul>
+<li>Une brosse à poils doux (brosse à dents souple en dépannage)</li>
 <li>Un chiffon microfibre</li>
-<li>Du savon de Marseille ou un nettoyant spécial sneakers</li>
+<li>Du savon de Marseille ou nettoyant spécial sneakers</li>
 <li>De l'eau tiède</li>
-<li>Un spray imperméabilisant</li>
+<li>Un spray imperméabilisant{' spécial suède' if 'suède' in main_material.lower() else ''}</li>
+{'<li>Une brosse à suède et une gomme à suède</li>' if 'suède' in main_material.lower() else ''}
+{'<li>Une crème nourrissante pour cuir</li>' if 'cuir' in main_material.lower() else ''}
+<li>Des embauchoirs (en cèdre idéalement)</li>
 </ul>
 
-<h2>Étapes de nettoyage</h2>
+<h2>Étapes de nettoyage de la {full_name}</h2>
 <h3>1. Préparation</h3>
-<p>Retirez les lacets et les semelles intérieures. Brossez délicatement pour enlever la poussière et les saletés superficielles.</p>
+<p>Retirez les lacets et les semelles intérieures. Brossez délicatement pour enlever poussière et saletés superficielles. Lavez les lacets séparément dans une bassine d'eau tiède savonneuse.</p>
 
-<h3>2. Nettoyage</h3>
-<p>Mélangez un peu de savon avec de l'eau tiède. Frottez doucement avec la brosse en faisant des mouvements circulaires. Évitez de tremper complètement vos sneakers.</p>
+<h3>2. Nettoyage adapté</h3>
+<p>{specific_tips}</p>
 
-<h3>3. Rinçage</h3>
-<p>Essuyez avec un chiffon humide pour retirer le savon. Répétez si nécessaire.</p>
+<h3>3. Rinçage et séchage</h3>
+<p>Essuyez avec un chiffon propre légèrement humide. Bourrez l'intérieur avec du papier journal (à changer toutes les 2 heures). Laissez sécher à l'air libre, <strong>jamais</strong> en plein soleil ni près d'un radiateur.</p>
 
-<h3>4. Séchage</h3>
-<p>Laissez sécher à l'air libre, loin des sources de chaleur directe. Bourrez l'intérieur avec du papier journal pour absorber l'humidité et maintenir la forme.</p>
+{material_section}
 
-<h2>Conseils selon les matériaux</h2>
-<h3>Cuir</h3>
-<p>Utilisez un nettoyant spécial cuir et appliquez une crème nourrissante après le nettoyage.</p>
-
-<h3>Suède/Nubuck</h3>
-<p>Brossez à sec avec une brosse spéciale suède. Évitez l'eau qui peut tacher le matériau.</p>
-
-<h3>Mesh/Textile</h3>
-<p>Ces matériaux supportent mieux l'eau. Vous pouvez les nettoyer plus généreusement.</p>
-
-<h2>Erreurs à éviter</h2>
+<h2>Erreurs à éviter avec vos {full_name}</h2>
 <ul>
-<li>❌ <strong>Ne jamais mettre en machine</strong> : Risque de déformation et décollement</li>
-<li>❌ <strong>Éviter le sèche-linge</strong> : La chaleur détériore les colles et matériaux</li>
-<li>❌ <strong>Ne pas utiliser de javel</strong> : Elle jaunit et fragilise les matériaux</li>
+<li>❌ <strong>Ne JAMAIS mettre en machine</strong> : Déformation, décollage de la semelle, dégradation des matériaux</li>
+<li>❌ <strong>Pas de sèche-linge ni radiateur</strong> : La chaleur détériore les colles et déforme les matériaux</li>
+<li>❌ <strong>Pas de javel</strong> : Elle jaunit les matériaux blancs et fragilise les fibres</li>
+<li>❌ <strong>{avoid}</strong></li>
 </ul>
 
 {collection_link}
@@ -1942,113 +2406,230 @@ def generate_care_article(subject, product_links, collection_link, tone):
 
 <h2>Protection et stockage</h2>
 <ul>
-<li>Appliquez un spray imperméabilisant avant la première utilisation</li>
-<li>Rangez vos sneakers dans leurs boîtes d'origine</li>
-<li>Utilisez des embauchoirs pour maintenir la forme</li>
-<li>Évitez l'humidité et la lumière directe du soleil</li>
+<li>Appliquez un spray imperméabilisant <strong>avant la première utilisation</strong></li>
+<li>Rangez vos {full_name} dans leur boîte d'origine avec du papier de soie</li>
+<li>Utilisez des embauchoirs en cèdre pour maintenir la forme et absorber l'humidité</li>
+<li>Évitez l'humidité et la lumière directe du soleil (le cuir et le suède se décolorent)</li>
+<li>Alternez vos paires : ne portez pas la même deux jours consécutifs</li>
 </ul>
 
-<p><strong>Chez KP SHOES, toutes nos sneakers sont livrées dans un état impeccable. 100% authentiques et vérifiées.</strong></p>
+<p><strong>Chez KP SHOES, toutes nos sneakers sont livrées dans un état impeccable. 100% authentiques et vérifiées par nos experts.</strong></p>
 """
     
     return {
-        'title': title,
-        'body_html': body,
-        'tags': f'entretien, nettoyage, {subject}, sneaker care, guide',
+        'title': title, 'body_html': body,
+        'tags': f'entretien, nettoyage, {subject}, sneaker care, {full_name}',
         'handle': f'entretien-{subject.lower().replace(" ", "-")}',
-        'meta_title': meta_title,
-        'meta_description': meta_description,
-        'summary_html': summary,
-        'needs_image': True,
-        'image_search_term': subject
+        'meta_title': meta_title, 'meta_description': meta_description,
+        'summary_html': summary, 'needs_image': True, 'image_search_term': subject
     }
 
-
 def generate_style_article(subject, product_links, collection_link, tone):
-    """Génère un article sur le style"""
-    title = f"Comment porter la {subject} ? Idées de looks et outfits 2026"
-    meta_title = f"Comment porter la {subject} ? Idées looks 2026 | KP SHOES"[:70]
-    meta_description = f"Découvrez comment porter la {subject}. Looks casual, streetwear et smart casual : nos idées d'outfits pour tous les styles."[:160]
-    summary = f"La {subject} est ultra polyvalente. Découvrez nos idées de looks pour la porter avec style au quotidien."
+    """Génère un article style enrichi avec SNEAKER_DATABASE"""
+    data = get_sneaker_data(subject)
+    full_name = data['full_name'] if data else subject
+    
+    title = f"Comment porter la {full_name} ? Idées de looks et outfits 2026"
+    meta_title = f"Comment porter la {full_name} ? Looks 2026 | KP SHOES"[:70]
+    meta_description = f"Découvrez comment porter la {full_name}. Looks casual, streetwear et smart casual : nos idées d'outfits pour tous les styles."[:160]
+    summary = f"La {full_name} est ultra polyvalente. Découvrez nos idées de looks pour la porter avec style."
+    
+    # Looks spécifiques
+    if data and data.get('style'):
+        looks = data['style'].get('looks', [])
+        colorways = data.get('iconic_colorways', [])
+    else:
+        looks = []
+        colorways = []
+    
+    looks_html = ""
+    if looks:
+        looks_html = f"<h2>Nos idées de looks avec la {full_name}</h2><ul>"
+        for look in looks:
+            parts = look.split(' : ', 1)
+            if len(parts) == 2:
+                looks_html += f"<li><strong>{parts[0]}</strong> : {parts[1]}</li>"
+            else:
+                looks_html += f"<li>{look}</li>"
+        looks_html += "</ul>"
+    else:
+        looks_html = f"""<h2>Nos idées de looks</h2>
+<h3>Look casual quotidien</h3>
+<p>Jean slim ou regular + t-shirt basique + {full_name}. Le combo simple et efficace.</p>
+<h3>Look streetwear</h3>
+<p>Pantalon cargo + sweat oversize + {full_name}. Le style urbain affirmé.</p>
+<h3>Look smart casual</h3>
+<p>Chino + chemise + blazer léger + {full_name}. Oui, les sneakers passent au bureau.</p>"""
+    
+    # Couleurs avec colorways spécifiques
+    colors_html = ""
+    if colorways:
+        # Séparer les coloris par famille
+        whites = [c for c in colorways if any(w in c.lower() for w in ['white', 'blanc', 'cream', 'triple white'])]
+        blacks = [c for c in colorways if any(w in c.lower() for w in ['black', 'noir', 'triple black'])]
+        colors = [c for c in colorways if c not in whites and c not in blacks]
+        
+        colors_html = "<h2>Quel coloris choisir selon votre style ?</h2>"
+        if whites:
+            cw_str = ', '.join(whites[:2])
+            colors_html += f"""<h3>Coloris clairs ({cw_str}...)</h3>
+<p>Le choix le plus polyvalent. Se porte avec absolument tout : jean bleu, pantalon noir, couleurs vives. Idéal si c'est votre première {full_name}.</p>"""
+        if blacks:
+            cw_str = ', '.join(blacks[:2])
+            colors_html += f"""<h3>Coloris sombres ({cw_str}...)</h3>
+<p>Parfaits pour un look monochrome ou urbain. Se combinent avec des couleurs neutres (gris, beige, blanc) pour un style maîtrisé.</p>"""
+        if colors:
+            cw_str = ', '.join(colors[:3])
+            colors_html += f"""<h3>Coloris signature ({cw_str}...)</h3>
+<p>Les coloris emblématiques font de vos {full_name} la pièce maîtresse de la tenue. Gardez le reste de l'outfit sobre (tons neutres) pour les laisser briller.</p>"""
+    else:
+        colors_html = f"""<h2>Les couleurs qui matchent</h2>
+<h3>Avec des {full_name} blanches</h3>
+<p>Tout ! Le blanc est la couleur la plus polyvalente.</p>
+<h3>Avec des {full_name} noires</h3>
+<p>Parfaites pour un look monochrome ou avec des couleurs neutres.</p>
+<h3>Avec des {full_name} colorées</h3>
+<p>Gardez le reste sobre pour laisser les sneakers comme point focal.</p>"""
     
     body = f"""
-<p>La <strong>{subject}</strong> est une sneaker polyvalente qui s'adapte à de nombreux styles. Découvrez nos conseils pour créer des looks tendance avec cette paire iconique.</p>
+<p>La <strong>{full_name}</strong> est bien plus qu'une sneaker : c'est un accessoire de mode à part entière. Découvrez nos conseils pour créer des looks tendance avec cette paire {'iconique' if data and data.get('year', 2020) < 2000 else 'incontournable'}.</p>
 
-<h2>Look casual quotidien</h2>
-<p>Pour un style décontracté au quotidien :</p>
-<ul>
-<li>Jean slim ou regular + t-shirt basique + {subject}</li>
-<li>Jogger + hoodie + {subject}</li>
-<li>Short cargo + polo + {subject}</li>
-</ul>
+{looks_html}
 
-<h2>Look streetwear</h2>
-<p>Pour un style urbain affirmé :</p>
-<ul>
-<li>Pantalon cargo + sweat oversize + {subject}</li>
-<li>Jean baggy + bomber jacket + {subject}</li>
-<li>Survêtement vintage + {subject}</li>
-</ul>
-
-<h2>Look smart casual</h2>
-<p>Oui, on peut porter des sneakers au bureau (selon le dress code) :</p>
-<ul>
-<li>Chino + chemise + blazer léger + {subject}</li>
-<li>Pantalon à pinces + pull col roulé + {subject}</li>
-</ul>
+{colors_html}
 
 {collection_link}
 
-<h2>Les couleurs qui matchent</h2>
-<h3>Avec des {subject} blanches</h3>
-<p>Tout ! Le blanc est la couleur la plus polyvalente. Jean bleu, pantalon noir, couleurs vives... Tout fonctionne.</p>
-
-<h3>Avec des {subject} noires</h3>
-<p>Parfaites pour un look monochrome ou avec des couleurs neutres (gris, beige, blanc).</p>
-
-<h3>Avec des {subject} colorées</h3>
-<p>Gardez le reste de la tenue sobre pour laisser les sneakers être le point focal.</p>
-
 {product_links}
 
-<h2>Conseils de style</h2>
+<h2>Règles de style avec des sneakers</h2>
 <ul>
-<li><strong>Équilibrez les proportions</strong> : Sneakers chunky avec pantalon plus ajusté</li>
-<li><strong>Jouez avec les textures</strong> : Cuir, denim, coton... Variez les matières</li>
-<li><strong>Accessoirisez</strong> : Montre, casquette, sac assorti</li>
+<li><strong>Équilibrez les proportions</strong> : {'Sneaker à semelle épaisse = pantalon plus ajusté ou droit' if data and data.get('comfort_rating', 3) >= 4 else 'Sneaker basse et fine = pantalon large ou slim, tout fonctionne'}</li>
+<li><strong>Jouez avec les textures</strong> : Cuir, denim, coton, maille... Variez les matières pour un look travaillé</li>
+<li><strong>Accessoirisez</strong> : Montre, casquette, sac assorti ou en contraste</li>
+<li><strong>Soignez vos sneakers</strong> : Une paire propre et bien entretenue change tout le look</li>
+<li><strong>Assumez votre style</strong> : Les sneakers se portent avec confiance, pas avec des excuses</li>
 </ul>
 
-<p><strong>Retrouvez la {subject} sur KP SHOES. 100% authentique, livraison rapide.</strong></p>
+<h2>Erreurs à éviter</h2>
+<ul>
+<li>❌ Porter des sneakers abîmées ou sales avec une tenue soignée</li>
+<li>❌ Trop de logos et de marques dans la même tenue</li>
+<li>❌ Des chaussettes blanches de sport avec un look habillé (optez pour des chaussettes invisibles ou des chaussettes assorties)</li>
+<li>❌ Forcer l'association sneakers + costume strict (sauf si le dress code le permet)</li>
+</ul>
+
+<p><strong>Retrouvez la {full_name} sur KP SHOES. 100% authentique, livraison rapide.</strong></p>
 """
     
     return {
-        'title': title,
-        'body_html': body,
-        'tags': f'style, outfit, {subject}, look, mode, streetwear',
+        'title': title, 'body_html': body,
+        'tags': f'style, outfit, {subject}, look, mode, streetwear, {full_name}',
         'handle': f'comment-porter-{subject.lower().replace(" ", "-")}',
-        'meta_title': meta_title,
-        'meta_description': meta_description,
-        'summary_html': summary,
-        'needs_image': True,
-        'image_search_term': subject
+        'meta_title': meta_title, 'meta_description': meta_description,
+        'summary_html': summary, 'needs_image': True, 'image_search_term': subject
     }
 
-
 def generate_custom_article(subject, keywords, product_links, collection_link, tone):
-    """Génère un article personnalisé"""
-    title = f"{subject} : Tout ce que vous devez savoir en 2026"
-    meta_title = f"{subject} : Guide complet 2026 | KP SHOES"[:70]
-    meta_description = f"Découvrez tout ce qu'il faut savoir sur {subject}. Guide complet, conseils d'achat et sélection des meilleures paires sur KP SHOES."[:160]
-    summary = f"Tout ce qu'il faut savoir sur {subject}. Guide complet et conseils d'achat par les experts KP SHOES."
+    """Génère un article personnalisé enrichi avec SNEAKER_DATABASE"""
+    data = get_sneaker_data(subject)
+    full_name = data['full_name'] if data else subject
     
-    body = f"""
-<p>Découvrez tout ce qu'il faut savoir sur <strong>{subject}</strong>. Chez <strong>KP SHOES</strong>, nous vous proposons les meilleures paires 100% authentiques.</p>
+    title = f"{full_name} : Tout ce que vous devez savoir en 2026"
+    meta_title = f"{full_name} : Guide complet 2026 | KP SHOES"[:70]
+    meta_description = f"Tout savoir sur la {full_name}. Histoire, taille, style, entretien et où acheter authentique. Guide complet KP SHOES."[:160]
+    summary = f"Tout ce qu'il faut savoir sur la {full_name}. Guide complet par les experts KP SHOES."
+    
+    if data:
+        year = data.get('year', '')
+        designer = data.get('designer', '')
+        history = data.get('history', '')
+        materials = ', '.join(data.get('materials', []))
+        tech = data.get('technology', '')
+        retail_price = data.get('retail_price', '')
+        sizing = data.get('sizing', {})
+        fit = sizing.get('fit', 'taille normalement')
+        advice = sizing.get('advice', '')
+        care = data.get('care', {})
+        care_tips = care.get('tips', '')
+        style_info = data.get('style', {})
+        looks = style_info.get('looks', [])
+        colorways = data.get('iconic_colorways', [])
+        cultural = data.get('cultural_moments', [])
+        brand = data.get('brand', '')
+        
+        body = f"""
+<p>Découvrez tout ce qu'il faut savoir sur la <strong>{full_name}</strong>. Histoire, taille, style, entretien : notre guide complet pour devenir incollable sur ce modèle {'légendaire' if year and year < 2000 else 'incontournable'}.</p>
 
-<h2>Pourquoi choisir {subject} ?</h2>
-<p>{subject} représente le meilleur de la culture sneaker actuelle. Que vous soyez collectionneur ou simplement à la recherche d'une paire de qualité, c'est un excellent choix.</p>
+<h2>Fiche technique</h2>
+<table style="width:100%;border-collapse:collapse;margin:20px 0">
+<tr style="background:#f5f5f5"><td style="padding:10px;border:1px solid #ddd;font-weight:bold;width:35%">Nom complet</td><td style="padding:10px;border:1px solid #ddd">{full_name}</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd;font-weight:bold">Marque</td><td style="padding:10px;border:1px solid #ddd">{brand}</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:10px;border:1px solid #ddd;font-weight:bold">Année de création</td><td style="padding:10px;border:1px solid #ddd">{year}</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd;font-weight:bold">Designer</td><td style="padding:10px;border:1px solid #ddd">{designer}</td></tr>
+<tr style="background:#f5f5f9"><td style="padding:10px;border:1px solid #ddd;font-weight:bold">Matériaux</td><td style="padding:10px;border:1px solid #ddd">{materials}</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd;font-weight:bold">Technologie</td><td style="padding:10px;border:1px solid #ddd">{tech}</td></tr>
+<tr style="background:#f5f5f5"><td style="padding:10px;border:1px solid #ddd;font-weight:bold">Prix retail</td><td style="padding:10px;border:1px solid #ddd">{retail_price}</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd;font-weight:bold">Taille</td><td style="padding:10px;border:1px solid #ddd">{fit}</td></tr>
+</table>
 
-<h2>Où acheter {subject} ?</h2>
-<p>Pour être sûr d'obtenir une paire authentique, privilégiez les revendeurs de confiance comme <strong>KP SHOES</strong>. Nous vérifions chaque paire avant expédition et garantissons l'authenticité.</p>
+<h2>L'histoire de la {full_name}</h2>
+<p>{history}</p>
+"""
+        
+        if cultural:
+            body += f"<h2>Les moments clés</h2><ul>"
+            for c in cultural:
+                body += f"<li>{c}</li>"
+            body += "</ul>"
+        
+        if colorways:
+            body += f"<h2>Les coloris iconiques</h2><ul>"
+            for cw in colorways:
+                body += f"<li><strong>{cw}</strong></li>"
+            body += "</ul>"
+        
+        body += f"""
+{collection_link}
+
+<h2>Comment taille la {full_name} ?</h2>
+<p>La {full_name} <strong>{fit}</strong>. {advice}</p>
+<p>👉 Consultez notre <a href="https://{SITE_DOMAIN}/blogs/news/guide-taille-{subject.lower().replace(' ', '-')}">guide complet des tailles {full_name}</a> pour plus de détails.</p>
+"""
+        
+        if looks:
+            body += f"<h2>Comment la porter ?</h2><ul>"
+            for look in looks:
+                parts = look.split(' : ', 1)
+                if len(parts) == 2:
+                    body += f"<li><strong>{parts[0]}</strong> : {parts[1]}</li>"
+                else:
+                    body += f"<li>{look}</li>"
+            body += "</ul>"
+        
+        if care_tips:
+            body += f"""
+<h2>Entretien</h2>
+<p>{care_tips}</p>
+"""
+        
+        body += f"""
+<h2>Où acheter la {full_name} authentique ?</h2>
+<p>Pour être sûr d'obtenir une paire authentique, privilégiez les revendeurs de confiance comme <strong>KP SHOES</strong>. Nous vérifions chaque paire avant expédition et garantissons l'authenticité à 100%.</p>
+
+{product_links}
+
+<p><strong>Faites confiance à KP SHOES pour vos sneakers authentiques. Livraison rapide et paiement sécurisé.</strong></p>
+"""
+    else:
+        body = f"""
+<p>Découvrez tout ce qu'il faut savoir sur <strong>{full_name}</strong>. Chez <strong>KP SHOES</strong>, nous vous proposons les meilleures paires 100% authentiques.</p>
+
+<h2>Pourquoi choisir {full_name} ?</h2>
+<p>{full_name} représente le meilleur de la culture sneaker. Que vous soyez collectionneur ou simplement à la recherche d'une paire de qualité, c'est un excellent choix.</p>
+
+<h2>Où acheter {full_name} authentique ?</h2>
+<p>Pour garantir l'authenticité, privilégiez <strong>KP SHOES</strong>. Nous vérifions chaque paire avant expédition.</p>
 
 {collection_link}
 
@@ -2066,17 +2647,12 @@ def generate_custom_article(subject, keywords, product_links, collection_link, t
 """
     
     return {
-        'title': title,
-        'body_html': body,
-        'tags': f'{subject}, sneakers, authentique, kp shoes',
+        'title': title, 'body_html': body,
+        'tags': f'{subject}, sneakers, authentique, kp shoes, {full_name}',
         'handle': f'{subject.lower().replace(" ", "-")}-guide-2026',
-        'meta_title': meta_title,
-        'meta_description': meta_description,
-        'summary_html': summary,
-        'needs_image': True,
-        'image_search_term': subject
+        'meta_title': meta_title, 'meta_description': meta_description,
+        'summary_html': summary, 'needs_image': True, 'image_search_term': subject
     }
-
 
 @app.route('/api/blog/generate', methods=['POST'])
 def api_generate_blog():
