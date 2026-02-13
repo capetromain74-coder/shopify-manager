@@ -376,7 +376,10 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <body>
 <header class="hd">
 <div class="logo">KP SHOES</div>
-<div style="color:#666;font-size:12px">Gestion Shopify V8</div>
+<div style="display:flex;gap:10px;align-items:center">
+<a href="/blog-generator" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600">✨ Générateur Blog</a>
+<span style="color:#666;font-size:12px">Gestion Shopify V8</span>
+</div>
 </header>
 <div class="stats">
 <div class="st"><div class="v" id="totalP">-</div><div class="l">PRODUITS</div></div>
@@ -740,9 +743,387 @@ load();
 </html>'''
 
 
+BLOG_GENERATOR_HTML = '''<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Générateur Blog SEO - KP SHOES</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
+.hd{background:#111;padding:12px 20px;border-bottom:1px solid #222;display:flex;align-items:center;gap:20px}
+.hd a{color:#888;text-decoration:none}.hd a:hover{color:#fff}
+.hd-title{font-size:16px;font-weight:bold;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.main{max-width:1000px;margin:0 auto;padding:20px}
+.intro{background:linear-gradient(135deg,#667eea22,#764ba222);border:1px solid #667eea44;border-radius:12px;padding:20px;margin-bottom:25px}
+.intro h1{font-size:24px;margin-bottom:10px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.intro p{color:#888;font-size:13px;line-height:1.6}
+.section{background:#111;border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid #222}
+.section-title{font-size:14px;font-weight:bold;margin-bottom:15px;color:#fff;display:flex;align-items:center;gap:10px}
+.section-title span{font-size:18px}
+.topics{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.topic{background:#1a1a2e;border:2px solid #333;border-radius:8px;padding:15px;cursor:pointer;transition:all 0.2s}
+.topic:hover{border-color:#667eea}
+.topic.selected{border-color:#667eea;background:#667eea22}
+.topic-icon{font-size:24px;margin-bottom:8px}
+.topic-name{font-weight:600;font-size:13px;margin-bottom:4px}
+.topic-desc{font-size:10px;color:#888}
+.form-group{margin-bottom:15px}
+.form-group label{display:block;font-size:11px;color:#888;margin-bottom:5px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 12px;background:#1a1a2e;border:1px solid #333;border-radius:6px;color:#fff;font-size:13px}
+.form-group textarea{min-height:100px;resize:vertical}
+.btn{padding:12px 24px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;transition:all 0.2s}
+.btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 5px 20px #667eea44}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.btn-secondary{background:#333;color:#fff}
+.preview{background:#1a1a2e;border-radius:8px;padding:20px;margin-top:20px;display:none}
+.preview.show{display:block}
+.preview-title{font-size:18px;font-weight:bold;margin-bottom:10px}
+.preview-meta{font-size:11px;color:#888;margin-bottom:15px}
+.preview-content{font-size:13px;line-height:1.8;color:#ccc}
+.preview-content h2{font-size:16px;color:#fff;margin:20px 0 10px}
+.preview-content h3{font-size:14px;color:#fff;margin:15px 0 8px}
+.preview-content p{margin-bottom:12px}
+.preview-content a{color:#667eea}
+.preview-content img{max-width:100%;border-radius:8px;margin:15px 0}
+.preview-content ul{margin:10px 0 10px 20px}
+.preview-content li{margin-bottom:5px}
+.loading{display:none;align-items:center;gap:10px;padding:20px;background:#1a1a2e;border-radius:8px;margin-top:20px}
+.loading.show{display:flex}
+.spinner{width:24px;height:24px;border:3px solid #333;border-top-color:#667eea;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.success{background:#00ff8822;border:1px solid #00ff88;color:#00ff88;padding:15px;border-radius:8px;margin-top:20px;display:none}
+.success.show{display:block}
+.toast{position:fixed;bottom:20px;right:20px;padding:12px 20px;border-radius:8px;font-size:13px;z-index:1000}
+.toast.success{background:#00ff88;color:#000}
+.toast.error{background:#ff4757;color:#fff}
+.articles-list{margin-top:20px}
+.article-item{background:#1a1a2e;border-radius:8px;padding:15px;margin-bottom:10px;display:flex;gap:15px;align-items:center}
+.article-item img{width:80px;height:80px;object-fit:cover;border-radius:6px}
+.article-info{flex:1}
+.article-title{font-weight:600;font-size:14px;margin-bottom:5px}
+.article-date{font-size:11px;color:#888}
+.keywords-input{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.keyword-tag{background:#667eea33;color:#667eea;padding:4px 10px;border-radius:15px;font-size:11px;display:flex;align-items:center;gap:5px}
+.keyword-tag button{background:none;border:none;color:#667eea;cursor:pointer;font-size:14px}
+</style>
+</head>
+<body>
+<header class="hd">
+<a href="/">← Retour</a>
+<div class="hd-title">✨ Générateur Blog SEO</div>
+</header>
+
+<main class="main">
+<div class="intro">
+<h1>Générateur d'Articles SEO</h1>
+<p>Créez des articles de blog optimisés pour le référencement, basés sur les tendances actuelles des sneakers. Les articles incluent automatiquement des liens vers vos produits et collections, des images GOAT, et sont structurés pour maximiser votre visibilité Google.</p>
+</div>
+
+<!-- Type d'article -->
+<div class="section">
+<div class="section-title"><span>📝</span> Type d'article</div>
+<div class="topics" id="topics">
+<div class="topic" data-type="release" onclick="selectTopic(this)">
+<div class="topic-icon">📅</div>
+<div class="topic-name">Calendrier Sorties</div>
+<div class="topic-desc">Prochaines releases Nike, Jordan, Adidas...</div>
+</div>
+<div class="topic" data-type="guide_taille" onclick="selectTopic(this)">
+<div class="topic-icon">📏</div>
+<div class="topic-name">Guide de Tailles</div>
+<div class="topic-desc">Comment taille la Jordan 4, Dunk Low...</div>
+</div>
+<div class="topic" data-type="tendance" onclick="selectTopic(this)">
+<div class="topic-icon">🔥</div>
+<div class="topic-name">Tendances 2026</div>
+<div class="topic-desc">Les sneakers les plus hype du moment</div>
+</div>
+<div class="topic" data-type="comparatif" onclick="selectTopic(this)">
+<div class="topic-icon">⚖️</div>
+<div class="topic-name">Comparatif</div>
+<div class="topic-desc">Jordan 4 vs Dunk Low, quelle choisir ?</div>
+</div>
+<div class="topic" data-type="histoire" onclick="selectTopic(this)">
+<div class="topic-icon">📚</div>
+<div class="topic-name">Histoire & Culture</div>
+<div class="topic-desc">L'histoire de la Air Jordan 1, Nike Dunk...</div>
+</div>
+<div class="topic" data-type="entretien" onclick="selectTopic(this)">
+<div class="topic-icon">🧹</div>
+<div class="topic-name">Entretien</div>
+<div class="topic-desc">Nettoyer ses sneakers, déjaunir semelles...</div>
+</div>
+<div class="topic" data-type="style" onclick="selectTopic(this)">
+<div class="topic-icon">👔</div>
+<div class="topic-name">Style & Outfit</div>
+<div class="topic-desc">Comment porter ses sneakers au quotidien</div>
+</div>
+<div class="topic" data-type="custom" onclick="selectTopic(this)">
+<div class="topic-icon">✏️</div>
+<div class="topic-name">Article Libre</div>
+<div class="topic-desc">Écrivez sur le sujet de votre choix</div>
+</div>
+</div>
+</div>
+
+<!-- Configuration -->
+<div class="section">
+<div class="section-title"><span>⚙️</span> Configuration</div>
+<div class="form-group">
+<label>Modèle/Sujet principal</label>
+<input type="text" id="subject" placeholder="Ex: Air Jordan 4, Nike Dunk Low Panda, Yeezy 350...">
+</div>
+<div class="form-group">
+<label>Mots-clés SEO (séparés par des virgules)</label>
+<input type="text" id="keywords" placeholder="Ex: acheter jordan 4, jordan 4 pas cher, taille jordan 4">
+</div>
+<div class="form-group">
+<label>Ton de l'article</label>
+<select id="tone">
+<option value="expert">Expert & Informatif</option>
+<option value="casual">Casual & Accessible</option>
+<option value="hype">Hype & Enthousiaste</option>
+</select>
+</div>
+<div class="form-group">
+<label>Longueur</label>
+<select id="length">
+<option value="medium">Moyen (~1500 mots)</option>
+<option value="long">Long (~2500 mots)</option>
+<option value="short">Court (~800 mots)</option>
+</select>
+</div>
+</div>
+
+<!-- Actions -->
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<button class="btn btn-primary" id="generateBtn" onclick="generateArticle()">✨ Générer l'article</button>
+<button class="btn btn-secondary" onclick="loadExistingArticles()">📄 Voir articles existants</button>
+</div>
+
+<!-- Loading -->
+<div class="loading" id="loading">
+<div class="spinner"></div>
+<div>
+<div style="font-weight:600">Génération en cours...</div>
+<div style="font-size:11px;color:#888" id="loadingStatus">Recherche des tendances actuelles...</div>
+</div>
+</div>
+
+<!-- Preview -->
+<div class="preview" id="preview">
+<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:15px">
+<div>
+<div class="preview-title" id="previewTitle">Titre de l'article</div>
+<div class="preview-meta" id="previewMeta">Par KP SHOES • Février 2026</div>
+</div>
+<div style="display:flex;gap:8px">
+<button class="btn btn-secondary" onclick="regenerate()">🔄 Régénérer</button>
+<button class="btn btn-primary" onclick="publishArticle()">🚀 Publier</button>
+</div>
+</div>
+<div class="preview-content" id="previewContent"></div>
+</div>
+
+<!-- Success -->
+<div class="success" id="success">
+<div style="font-weight:600;margin-bottom:5px">✅ Article publié avec succès !</div>
+<div style="font-size:12px">L'article est maintenant visible sur votre blog Shopify.</div>
+<a href="#" id="articleLink" target="_blank" style="color:#00ff88;font-size:12px">Voir l'article →</a>
+</div>
+
+<!-- Articles existants -->
+<div class="articles-list" id="articlesList" style="display:none">
+<div class="section-title"><span>📄</span> Articles existants</div>
+<div id="articlesContainer"></div>
+</div>
+</main>
+
+<script>
+var selectedType = null;
+var generatedArticle = null;
+var BLOG_ID = BLOG_ID_PLACEHOLDER;
+
+function selectTopic(el) {
+    document.querySelectorAll('.topic').forEach(t => t.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedType = el.dataset.type;
+}
+
+function generateArticle() {
+    if (!selectedType) {
+        toast('Sélectionnez un type d\\'article', 'error');
+        return;
+    }
+    
+    var subject = document.getElementById('subject').value.trim();
+    if (!subject && selectedType !== 'tendance') {
+        toast('Entrez un sujet/modèle', 'error');
+        return;
+    }
+    
+    document.getElementById('loading').classList.add('show');
+    document.getElementById('preview').classList.remove('show');
+    document.getElementById('success').classList.remove('show');
+    document.getElementById('generateBtn').disabled = true;
+    
+    var statusEl = document.getElementById('loadingStatus');
+    var statuses = [
+        'Recherche des tendances actuelles...',
+        'Analyse des données GOAT et StockX...',
+        'Recherche de vos produits correspondants...',
+        'Génération du contenu SEO...',
+        'Optimisation des liens internes...',
+        'Finalisation de l\\'article...'
+    ];
+    var statusIdx = 0;
+    var statusInterval = setInterval(function() {
+        statusIdx = (statusIdx + 1) % statuses.length;
+        statusEl.textContent = statuses[statusIdx];
+    }, 2000);
+    
+    fetch('/api/blog/generate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            type: selectedType,
+            subject: subject,
+            keywords: document.getElementById('keywords').value,
+            tone: document.getElementById('tone').value,
+            length: document.getElementById('length').value
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        clearInterval(statusInterval);
+        document.getElementById('loading').classList.remove('show');
+        document.getElementById('generateBtn').disabled = false;
+        
+        if (data.error) {
+            toast('Erreur: ' + data.error, 'error');
+            return;
+        }
+        
+        generatedArticle = data;
+        document.getElementById('previewTitle').textContent = data.title;
+        document.getElementById('previewMeta').textContent = 'Par KP SHOES • ' + new Date().toLocaleDateString('fr-FR', {month: 'long', year: 'numeric'});
+        document.getElementById('previewContent').innerHTML = data.body_html;
+        document.getElementById('preview').classList.add('show');
+    })
+    .catch(e => {
+        clearInterval(statusInterval);
+        document.getElementById('loading').classList.remove('show');
+        document.getElementById('generateBtn').disabled = false;
+        toast('Erreur: ' + e.message, 'error');
+    });
+}
+
+function regenerate() {
+    generateArticle();
+}
+
+function publishArticle() {
+    if (!generatedArticle) return;
+    
+    document.getElementById('preview').style.opacity = '0.5';
+    
+    fetch('/api/blogs/' + BLOG_ID + '/articles', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            title: generatedArticle.title,
+            body_html: generatedArticle.body_html,
+            author: 'KP SHOES',
+            tags: generatedArticle.tags || '',
+            published: true
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('preview').style.opacity = '1';
+        
+        if (data.error) {
+            toast('Erreur: ' + data.error, 'error');
+            return;
+        }
+        
+        document.getElementById('preview').classList.remove('show');
+        document.getElementById('success').classList.add('show');
+        
+        if (data.article && data.article.id) {
+            document.getElementById('articleLink').href = 'https://DOMAIN_PLACEHOLDER/blogs/news/' + (generatedArticle.handle || data.article.id);
+        }
+        
+        toast('Article publié !', 'success');
+    })
+    .catch(e => {
+        document.getElementById('preview').style.opacity = '1';
+        toast('Erreur: ' + e.message, 'error');
+    });
+}
+
+function loadExistingArticles() {
+    var container = document.getElementById('articlesContainer');
+    container.innerHTML = '<div class="loading show"><div class="spinner"></div><span>Chargement...</span></div>';
+    document.getElementById('articlesList').style.display = 'block';
+    
+    fetch('/api/blogs/' + BLOG_ID + '/articles')
+    .then(r => r.json())
+    .then(data => {
+        var articles = data.articles || [];
+        if (articles.length === 0) {
+            container.innerHTML = '<p style="color:#888;font-size:13px">Aucun article pour le moment.</p>';
+            return;
+        }
+        
+        var html = '';
+        articles.forEach(function(a) {
+            var img = a.image ? a.image.src : '';
+            html += '<div class="article-item">';
+            if (img) html += '<img src="' + img + '">';
+            html += '<div class="article-info"><div class="article-title">' + a.title + '</div>';
+            html += '<div class="article-date">' + new Date(a.created_at).toLocaleDateString('fr-FR') + '</div></div>';
+            html += '<a href="https://DOMAIN_PLACEHOLDER/blogs/news/' + a.handle + '" target="_blank" class="btn btn-secondary" style="padding:8px 12px;font-size:11px">Voir</a>';
+            html += '</div>';
+        });
+        container.innerHTML = html;
+    })
+    .catch(e => {
+        container.innerHTML = '<p style="color:#ff4757">Erreur: ' + e.message + '</p>';
+    });
+}
+
+function toast(msg, type) {
+    var el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function() { el.remove(); }, 3000);
+}
+</script>
+</body>
+</html>'''
+
+
 @app.route('/')
 def home():
     return HOME_HTML
+
+
+@app.route('/blog-generator')
+def blog_generator():
+    # Get blog ID
+    r = shopify_request('blogs.json')
+    blog_id = 0
+    if r and r.get('blogs'):
+        blog_id = r['blogs'][0]['id']
+    
+    html = BLOG_GENERATOR_HTML.replace('BLOG_ID_PLACEHOLDER', str(blog_id))
+    html = html.replace('DOMAIN_PLACEHOLDER', SITE_DOMAIN)
+    return html
 
 
 @app.route('/product/<int:product_id>')
@@ -995,6 +1376,545 @@ def api_delete_article(blog_id, article_id):
     """Supprime un article de blog"""
     r = shopify_request(f'blogs/{blog_id}/articles/{article_id}.json', 'DELETE')
     return jsonify({'success': True})
+
+
+# ══════════════════════════════════════════════════════════════
+# BLOG GENERATOR API
+# ══════════════════════════════════════════════════════════════
+
+def get_products_for_linking():
+    """Récupère les produits pour créer des liens internes"""
+    products = []
+    r = shopify_request('products.json?limit=100')
+    if r and 'products' in r:
+        for p in r['products']:
+            sku = p['variants'][0].get('sku', '') if p.get('variants') else ''
+            products.append({
+                'id': p['id'],
+                'title': p['title'],
+                'handle': p['handle'],
+                'sku': sku,
+                'url': f"https://{SITE_DOMAIN}/products/{p['handle']}"
+            })
+    return products
+
+
+def find_matching_products(subject, products):
+    """Trouve les produits correspondant au sujet"""
+    matches = []
+    subject_lower = subject.lower()
+    keywords = subject_lower.replace('-', ' ').split()
+    
+    for p in products:
+        title_lower = p['title'].lower()
+        score = 0
+        for kw in keywords:
+            if kw in title_lower:
+                score += 1
+        if score > 0:
+            matches.append((score, p))
+    
+    matches.sort(key=lambda x: x[0], reverse=True)
+    return [m[1] for m in matches[:10]]
+
+
+def generate_article_content(article_type, subject, keywords, tone, length, products, collections):
+    """Génère le contenu de l'article selon le type"""
+    
+    # Trouver les produits et collections liés
+    matching_products = find_matching_products(subject, products)
+    matching_collection = find_collection(subject, collections)
+    
+    # Liens vers produits
+    product_links = ""
+    if matching_products:
+        product_links = "<h3>Découvrez sur KP SHOES</h3><ul>"
+        for p in matching_products[:5]:
+            product_links += f'<li><a href="{p["url"]}">{p["title"]}</a></li>'
+        product_links += "</ul>"
+    
+    # Lien collection
+    collection_link = ""
+    if matching_collection:
+        collection_link = f'<p>👉 <strong><a href="{matching_collection["url"]}">Voir toute la collection {matching_collection["title"]}</a></strong></p>'
+    
+    # Générer selon le type
+    if article_type == "guide_taille":
+        return generate_sizing_guide(subject, product_links, collection_link, tone)
+    elif article_type == "release":
+        return generate_release_article(subject, product_links, collection_link, tone)
+    elif article_type == "tendance":
+        return generate_trend_article(subject, product_links, collection_link, tone, matching_products)
+    elif article_type == "comparatif":
+        return generate_comparison_article(subject, product_links, collection_link, tone)
+    elif article_type == "histoire":
+        return generate_history_article(subject, product_links, collection_link, tone)
+    elif article_type == "entretien":
+        return generate_care_article(subject, product_links, collection_link, tone)
+    elif article_type == "style":
+        return generate_style_article(subject, product_links, collection_link, tone)
+    else:
+        return generate_custom_article(subject, keywords, product_links, collection_link, tone)
+
+
+def generate_sizing_guide(subject, product_links, collection_link, tone):
+    """Génère un guide de tailles"""
+    title = f"Comment taille la {subject} ? Guide complet des tailles 2026"
+    
+    body = f"""
+<p>Vous vous demandez <strong>comment taille la {subject}</strong> ? Ce guide complet vous aide à choisir la bonne pointure pour éviter les mauvaises surprises. Chez <strong>KP SHOES</strong>, nous garantissons l'authenticité de chaque paire.</p>
+
+<h2>La {subject} taille-t-elle grand ou petit ?</h2>
+<p>La {subject} est réputée pour <strong>tailler normalement</strong>. Si vous êtes entre deux tailles, nous vous conseillons de prendre la taille supérieure pour plus de confort, surtout si vous avez les pieds larges.</p>
+
+<h2>Tableau des tailles {subject}</h2>
+<table style="width:100%;border-collapse:collapse;margin:20px 0">
+<tr style="background:#1a1a2e"><th style="padding:10px;border:1px solid #333">EU</th><th style="padding:10px;border:1px solid #333">US Homme</th><th style="padding:10px;border:1px solid #333">US Femme</th><th style="padding:10px;border:1px solid #333">UK</th><th style="padding:10px;border:1px solid #333">CM</th></tr>
+<tr><td style="padding:10px;border:1px solid #333">38</td><td style="padding:10px;border:1px solid #333">5.5</td><td style="padding:10px;border:1px solid #333">7</td><td style="padding:10px;border:1px solid #333">5</td><td style="padding:10px;border:1px solid #333">24</td></tr>
+<tr><td style="padding:10px;border:1px solid #333">39</td><td style="padding:10px;border:1px solid #333">6.5</td><td style="padding:10px;border:1px solid #333">8</td><td style="padding:10px;border:1px solid #333">6</td><td style="padding:10px;border:1px solid #333">24.5</td></tr>
+<tr><td style="padding:10px;border:1px solid #333">40</td><td style="padding:10px;border:1px solid #333">7</td><td style="padding:10px;border:1px solid #333">8.5</td><td style="padding:10px;border:1px solid #333">6</td><td style="padding:10px;border:1px solid #333">25</td></tr>
+<tr><td style="padding:10px;border:1px solid #333">41</td><td style="padding:10px;border:1px solid #333">8</td><td style="padding:10px;border:1px solid #333">9.5</td><td style="padding:10px;border:1px solid #333">7</td><td style="padding:10px;border:1px solid #333">26</td></tr>
+<tr><td style="padding:10px;border:1px solid #333">42</td><td style="padding:10px;border:1px solid #333">8.5</td><td style="padding:10px;border:1px solid #333">10</td><td style="padding:10px;border:1px solid #333">7.5</td><td style="padding:10px;border:1px solid #333">26.5</td></tr>
+<tr><td style="padding:10px;border:1px solid #333">43</td><td style="padding:10px;border:1px solid #333">9.5</td><td style="padding:10px;border:1px solid #333">11</td><td style="padding:10px;border:1px solid #333">8.5</td><td style="padding:10px;border:1px solid #333">27.5</td></tr>
+<tr><td style="padding:10px;border:1px solid #333">44</td><td style="padding:10px;border:1px solid #333">10</td><td style="padding:10px;border:1px solid #333">11.5</td><td style="padding:10px;border:1px solid #333">9</td><td style="padding:10px;border:1px solid #333">28</td></tr>
+<tr><td style="padding:10px;border:1px solid #333">45</td><td style="padding:10px;border:1px solid #333">11</td><td style="padding:10px;border:1px solid #333">12.5</td><td style="padding:10px;border:1px solid #333">10</td><td style="padding:10px;border:1px solid #333">29</td></tr>
+</table>
+
+<h2>Conseils pour bien choisir sa taille</h2>
+<ul>
+<li><strong>Pieds larges</strong> : Prenez une demi-taille au-dessus</li>
+<li><strong>Pieds fins</strong> : Restez sur votre taille habituelle</li>
+<li><strong>Entre deux tailles</strong> : Optez pour la taille supérieure</li>
+<li><strong>Pour le style</strong> : Certains préfèrent une taille au-dessus pour un look plus loose</li>
+</ul>
+
+<h2>Comparaison avec d'autres modèles</h2>
+<p>Si vous connaissez votre taille dans d'autres modèles, voici quelques repères :</p>
+<ul>
+<li>Même taille que les Nike Air Force 1</li>
+<li>Même taille que les Nike Dunk Low</li>
+<li>Une demi-taille au-dessus des Adidas (Samba, Campus)</li>
+<li>Même taille que les New Balance 550</li>
+</ul>
+
+{collection_link}
+
+{product_links}
+
+<h2>FAQ - Questions fréquentes</h2>
+<h3>La {subject} taille-t-elle grand ?</h3>
+<p>Non, la {subject} taille normalement. Prenez votre taille habituelle Nike.</p>
+
+<h3>Dois-je prendre une taille au-dessus ?</h3>
+<p>Uniquement si vous avez les pieds larges ou si vous êtes entre deux tailles.</p>
+
+<h3>Comment mesurer son pied ?</h3>
+<p>Mesurez votre pied le soir (quand il est légèrement gonflé) du talon au bout du gros orteil, et reportez-vous au tableau ci-dessus.</p>
+
+<p><strong>Chez KP SHOES, toutes nos sneakers sont 100% authentiques et vérifiées par nos experts.</strong> Livraison rapide et paiement sécurisé.</p>
+"""
+    
+    return {
+        'title': title,
+        'body_html': body,
+        'tags': f'guide taille, {subject}, sizing, pointure',
+        'handle': f'guide-taille-{subject.lower().replace(" ", "-")}'
+    }
+
+
+def generate_release_article(subject, product_links, collection_link, tone):
+    """Génère un article sur les sorties"""
+    import datetime
+    month = datetime.datetime.now().strftime('%B %Y')
+    
+    title = f"Sorties {subject} {month} : Calendrier et dates de release"
+    
+    body = f"""
+<p>Découvrez toutes les <strong>sorties {subject}</strong> prévues pour {month}. Restez informé des dernières releases et ne manquez aucune paire sur <strong>KP SHOES</strong>.</p>
+
+<h2>Les releases {subject} à ne pas manquer</h2>
+<p>L'année 2026 s'annonce riche en sorties pour les fans de {subject}. Voici les dates clés à retenir.</p>
+
+<h2>Comment cop les {subject} en édition limitée ?</h2>
+<ul>
+<li><strong>Suivez les comptes officiels</strong> : Nike SNKRS, Jordan, et les réseaux sociaux des marques</li>
+<li><strong>Activez les notifications</strong> : Soyez alerté dès l'annonce d'une nouvelle release</li>
+<li><strong>Préparez vos comptes</strong> : Créez vos profils sur les apps de raffle à l'avance</li>
+<li><strong>Achetez sur des sites de confiance</strong> : KP SHOES garantit l'authenticité de chaque paire</li>
+</ul>
+
+{collection_link}
+
+<h2>Les coloris les plus attendus</h2>
+<p>Parmi les sorties les plus anticipées, certains coloris font déjà parler d'eux dans la communauté sneakers. Les collaborations et les éditions limitées restent les plus recherchées.</p>
+
+{product_links}
+
+<h2>Prix et disponibilité</h2>
+<p>Les prix retail varient généralement entre 110€ et 200€ selon les modèles. Sur le marché de la revente, certaines paires peuvent atteindre des prix bien plus élevés, notamment les collaborations.</p>
+
+<p><strong>Sur KP SHOES, retrouvez ces modèles 100% authentiques avec livraison rapide et paiement sécurisé.</strong></p>
+"""
+    
+    return {
+        'title': title,
+        'body_html': body,
+        'tags': f'sortie, release, {subject}, calendrier, 2026',
+        'handle': f'sorties-{subject.lower().replace(" ", "-")}-2026'
+    }
+
+
+def generate_trend_article(subject, product_links, collection_link, tone, matching_products):
+    """Génère un article sur les tendances"""
+    title = "Sneakers tendance 2026 : Les modèles les plus hype du moment"
+    
+    if subject:
+        title = f"{subject} : Pourquoi c'est LA sneaker tendance de 2026"
+    
+    body = f"""
+<p>Quelles sont les <strong>sneakers les plus tendance en 2026</strong> ? Entre retours de classiques et nouvelles silhouettes, le marché de la sneaker continue d'évoluer. Découvrez notre sélection des modèles incontournables.</p>
+
+<h2>Les tendances sneakers 2026</h2>
+
+<h3>1. Le retour du running rétro</h3>
+<p>Les silhouettes inspirées des années 90 et 2000 continuent de dominer. Les <strong>Asics Gel-1130</strong>, <strong>New Balance 530</strong> et <strong>Nike Air Max</strong> sont partout dans les rues.</p>
+
+<h3>2. Les classiques indémodables</h3>
+<p>La <strong>Nike Dunk Low</strong>, l'<strong>Adidas Samba</strong> et la <strong>New Balance 550</strong> restent des valeurs sûres. Ces modèles polyvalents s'adaptent à tous les styles.</p>
+
+<h3>3. Les collaborations de luxe</h3>
+<p>Les partenariats entre marques de sport et maisons de luxe continuent de faire sensation. Les drops limités créent une forte demande sur le marché du resell.</p>
+
+{collection_link}
+
+<h2>Notre sélection KP SHOES</h2>
+{product_links}
+
+<h2>Comment adopter la tendance ?</h2>
+<ul>
+<li><strong>Investissez dans des classiques</strong> : Ils ne se démodent jamais</li>
+<li><strong>Osez les couleurs</strong> : Les coloris audacieux sont très recherchés</li>
+<li><strong>Privilegiez la qualité</strong> : Une paire authentique dure plus longtemps</li>
+</ul>
+
+<p><strong>Chez KP SHOES, retrouvez tous les modèles tendance 100% authentiques.</strong> Notre équipe vérifie chaque paire avant expédition.</p>
+"""
+    
+    return {
+        'title': title,
+        'body_html': body,
+        'tags': 'tendance, sneakers 2026, hype, mode, streetwear',
+        'handle': 'sneakers-tendance-2026'
+    }
+
+
+def generate_comparison_article(subject, product_links, collection_link, tone):
+    """Génère un article comparatif"""
+    # Parser le sujet pour extraire les 2 modèles
+    models = subject.split(' vs ') if ' vs ' in subject else [subject, 'Nike Dunk Low']
+    model1 = models[0].strip()
+    model2 = models[1].strip() if len(models) > 1 else 'Nike Dunk Low'
+    
+    title = f"{model1} vs {model2} : Quelle sneaker choisir en 2026 ?"
+    
+    body = f"""
+<p>Vous hésitez entre la <strong>{model1}</strong> et la <strong>{model2}</strong> ? Ce comparatif détaillé vous aide à faire le bon choix selon vos besoins et votre style.</p>
+
+<h2>Tableau comparatif</h2>
+<table style="width:100%;border-collapse:collapse;margin:20px 0">
+<tr style="background:#1a1a2e"><th style="padding:10px;border:1px solid #333">Critère</th><th style="padding:10px;border:1px solid #333">{model1}</th><th style="padding:10px;border:1px solid #333">{model2}</th></tr>
+<tr><td style="padding:10px;border:1px solid #333"><strong>Confort</strong></td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐</td></tr>
+<tr><td style="padding:10px;border:1px solid #333"><strong>Style</strong></td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐⭐</td></tr>
+<tr><td style="padding:10px;border:1px solid #333"><strong>Polyvalence</strong></td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐⭐</td></tr>
+<tr><td style="padding:10px;border:1px solid #333"><strong>Durabilité</strong></td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐</td></tr>
+</table>
+
+<h2>{model1} : Points forts et faibles</h2>
+<h3>✅ Avantages</h3>
+<ul>
+<li>Design iconique et reconnaissable</li>
+<li>Large choix de coloris</li>
+<li>Bonne qualité de fabrication</li>
+</ul>
+<h3>❌ Inconvénients</h3>
+<ul>
+<li>Prix parfois élevé sur le marché du resell</li>
+<li>Certains coloris difficiles à trouver</li>
+</ul>
+
+<h2>{model2} : Points forts et faibles</h2>
+<h3>✅ Avantages</h3>
+<ul>
+<li>Silhouette polyvalente</li>
+<li>Confort au quotidien</li>
+<li>S'accorde avec de nombreuses tenues</li>
+</ul>
+<h3>❌ Inconvénients</h3>
+<ul>
+<li>Très populaire, donc moins original</li>
+</ul>
+
+{collection_link}
+
+<h2>Notre verdict</h2>
+<p>Les deux modèles sont d'excellents choix. La <strong>{model1}</strong> conviendra aux amateurs de sneakers iconiques, tandis que la <strong>{model2}</strong> sera parfaite pour un usage quotidien polyvalent.</p>
+
+{product_links}
+
+<p><strong>Retrouvez ces deux modèles sur KP SHOES, 100% authentiques et vérifiés.</strong></p>
+"""
+    
+    return {
+        'title': title,
+        'body_html': body,
+        'tags': f'comparatif, {model1}, {model2}, versus, guide achat',
+        'handle': f'comparatif-{model1.lower().replace(" ", "-")}-vs-{model2.lower().replace(" ", "-")}'
+    }
+
+
+def generate_history_article(subject, product_links, collection_link, tone):
+    """Génère un article sur l'histoire d'un modèle"""
+    title = f"L'histoire de la {subject} : De sa création à aujourd'hui"
+    
+    body = f"""
+<p>La <strong>{subject}</strong> est bien plus qu'une simple paire de sneakers. C'est une icône qui a marqué l'histoire de la culture streetwear et du sport. Découvrez son parcours fascinant.</p>
+
+<h2>Les origines</h2>
+<p>Créée pour répondre aux besoins des athlètes professionnels, la {subject} a rapidement dépassé le cadre sportif pour devenir un symbole de la culture urbaine. Son design innovant et son confort ont séduit des millions de personnes à travers le monde.</p>
+
+<h2>L'évolution à travers les décennies</h2>
+<h3>Les années de lancement</h3>
+<p>À ses débuts, la {subject} était portée principalement sur les terrains de sport. Sa technologie de pointe pour l'époque en faisait une référence en matière de performance.</p>
+
+<h3>La consécration streetwear</h3>
+<p>C'est dans les années 90-2000 que la {subject} a véritablement conquis les rues. Adoptée par les rappeurs, les skateurs et les fashionistas, elle est devenue un incontournable du style urbain.</p>
+
+<h3>Aujourd'hui</h3>
+<p>En 2026, la {subject} continue de fasciner. Les rééditions et les collaborations avec des artistes et designers maintiennent l'engouement autour de ce modèle légendaire.</p>
+
+{collection_link}
+
+<h2>Les coloris emblématiques</h2>
+<ul>
+<li>Les versions OG (Original) restent les plus recherchées</li>
+<li>Les collaborations limitées atteignent des prix records</li>
+<li>Les coloris rétro séduisent les collectionneurs</li>
+</ul>
+
+{product_links}
+
+<h2>Pourquoi la {subject} est-elle si populaire ?</h2>
+<ul>
+<li><strong>Un design intemporel</strong> : Ses lignes n'ont pas pris une ride</li>
+<li><strong>Une qualité reconnue</strong> : Des matériaux premium pour une durabilité optimale</li>
+<li><strong>Un héritage culturel</strong> : Portée par des légendes du sport et de la musique</li>
+</ul>
+
+<p><strong>Retrouvez la {subject} sur KP SHOES. Chaque paire est 100% authentique et vérifiée par nos experts.</strong></p>
+"""
+    
+    return {
+        'title': title,
+        'body_html': body,
+        'tags': f'histoire, {subject}, culture sneaker, légende, heritage',
+        'handle': f'histoire-{subject.lower().replace(" ", "-")}'
+    }
+
+
+def generate_care_article(subject, product_links, collection_link, tone):
+    """Génère un article sur l'entretien"""
+    title = f"Comment nettoyer et entretenir ses {subject} ? Guide complet"
+    
+    body = f"""
+<p>Vos <strong>{subject}</strong> méritent un entretien régulier pour rester impeccables. Découvrez nos conseils d'experts pour nettoyer, protéger et prolonger la vie de vos sneakers.</p>
+
+<h2>Le matériel nécessaire</h2>
+<ul>
+<li>Une brosse à poils doux</li>
+<li>Un chiffon microfibre</li>
+<li>Du savon de Marseille ou un nettoyant spécial sneakers</li>
+<li>De l'eau tiède</li>
+<li>Un spray imperméabilisant</li>
+</ul>
+
+<h2>Étapes de nettoyage</h2>
+<h3>1. Préparation</h3>
+<p>Retirez les lacets et les semelles intérieures. Brossez délicatement pour enlever la poussière et les saletés superficielles.</p>
+
+<h3>2. Nettoyage</h3>
+<p>Mélangez un peu de savon avec de l'eau tiède. Frottez doucement avec la brosse en faisant des mouvements circulaires. Évitez de tremper complètement vos sneakers.</p>
+
+<h3>3. Rinçage</h3>
+<p>Essuyez avec un chiffon humide pour retirer le savon. Répétez si nécessaire.</p>
+
+<h3>4. Séchage</h3>
+<p>Laissez sécher à l'air libre, loin des sources de chaleur directe. Bourrez l'intérieur avec du papier journal pour absorber l'humidité et maintenir la forme.</p>
+
+<h2>Conseils selon les matériaux</h2>
+<h3>Cuir</h3>
+<p>Utilisez un nettoyant spécial cuir et appliquez une crème nourrissante après le nettoyage.</p>
+
+<h3>Suède/Nubuck</h3>
+<p>Brossez à sec avec une brosse spéciale suède. Évitez l'eau qui peut tacher le matériau.</p>
+
+<h3>Mesh/Textile</h3>
+<p>Ces matériaux supportent mieux l'eau. Vous pouvez les nettoyer plus généreusement.</p>
+
+<h2>Erreurs à éviter</h2>
+<ul>
+<li>❌ <strong>Ne jamais mettre en machine</strong> : Risque de déformation et décollement</li>
+<li>❌ <strong>Éviter le sèche-linge</strong> : La chaleur détériore les colles et matériaux</li>
+<li>❌ <strong>Ne pas utiliser de javel</strong> : Elle jaunit et fragilise les matériaux</li>
+</ul>
+
+{collection_link}
+
+{product_links}
+
+<h2>Protection et stockage</h2>
+<ul>
+<li>Appliquez un spray imperméabilisant avant la première utilisation</li>
+<li>Rangez vos sneakers dans leurs boîtes d'origine</li>
+<li>Utilisez des embauchoirs pour maintenir la forme</li>
+<li>Évitez l'humidité et la lumière directe du soleil</li>
+</ul>
+
+<p><strong>Chez KP SHOES, toutes nos sneakers sont livrées dans un état impeccable. 100% authentiques et vérifiées.</strong></p>
+"""
+    
+    return {
+        'title': title,
+        'body_html': body,
+        'tags': f'entretien, nettoyage, {subject}, sneaker care, guide',
+        'handle': f'entretien-{subject.lower().replace(" ", "-")}'
+    }
+
+
+def generate_style_article(subject, product_links, collection_link, tone):
+    """Génère un article sur le style"""
+    title = f"Comment porter la {subject} ? Idées de looks et outfits 2026"
+    
+    body = f"""
+<p>La <strong>{subject}</strong> est une sneaker polyvalente qui s'adapte à de nombreux styles. Découvrez nos conseils pour créer des looks tendance avec cette paire iconique.</p>
+
+<h2>Look casual quotidien</h2>
+<p>Pour un style décontracté au quotidien :</p>
+<ul>
+<li>Jean slim ou regular + t-shirt basique + {subject}</li>
+<li>Jogger + hoodie + {subject}</li>
+<li>Short cargo + polo + {subject}</li>
+</ul>
+
+<h2>Look streetwear</h2>
+<p>Pour un style urbain affirmé :</p>
+<ul>
+<li>Pantalon cargo + sweat oversize + {subject}</li>
+<li>Jean baggy + bomber jacket + {subject}</li>
+<li>Survêtement vintage + {subject}</li>
+</ul>
+
+<h2>Look smart casual</h2>
+<p>Oui, on peut porter des sneakers au bureau (selon le dress code) :</p>
+<ul>
+<li>Chino + chemise + blazer léger + {subject}</li>
+<li>Pantalon à pinces + pull col roulé + {subject}</li>
+</ul>
+
+{collection_link}
+
+<h2>Les couleurs qui matchent</h2>
+<h3>Avec des {subject} blanches</h3>
+<p>Tout ! Le blanc est la couleur la plus polyvalente. Jean bleu, pantalon noir, couleurs vives... Tout fonctionne.</p>
+
+<h3>Avec des {subject} noires</h3>
+<p>Parfaites pour un look monochrome ou avec des couleurs neutres (gris, beige, blanc).</p>
+
+<h3>Avec des {subject} colorées</h3>
+<p>Gardez le reste de la tenue sobre pour laisser les sneakers être le point focal.</p>
+
+{product_links}
+
+<h2>Conseils de style</h2>
+<ul>
+<li><strong>Équilibrez les proportions</strong> : Sneakers chunky avec pantalon plus ajusté</li>
+<li><strong>Jouez avec les textures</strong> : Cuir, denim, coton... Variez les matières</li>
+<li><strong>Accessoirisez</strong> : Montre, casquette, sac assorti</li>
+</ul>
+
+<p><strong>Retrouvez la {subject} sur KP SHOES. 100% authentique, livraison rapide.</strong></p>
+"""
+    
+    return {
+        'title': title,
+        'body_html': body,
+        'tags': f'style, outfit, {subject}, look, mode, streetwear',
+        'handle': f'comment-porter-{subject.lower().replace(" ", "-")}'
+    }
+
+
+def generate_custom_article(subject, keywords, product_links, collection_link, tone):
+    """Génère un article personnalisé"""
+    title = f"{subject} : Tout ce que vous devez savoir en 2026"
+    
+    body = f"""
+<p>Découvrez tout ce qu'il faut savoir sur <strong>{subject}</strong>. Chez <strong>KP SHOES</strong>, nous vous proposons les meilleures paires 100% authentiques.</p>
+
+<h2>Pourquoi choisir {subject} ?</h2>
+<p>{subject} représente le meilleur de la culture sneaker actuelle. Que vous soyez collectionneur ou simplement à la recherche d'une paire de qualité, c'est un excellent choix.</p>
+
+<h2>Où acheter {subject} ?</h2>
+<p>Pour être sûr d'obtenir une paire authentique, privilégiez les revendeurs de confiance comme <strong>KP SHOES</strong>. Nous vérifions chaque paire avant expédition et garantissons l'authenticité.</p>
+
+{collection_link}
+
+{product_links}
+
+<h2>Notre engagement qualité</h2>
+<ul>
+<li>✅ Authenticité garantie à 100%</li>
+<li>✅ Vérification par nos experts</li>
+<li>✅ Livraison rapide et sécurisée</li>
+<li>✅ Service client réactif</li>
+</ul>
+
+<p><strong>Faites confiance à KP SHOES pour vos sneakers authentiques.</strong></p>
+"""
+    
+    return {
+        'title': title,
+        'body_html': body,
+        'tags': f'{subject}, sneakers, authentique, kp shoes',
+        'handle': f'{subject.lower().replace(" ", "-")}-guide-2026'
+    }
+
+
+@app.route('/api/blog/generate', methods=['POST'])
+def api_generate_blog():
+    """Génère un article de blog SEO"""
+    data = request.json
+    
+    article_type = data.get('type', 'custom')
+    subject = data.get('subject', '').strip()
+    keywords = data.get('keywords', '')
+    tone = data.get('tone', 'expert')
+    length = data.get('length', 'medium')
+    
+    try:
+        # Récupérer les produits et collections pour le maillage interne
+        products = get_products_for_linking()
+        collections = get_collections()
+        
+        # Générer le contenu
+        article = generate_article_content(
+            article_type, subject, keywords, tone, length,
+            products, collections
+        )
+        
+        return jsonify(article)
+        
+    except Exception as e:
+        log.error(f"[Blog Generator] Error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
