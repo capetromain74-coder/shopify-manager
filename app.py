@@ -1403,17 +1403,43 @@ def find_matching_products(subject, products):
     """Trouve les produits correspondant au sujet"""
     matches = []
     subject_lower = subject.lower()
-    keywords = subject_lower.replace('-', ' ').split()
+    
+    # Nettoyer le sujet pour extraire les mots-clés importants
+    # Ex: "Air Jordan 4" -> ["jordan", "4"]
+    # Ex: "Nike Dunk Low" -> ["dunk", "low"]
+    subject_clean = subject_lower.replace('-', ' ').replace('air ', '').replace('nike ', '').replace('adidas ', '').replace('new balance ', '')
+    keywords = [kw for kw in subject_clean.split() if len(kw) > 1]
     
     for p in products:
         title_lower = p['title'].lower()
         score = 0
+        
+        # Vérifier chaque mot-clé
         for kw in keywords:
             if kw in title_lower:
-                score += 1
+                # Bonus si c'est un mot important (chiffre de modèle, nom du modèle)
+                if kw.isdigit() or kw in ['dunk', 'jordan', 'yeezy', 'samba', 'campus', 'force', 'max', 'gel']:
+                    score += 3
+                else:
+                    score += 1
+        
+        # Bonus si le sujet complet est dans le titre
+        if subject_lower in title_lower:
+            score += 10
+        
+        # Bonus pour correspondance partielle forte
+        # Ex: "jordan 4" dans "Air Jordan 4 Retro Military Black"
+        subject_parts = subject_lower.split()
+        if len(subject_parts) >= 2:
+            # Chercher "jordan 4", "dunk low", etc.
+            key_combo = ' '.join(subject_parts[-2:])  # Les 2 derniers mots
+            if key_combo in title_lower:
+                score += 8
+        
         if score > 0:
             matches.append((score, p))
     
+    # Trier par score décroissant
     matches.sort(key=lambda x: x[0], reverse=True)
     return [m[1] for m in matches[:10]]
 
