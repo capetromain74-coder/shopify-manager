@@ -973,7 +973,7 @@ function generateArticle() {
     var statusEl = document.getElementById('loadingStatus');
     var statuses = [
         'Recherche des tendances actuelles...',
-        'Analyse des données GOAT et StockX...',
+        'Récupération de l\\'image depuis GOAT...',
         'Recherche de vos produits correspondants...',
         'Génération du contenu SEO...',
         'Optimisation des liens internes...',
@@ -1009,8 +1009,39 @@ function generateArticle() {
         
         generatedArticle = data;
         document.getElementById('previewTitle').textContent = data.title;
-        document.getElementById('previewMeta').textContent = 'Par KP SHOES • ' + new Date().toLocaleDateString('fr-FR', {month: 'long', year: 'numeric'});
-        document.getElementById('previewContent').innerHTML = data.body_html;
+        document.getElementById('previewMeta').innerHTML = 'Par KP SHOES • ' + new Date().toLocaleDateString('fr-FR', {month: 'long', year: 'numeric'});
+        
+        // Afficher l'image si disponible
+        var imageHtml = '';
+        if (data.image_url) {
+            imageHtml = '<div style="margin-bottom:20px"><img src="' + data.image_url + '" style="max-width:100%;max-height:300px;border-radius:8px;object-fit:contain"></div>';
+        }
+        
+        // Afficher les meta SEO
+        var metaHtml = '';
+        if (data.meta_title || data.meta_description) {
+            metaHtml = '<div style="background:#1a1a2e;padding:15px;border-radius:8px;margin-bottom:20px;font-size:12px">';
+            metaHtml += '<div style="color:#888;margin-bottom:5px">📊 Aperçu SEO Google</div>';
+            if (data.meta_title) {
+                metaHtml += '<div style="color:#1a0dab;font-size:14px;margin-bottom:3px">' + data.meta_title + '</div>';
+            }
+            metaHtml += '<div style="color:#006621;font-size:11px;margin-bottom:3px">https://kpshoes.fr/blogs/news/' + (data.handle || '...') + '</div>';
+            if (data.meta_description) {
+                metaHtml += '<div style="color:#666">' + data.meta_description + '</div>';
+            }
+            metaHtml += '</div>';
+        }
+        
+        // Afficher l'extrait
+        var summaryHtml = '';
+        if (data.summary_html) {
+            summaryHtml = '<div style="background:#667eea22;padding:15px;border-radius:8px;margin-bottom:20px;border-left:4px solid #667eea">';
+            summaryHtml += '<div style="color:#667eea;font-size:11px;margin-bottom:5px;font-weight:600">📝 EXTRAIT</div>';
+            summaryHtml += '<div style="font-size:13px;color:#ccc">' + data.summary_html + '</div>';
+            summaryHtml += '</div>';
+        }
+        
+        document.getElementById('previewContent').innerHTML = imageHtml + metaHtml + summaryHtml + data.body_html;
         document.getElementById('preview').classList.add('show');
     })
     .catch(e => {
@@ -1038,7 +1069,11 @@ function publishArticle() {
             body_html: generatedArticle.body_html,
             author: 'KP SHOES',
             tags: generatedArticle.tags || '',
-            published: true
+            published: true,
+            image_url: generatedArticle.image_url || '',
+            summary_html: generatedArticle.summary_html || '',
+            meta_title: generatedArticle.meta_title || '',
+            meta_description: generatedArticle.meta_description || ''
         })
     })
     .then(r => r.json())
@@ -1053,8 +1088,8 @@ function publishArticle() {
         document.getElementById('preview').classList.remove('show');
         document.getElementById('success').classList.add('show');
         
-        if (data.article && data.article.id) {
-            document.getElementById('articleLink').href = 'https://DOMAIN_PLACEHOLDER/blogs/news/' + (generatedArticle.handle || data.article.id);
+        if (data.article && data.article.handle) {
+            document.getElementById('articleLink').href = 'https://DOMAIN_PLACEHOLDER/blogs/news/' + data.article.handle;
         }
         
         toast('Article publié !', 'success');
@@ -1333,13 +1368,37 @@ def api_create_article(blog_id):
             'author': data.get('author', 'KP SHOES'),
             'body_html': data.get('body_html', ''),
             'published': data.get('published', True),
-            'tags': data.get('tags', '')
+            'tags': data.get('tags', ''),
+            'summary_html': data.get('summary_html', ''),  # Extrait
+            'metafields': []
         }
     }
     
     # Ajouter image si fournie
     if data.get('image_url'):
         article_data['article']['image'] = {'src': data.get('image_url')}
+    
+    # Ajouter meta title
+    if data.get('meta_title'):
+        article_data['article']['metafields'].append({
+            'namespace': 'global',
+            'key': 'title_tag',
+            'value': data.get('meta_title'),
+            'type': 'single_line_text_field'
+        })
+    
+    # Ajouter meta description
+    if data.get('meta_description'):
+        article_data['article']['metafields'].append({
+            'namespace': 'global',
+            'key': 'description_tag',
+            'value': data.get('meta_description'),
+            'type': 'single_line_text_field'
+        })
+    
+    # Supprimer metafields si vide
+    if not article_data['article']['metafields']:
+        del article_data['article']['metafields']
     
     r = shopify_request(f'blogs/{blog_id}/articles.json', 'POST', article_data)
     if not r:
@@ -1385,17 +1444,36 @@ def api_delete_article(blog_id, article_id):
 def get_products_for_linking():
     """Récupère les produits pour créer des liens internes"""
     products = []
-    r = shopify_request('products.json?limit=100')
-    if r and 'products' in r:
+    since_id = 0
+    
+    # Récupérer jusqu'à 250 produits (5 pages de 50)
+    for _ in range(5):
+        r = shopify_request(f'products.json?limit=50&since_id={since_id}')
+        if not r or 'products' not in r or not r['products']:
+            break
+        
         for p in r['products']:
             sku = p['variants'][0].get('sku', '') if p.get('variants') else ''
+            img = ''
+            if p.get('images') and len(p['images']) > 0:
+                img = p['images'][0].get('src', '')
+            
             products.append({
                 'id': p['id'],
                 'title': p['title'],
                 'handle': p['handle'],
                 'sku': sku,
+                'image': img,
                 'url': f"https://{SITE_DOMAIN}/products/{p['handle']}"
             })
+        
+        since_id = r['products'][-1]['id']
+        
+        # Si moins de 50 produits, on a tout récupéré
+        if len(r['products']) < 50:
+            break
+    
+    log.info(f"[Blog] Loaded {len(products)} products for linking")
     return products
 
 
@@ -1451,18 +1529,32 @@ def generate_article_content(article_type, subject, keywords, tone, length, prod
     matching_products = find_matching_products(subject, products)
     matching_collection = find_collection(subject, collections)
     
-    # Liens vers produits
+    log.info(f"[Blog] Found {len(matching_products)} matching products for '{subject}'")
+    
+    # Liens vers produits - VERSION AMÉLIORÉE avec images
     product_links = ""
     if matching_products:
-        product_links = "<h3>Découvrez sur KP SHOES</h3><ul>"
-        for p in matching_products[:5]:
-            product_links += f'<li><a href="{p["url"]}">{p["title"]}</a></li>'
-        product_links += "</ul>"
+        product_links = "<h3>Découvrez sur KP SHOES</h3>"
+        product_links += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:15px;margin:20px 0">'
+        
+        for p in matching_products[:6]:  # Max 6 produits
+            img_html = ""
+            if p.get('image'):
+                img_html = f'<img src="{p["image"]}" style="width:100%;height:120px;object-fit:contain;background:#f5f5f5;border-radius:8px">'
+            else:
+                img_html = '<div style="width:100%;height:120px;background:#f5f5f5;border-radius:8px"></div>'
+            
+            product_links += f'''<a href="{p['url']}" style="text-decoration:none;color:inherit;display:block">
+                {img_html}
+                <div style="font-size:12px;margin-top:8px;color:#333;text-align:center;line-height:1.3">{p['title'][:50]}{"..." if len(p['title']) > 50 else ""}</div>
+            </a>'''
+        
+        product_links += "</div>"
     
     # Lien collection
     collection_link = ""
     if matching_collection:
-        collection_link = f'<p>👉 <strong><a href="{matching_collection["url"]}">Voir toute la collection {matching_collection["title"]}</a></strong></p>'
+        collection_link = f'<p style="margin:20px 0">👉 <strong><a href="{matching_collection["url"]}">Voir toute la collection {matching_collection["title"]}</a></strong></p>'
     
     # Générer selon le type
     if article_type == "guide_taille":
@@ -1487,6 +1579,13 @@ def generate_sizing_guide(subject, product_links, collection_link, tone):
     """Génère un guide de tailles"""
     title = f"Comment taille la {subject} ? Guide complet des tailles 2026"
     
+    # Meta SEO
+    meta_title = f"Comment taille la {subject} ? Guide tailles 2026 | KP SHOES"[:70]
+    meta_description = f"Découvrez comment taille la {subject}. Tableau des tailles EU/US/UK, conseils pour pieds larges et comparaison avec d'autres modèles. Guide complet."[:160]
+    
+    # Extrait
+    summary = f"Vous vous demandez comment taille la {subject} ? Découvrez notre guide complet avec tableau des tailles, conseils pour bien choisir et comparaisons avec d'autres modèles."
+    
     body = f"""
 <p>Vous vous demandez <strong>comment taille la {subject}</strong> ? Ce guide complet vous aide à choisir la bonne pointure pour éviter les mauvaises surprises. Chez <strong>KP SHOES</strong>, nous garantissons l'authenticité de chaque paire.</p>
 
@@ -1495,15 +1594,16 @@ def generate_sizing_guide(subject, product_links, collection_link, tone):
 
 <h2>Tableau des tailles {subject}</h2>
 <table style="width:100%;border-collapse:collapse;margin:20px 0">
-<tr style="background:#1a1a2e"><th style="padding:10px;border:1px solid #333">EU</th><th style="padding:10px;border:1px solid #333">US Homme</th><th style="padding:10px;border:1px solid #333">US Femme</th><th style="padding:10px;border:1px solid #333">UK</th><th style="padding:10px;border:1px solid #333">CM</th></tr>
-<tr><td style="padding:10px;border:1px solid #333">38</td><td style="padding:10px;border:1px solid #333">5.5</td><td style="padding:10px;border:1px solid #333">7</td><td style="padding:10px;border:1px solid #333">5</td><td style="padding:10px;border:1px solid #333">24</td></tr>
-<tr><td style="padding:10px;border:1px solid #333">39</td><td style="padding:10px;border:1px solid #333">6.5</td><td style="padding:10px;border:1px solid #333">8</td><td style="padding:10px;border:1px solid #333">6</td><td style="padding:10px;border:1px solid #333">24.5</td></tr>
-<tr><td style="padding:10px;border:1px solid #333">40</td><td style="padding:10px;border:1px solid #333">7</td><td style="padding:10px;border:1px solid #333">8.5</td><td style="padding:10px;border:1px solid #333">6</td><td style="padding:10px;border:1px solid #333">25</td></tr>
-<tr><td style="padding:10px;border:1px solid #333">41</td><td style="padding:10px;border:1px solid #333">8</td><td style="padding:10px;border:1px solid #333">9.5</td><td style="padding:10px;border:1px solid #333">7</td><td style="padding:10px;border:1px solid #333">26</td></tr>
-<tr><td style="padding:10px;border:1px solid #333">42</td><td style="padding:10px;border:1px solid #333">8.5</td><td style="padding:10px;border:1px solid #333">10</td><td style="padding:10px;border:1px solid #333">7.5</td><td style="padding:10px;border:1px solid #333">26.5</td></tr>
-<tr><td style="padding:10px;border:1px solid #333">43</td><td style="padding:10px;border:1px solid #333">9.5</td><td style="padding:10px;border:1px solid #333">11</td><td style="padding:10px;border:1px solid #333">8.5</td><td style="padding:10px;border:1px solid #333">27.5</td></tr>
-<tr><td style="padding:10px;border:1px solid #333">44</td><td style="padding:10px;border:1px solid #333">10</td><td style="padding:10px;border:1px solid #333">11.5</td><td style="padding:10px;border:1px solid #333">9</td><td style="padding:10px;border:1px solid #333">28</td></tr>
-<tr><td style="padding:10px;border:1px solid #333">45</td><td style="padding:10px;border:1px solid #333">11</td><td style="padding:10px;border:1px solid #333">12.5</td><td style="padding:10px;border:1px solid #333">10</td><td style="padding:10px;border:1px solid #333">29</td></tr>
+<tr style="background:#f5f5f5"><th style="padding:12px;border:1px solid #ddd;text-align:center">EU</th><th style="padding:12px;border:1px solid #ddd;text-align:center">US Homme</th><th style="padding:12px;border:1px solid #ddd;text-align:center">US Femme</th><th style="padding:12px;border:1px solid #ddd;text-align:center">UK</th><th style="padding:12px;border:1px solid #ddd;text-align:center">CM</th></tr>
+<tr><td style="padding:10px;border:1px solid #ddd;text-align:center">38</td><td style="padding:10px;border:1px solid #ddd;text-align:center">5.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">7</td><td style="padding:10px;border:1px solid #ddd;text-align:center">5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">24</td></tr>
+<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd;text-align:center">39</td><td style="padding:10px;border:1px solid #ddd;text-align:center">6.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">8</td><td style="padding:10px;border:1px solid #ddd;text-align:center">6</td><td style="padding:10px;border:1px solid #ddd;text-align:center">24.5</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd;text-align:center">40</td><td style="padding:10px;border:1px solid #ddd;text-align:center">7</td><td style="padding:10px;border:1px solid #ddd;text-align:center">8.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">6</td><td style="padding:10px;border:1px solid #ddd;text-align:center">25</td></tr>
+<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd;text-align:center">41</td><td style="padding:10px;border:1px solid #ddd;text-align:center">8</td><td style="padding:10px;border:1px solid #ddd;text-align:center">9.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">7</td><td style="padding:10px;border:1px solid #ddd;text-align:center">26</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd;text-align:center">42</td><td style="padding:10px;border:1px solid #ddd;text-align:center">8.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">10</td><td style="padding:10px;border:1px solid #ddd;text-align:center">7.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">26.5</td></tr>
+<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd;text-align:center">43</td><td style="padding:10px;border:1px solid #ddd;text-align:center">9.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">11</td><td style="padding:10px;border:1px solid #ddd;text-align:center">8.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">27.5</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd;text-align:center">44</td><td style="padding:10px;border:1px solid #ddd;text-align:center">10</td><td style="padding:10px;border:1px solid #ddd;text-align:center">11.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">9</td><td style="padding:10px;border:1px solid #ddd;text-align:center">28</td></tr>
+<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd;text-align:center">45</td><td style="padding:10px;border:1px solid #ddd;text-align:center">11</td><td style="padding:10px;border:1px solid #ddd;text-align:center">12.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">10</td><td style="padding:10px;border:1px solid #ddd;text-align:center">29</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd;text-align:center">46</td><td style="padding:10px;border:1px solid #ddd;text-align:center">12</td><td style="padding:10px;border:1px solid #ddd;text-align:center">13.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">11</td><td style="padding:10px;border:1px solid #ddd;text-align:center">30</td></tr>
 </table>
 
 <h2>Conseils pour bien choisir sa taille</h2>
@@ -1544,7 +1644,12 @@ def generate_sizing_guide(subject, product_links, collection_link, tone):
         'title': title,
         'body_html': body,
         'tags': f'guide taille, {subject}, sizing, pointure',
-        'handle': f'guide-taille-{subject.lower().replace(" ", "-")}'
+        'handle': f'guide-taille-{subject.lower().replace(" ", "-")}',
+        'meta_title': meta_title,
+        'meta_description': meta_description,
+        'summary_html': summary,
+        'needs_image': True,
+        'image_search_term': subject
     }
 
 
@@ -1554,6 +1659,9 @@ def generate_release_article(subject, product_links, collection_link, tone):
     month = datetime.datetime.now().strftime('%B %Y')
     
     title = f"Sorties {subject} {month} : Calendrier et dates de release"
+    meta_title = f"Sorties {subject} 2026 : Dates et calendrier | KP SHOES"[:70]
+    meta_description = f"Découvrez toutes les sorties {subject} prévues en 2026. Calendrier des releases, dates de sortie et conseils pour cop les paires limitées."[:160]
+    summary = f"Toutes les sorties {subject} à ne pas manquer. Calendrier des releases, dates clés et conseils pour réussir vos achats."
     
     body = f"""
 <p>Découvrez toutes les <strong>sorties {subject}</strong> prévues pour {month}. Restez informé des dernières releases et ne manquez aucune paire sur <strong>KP SHOES</strong>.</p>
@@ -1586,16 +1694,27 @@ def generate_release_article(subject, product_links, collection_link, tone):
         'title': title,
         'body_html': body,
         'tags': f'sortie, release, {subject}, calendrier, 2026',
-        'handle': f'sorties-{subject.lower().replace(" ", "-")}-2026'
+        'handle': f'sorties-{subject.lower().replace(" ", "-")}-2026',
+        'meta_title': meta_title,
+        'meta_description': meta_description,
+        'summary_html': summary,
+        'needs_image': True,
+        'image_search_term': subject
     }
 
 
 def generate_trend_article(subject, product_links, collection_link, tone, matching_products):
     """Génère un article sur les tendances"""
     title = "Sneakers tendance 2026 : Les modèles les plus hype du moment"
+    meta_title = "Sneakers tendance 2026 : Les modèles incontournables | KP SHOES"
+    meta_description = "Découvrez les sneakers les plus tendance en 2026. Running rétro, classiques indémodables et collaborations de luxe. Notre sélection des modèles hype."
+    summary = "Quelles sont les sneakers les plus tendance en 2026 ? Découvrez notre sélection des modèles incontournables : running rétro, classiques et collaborations."
     
     if subject:
         title = f"{subject} : Pourquoi c'est LA sneaker tendance de 2026"
+        meta_title = f"{subject} : La sneaker tendance 2026 | KP SHOES"[:70]
+        meta_description = f"Découvrez pourquoi la {subject} est LA sneaker tendance de 2026. Style, confort et hype : tout ce qu'il faut savoir."[:160]
+        summary = f"La {subject} s'impose comme l'une des sneakers les plus tendance de 2026. Découvrez pourquoi elle fait l'unanimité."
     
     body = f"""
 <p>Quelles sont les <strong>sneakers les plus tendance en 2026</strong> ? Entre retours de classiques et nouvelles silhouettes, le marché de la sneaker continue d'évoluer. Découvrez notre sélection des modèles incontournables.</p>
@@ -1620,7 +1739,7 @@ def generate_trend_article(subject, product_links, collection_link, tone, matchi
 <ul>
 <li><strong>Investissez dans des classiques</strong> : Ils ne se démodent jamais</li>
 <li><strong>Osez les couleurs</strong> : Les coloris audacieux sont très recherchés</li>
-<li><strong>Privilegiez la qualité</strong> : Une paire authentique dure plus longtemps</li>
+<li><strong>Privilégiez la qualité</strong> : Une paire authentique dure plus longtemps</li>
 </ul>
 
 <p><strong>Chez KP SHOES, retrouvez tous les modèles tendance 100% authentiques.</strong> Notre équipe vérifie chaque paire avant expédition.</p>
@@ -1630,7 +1749,12 @@ def generate_trend_article(subject, product_links, collection_link, tone, matchi
         'title': title,
         'body_html': body,
         'tags': 'tendance, sneakers 2026, hype, mode, streetwear',
-        'handle': 'sneakers-tendance-2026'
+        'handle': 'sneakers-tendance-2026',
+        'meta_title': meta_title,
+        'meta_description': meta_description,
+        'summary_html': summary,
+        'needs_image': True,
+        'image_search_term': subject if subject else 'Nike Dunk Low'
     }
 
 
@@ -1642,17 +1766,20 @@ def generate_comparison_article(subject, product_links, collection_link, tone):
     model2 = models[1].strip() if len(models) > 1 else 'Nike Dunk Low'
     
     title = f"{model1} vs {model2} : Quelle sneaker choisir en 2026 ?"
+    meta_title = f"{model1} vs {model2} : Comparatif 2026 | KP SHOES"[:70]
+    meta_description = f"Comparatif {model1} vs {model2}. Confort, style, prix : on vous aide à choisir la sneaker faite pour vous."[:160]
+    summary = f"Vous hésitez entre {model1} et {model2} ? Notre comparatif détaillé vous aide à faire le bon choix."
     
     body = f"""
 <p>Vous hésitez entre la <strong>{model1}</strong> et la <strong>{model2}</strong> ? Ce comparatif détaillé vous aide à faire le bon choix selon vos besoins et votre style.</p>
 
 <h2>Tableau comparatif</h2>
 <table style="width:100%;border-collapse:collapse;margin:20px 0">
-<tr style="background:#1a1a2e"><th style="padding:10px;border:1px solid #333">Critère</th><th style="padding:10px;border:1px solid #333">{model1}</th><th style="padding:10px;border:1px solid #333">{model2}</th></tr>
-<tr><td style="padding:10px;border:1px solid #333"><strong>Confort</strong></td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐</td></tr>
-<tr><td style="padding:10px;border:1px solid #333"><strong>Style</strong></td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐⭐</td></tr>
-<tr><td style="padding:10px;border:1px solid #333"><strong>Polyvalence</strong></td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐⭐</td></tr>
-<tr><td style="padding:10px;border:1px solid #333"><strong>Durabilité</strong></td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #333">⭐⭐⭐⭐</td></tr>
+<tr style="background:#f5f5f5"><th style="padding:12px;border:1px solid #ddd">Critère</th><th style="padding:12px;border:1px solid #ddd">{model1}</th><th style="padding:12px;border:1px solid #ddd">{model2}</th></tr>
+<tr><td style="padding:10px;border:1px solid #ddd"><strong>Confort</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td></tr>
+<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd"><strong>Style</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐⭐</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd"><strong>Polyvalence</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐⭐</td></tr>
+<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd"><strong>Durabilité</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td></tr>
 </table>
 
 <h2>{model1} : Points forts et faibles</h2>
@@ -1694,13 +1821,21 @@ def generate_comparison_article(subject, product_links, collection_link, tone):
         'title': title,
         'body_html': body,
         'tags': f'comparatif, {model1}, {model2}, versus, guide achat',
-        'handle': f'comparatif-{model1.lower().replace(" ", "-")}-vs-{model2.lower().replace(" ", "-")}'
+        'handle': f'comparatif-{model1.lower().replace(" ", "-")}-vs-{model2.lower().replace(" ", "-")}',
+        'meta_title': meta_title,
+        'meta_description': meta_description,
+        'summary_html': summary,
+        'needs_image': True,
+        'image_search_term': model1
     }
 
 
 def generate_history_article(subject, product_links, collection_link, tone):
     """Génère un article sur l'histoire d'un modèle"""
     title = f"L'histoire de la {subject} : De sa création à aujourd'hui"
+    meta_title = f"Histoire de la {subject} : Origines et évolution | KP SHOES"[:70]
+    meta_description = f"Découvrez l'histoire fascinante de la {subject}. De ses origines à son statut d'icône streetwear, retour sur un modèle légendaire."[:160]
+    summary = f"La {subject} est bien plus qu'une sneaker. Découvrez son histoire fascinante, de sa création à son statut d'icône culturelle."
     
     body = f"""
 <p>La <strong>{subject}</strong> est bien plus qu'une simple paire de sneakers. C'est une icône qui a marqué l'histoire de la culture streetwear et du sport. Découvrez son parcours fascinant.</p>
@@ -1743,13 +1878,21 @@ def generate_history_article(subject, product_links, collection_link, tone):
         'title': title,
         'body_html': body,
         'tags': f'histoire, {subject}, culture sneaker, légende, heritage',
-        'handle': f'histoire-{subject.lower().replace(" ", "-")}'
+        'handle': f'histoire-{subject.lower().replace(" ", "-")}',
+        'meta_title': meta_title,
+        'meta_description': meta_description,
+        'summary_html': summary,
+        'needs_image': True,
+        'image_search_term': subject
     }
 
 
 def generate_care_article(subject, product_links, collection_link, tone):
     """Génère un article sur l'entretien"""
     title = f"Comment nettoyer et entretenir ses {subject} ? Guide complet"
+    meta_title = f"Comment nettoyer ses {subject} ? Guide entretien | KP SHOES"[:70]
+    meta_description = f"Découvrez comment nettoyer et entretenir vos {subject}. Conseils d'experts, erreurs à éviter et astuces pour prolonger leur durée de vie."[:160]
+    summary = f"Vos {subject} méritent le meilleur entretien. Découvrez nos conseils d'experts pour les garder impeccables."
     
     body = f"""
 <p>Vos <strong>{subject}</strong> méritent un entretien régulier pour rester impeccables. Découvrez nos conseils d'experts pour nettoyer, protéger et prolonger la vie de vos sneakers.</p>
@@ -1812,13 +1955,21 @@ def generate_care_article(subject, product_links, collection_link, tone):
         'title': title,
         'body_html': body,
         'tags': f'entretien, nettoyage, {subject}, sneaker care, guide',
-        'handle': f'entretien-{subject.lower().replace(" ", "-")}'
+        'handle': f'entretien-{subject.lower().replace(" ", "-")}',
+        'meta_title': meta_title,
+        'meta_description': meta_description,
+        'summary_html': summary,
+        'needs_image': True,
+        'image_search_term': subject
     }
 
 
 def generate_style_article(subject, product_links, collection_link, tone):
     """Génère un article sur le style"""
     title = f"Comment porter la {subject} ? Idées de looks et outfits 2026"
+    meta_title = f"Comment porter la {subject} ? Idées looks 2026 | KP SHOES"[:70]
+    meta_description = f"Découvrez comment porter la {subject}. Looks casual, streetwear et smart casual : nos idées d'outfits pour tous les styles."[:160]
+    summary = f"La {subject} est ultra polyvalente. Découvrez nos idées de looks pour la porter avec style au quotidien."
     
     body = f"""
 <p>La <strong>{subject}</strong> est une sneaker polyvalente qui s'adapte à de nombreux styles. Découvrez nos conseils pour créer des looks tendance avec cette paire iconique.</p>
@@ -1874,13 +2025,21 @@ def generate_style_article(subject, product_links, collection_link, tone):
         'title': title,
         'body_html': body,
         'tags': f'style, outfit, {subject}, look, mode, streetwear',
-        'handle': f'comment-porter-{subject.lower().replace(" ", "-")}'
+        'handle': f'comment-porter-{subject.lower().replace(" ", "-")}',
+        'meta_title': meta_title,
+        'meta_description': meta_description,
+        'summary_html': summary,
+        'needs_image': True,
+        'image_search_term': subject
     }
 
 
 def generate_custom_article(subject, keywords, product_links, collection_link, tone):
     """Génère un article personnalisé"""
     title = f"{subject} : Tout ce que vous devez savoir en 2026"
+    meta_title = f"{subject} : Guide complet 2026 | KP SHOES"[:70]
+    meta_description = f"Découvrez tout ce qu'il faut savoir sur {subject}. Guide complet, conseils d'achat et sélection des meilleures paires sur KP SHOES."[:160]
+    summary = f"Tout ce qu'il faut savoir sur {subject}. Guide complet et conseils d'achat par les experts KP SHOES."
     
     body = f"""
 <p>Découvrez tout ce qu'il faut savoir sur <strong>{subject}</strong>. Chez <strong>KP SHOES</strong>, nous vous proposons les meilleures paires 100% authentiques.</p>
@@ -1910,7 +2069,12 @@ def generate_custom_article(subject, keywords, product_links, collection_link, t
         'title': title,
         'body_html': body,
         'tags': f'{subject}, sneakers, authentique, kp shoes',
-        'handle': f'{subject.lower().replace(" ", "-")}-guide-2026'
+        'handle': f'{subject.lower().replace(" ", "-")}-guide-2026',
+        'meta_title': meta_title,
+        'meta_description': meta_description,
+        'summary_html': summary,
+        'needs_image': True,
+        'image_search_term': subject
     }
 
 
@@ -1935,6 +2099,26 @@ def api_generate_blog():
             article_type, subject, keywords, tone, length,
             products, collections
         )
+        
+        # Récupérer une image depuis GOAT si nécessaire
+        if article.get('needs_image') and article.get('image_search_term'):
+            search_term = article.get('image_search_term', subject)
+            goat_result = get_goat_images(search_term)
+            if goat_result and goat_result.get('images'):
+                article['image_url'] = goat_result['images'][0]
+                log.info(f"[Blog] Got image from GOAT: {article['image_url'][:50]}...")
+        
+        # Si pas d'image GOAT, chercher dans les produits correspondants
+        if not article.get('image_url'):
+            matching = find_matching_products(subject, products)
+            if matching:
+                # Chercher l'image du premier produit
+                for p in matching:
+                    r = shopify_request(f'products/{p["id"]}.json')
+                    if r and r.get('product', {}).get('images'):
+                        article['image_url'] = r['product']['images'][0]['src']
+                        log.info(f"[Blog] Got image from product: {p['title']}")
+                        break
         
         return jsonify(article)
         
