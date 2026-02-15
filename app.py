@@ -1547,25 +1547,56 @@ def generate_article_content(article_type, subject, keywords, tone, length, prod
     
     log.info(f"[Blog] Found {len(matching_products)} matching products for '{subject}'")
     
-    # Liens vers produits avec section dédiée
+    # ── Chercher la paire EXACTE dans les produits ──
+    exact_product = None
+    subject_lower = subject.lower()
+    for p in products:
+        title_lower = p['title'].lower()
+        # Match exact ou quasi-exact
+        if subject_lower in title_lower or title_lower in subject_lower:
+            exact_product = p
+            break
+    
+    # Si pas de match exact, chercher avec les mots-clés importants (au moins 80% de match)
+    if not exact_product and matching_products:
+        subject_words = set(w for w in subject_lower.split() if len(w) > 2)
+        best_score = 0
+        for p in matching_products:
+            p_words = set(w for w in p['title'].lower().split() if len(w) > 2)
+            common = len(subject_words & p_words)
+            if common > best_score and common >= len(subject_words) * 0.5:
+                best_score = common
+                exact_product = p
+    
+    if exact_product:
+        log.info(f"[Blog] Exact product found: {exact_product['title']}")
+    
+    # ── Section produit dédiée ──
     product_links = ""
-    if matching_products:
-        product_links = f'<h2>Acheter la {subject} sur KP SHOES</h2><p>Retrouvez cette paire et d\'autres modèles similaires dans notre boutique. Toutes nos paires sont <strong>100% authentiques</strong>.</p>'
-        product_links += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:15px;margin:20px 0">'
+    if exact_product or matching_products:
+        product_links = f'<h2>Acheter la {subject} sur KP SHOES</h2>'
         
-        for p in matching_products[:6]:  # Max 6 produits
-            img_html = ""
-            if p.get('image'):
-                img_html = f'<img src="{p["image"]}" style="width:100%;height:120px;object-fit:contain;background:#f5f5f5;border-radius:8px">'
-            else:
-                img_html = '<div style="width:100%;height:120px;background:#f5f5f5;border-radius:8px"></div>'
-            
-            product_links += f'''<a href="{p['url']}" style="text-decoration:none;color:inherit;display:block">
-                {img_html}
-                <div style="font-size:12px;margin-top:8px;color:#333;text-align:center;line-height:1.3">{p['title'][:50]}{"..." if len(p['title']) > 50 else ""}</div>
-            </a>'''
+        # Mettre la paire exacte en premier, bien mise en avant
+        if exact_product:
+            exact_img = f'<img src="{exact_product["image"]}" style="width:100%;max-width:300px;height:auto;border-radius:10px;margin:10px auto;display:block">' if exact_product.get('image') else ''
+            product_links += f'''<div style="text-align:center;margin:20px 0;padding:20px;background:#f5f5f5;border-radius:12px">
+                {exact_img}
+                <div style="font-size:16px;font-weight:600;margin:10px 0;color:#333">{exact_product['title']}</div>
+                <a href="{exact_product['url']}" style="display:inline-block;padding:10px 25px;background:#667eea;color:white;text-decoration:none;border-radius:8px;font-weight:600;margin:10px 0">Voir cette paire →</a>
+            </div>'''
         
-        product_links += "</div>"
+        # Ajouter les autres produits similaires
+        other_products = [p for p in matching_products if not exact_product or p['id'] != exact_product['id']]
+        if other_products:
+            product_links += '<p style="margin-top:20px"><strong>Paires similaires disponibles :</strong></p>'
+            product_links += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:15px;margin:10px 0">'
+            for p in other_products[:5]:
+                img_html = f'<img src="{p["image"]}" style="width:100%;height:120px;object-fit:contain;background:#f5f5f5;border-radius:8px">' if p.get('image') else '<div style="width:100%;height:120px;background:#f5f5f5;border-radius:8px"></div>'
+                product_links += f'''<a href="{p['url']}" style="text-decoration:none;color:inherit;display:block">
+                    {img_html}
+                    <div style="font-size:12px;margin-top:8px;color:#333;text-align:center;line-height:1.3">{p['title'][:50]}{"..." if len(p['title']) > 50 else ""}</div>
+                </a>'''
+            product_links += "</div>"
     
     # Lien collection
     collection_link = ""
@@ -1575,29 +1606,69 @@ def generate_article_content(article_type, subject, keywords, tone, length, prod
     # Construire le bloc HTML des infos web trouvées
     web_info_html = build_web_info_html(research, subject)
     
-    # Générer selon le type
+    # Stocker le produit exact pour l'image
+    # On passe exact_product via un attribut sur l'article retourné
+    result = None
     if article_type == "guide_taille":
-        return generate_sizing_guide(subject, product_links, collection_link, tone, web_info_html, research)
+        result = generate_sizing_guide(subject, product_links, collection_link, tone, web_info_html, research)
     elif article_type == "release":
-        return generate_release_article(subject, product_links, collection_link, tone, web_info_html, research)
+        result = generate_release_article(subject, product_links, collection_link, tone, web_info_html, research)
     elif article_type == "tendance":
-        return generate_trend_article(subject, product_links, collection_link, tone, matching_products, web_info_html, research)
+        result = generate_trend_article(subject, product_links, collection_link, tone, matching_products, web_info_html, research)
     elif article_type == "comparatif":
-        return generate_comparison_article(subject, product_links, collection_link, tone, web_info_html, research)
+        result = generate_comparison_article(subject, product_links, collection_link, tone, web_info_html, research)
     elif article_type == "histoire":
-        return generate_history_article(subject, product_links, collection_link, tone, web_info_html, research)
+        result = generate_history_article(subject, product_links, collection_link, tone, web_info_html, research)
     elif article_type == "entretien":
-        return generate_care_article(subject, product_links, collection_link, tone, web_info_html, research)
+        result = generate_care_article(subject, product_links, collection_link, tone, web_info_html, research)
     elif article_type == "style":
-        return generate_style_article(subject, product_links, collection_link, tone, web_info_html, research)
+        result = generate_style_article(subject, product_links, collection_link, tone, web_info_html, research)
     else:
-        return generate_custom_article(subject, keywords, product_links, collection_link, tone, web_info_html, research)
+        result = generate_custom_article(subject, keywords, product_links, collection_link, tone, web_info_html, research)
+    
+    # Si on a trouvé la paire exacte, utiliser son image directement
+    if exact_product and exact_product.get('image'):
+        result['image_url'] = exact_product['image']
+        result['needs_image'] = False  # Pas besoin de chercher sur GOAT
+        log.info(f"[Blog] Using exact product image: {exact_product['title']}")
+    
+    return result
 
 
+
+
+def translate_to_french(text):
+    """Traduit un texte en français via Google Translate (gratuit, pas de clé)"""
+    if not text or len(text) < 10:
+        return text
+    
+    # Détecter si c'est déjà en français (heuristique simple)
+    french_indicators = [' le ', ' la ', ' les ', ' des ', ' une ', ' est ', ' sont ', ' dans ', ' pour ', ' avec ', ' cette ', ' sur ', ' qui ', ' que ']
+    text_lower = text.lower()
+    french_count = sum(1 for ind in french_indicators if ind in text_lower)
+    if french_count >= 3:
+        return text  # Déjà en français
+    
+    try:
+        import urllib.parse
+        # API Google Translate gratuite (endpoint non-officiel mais fonctionnel)
+        encoded = urllib.parse.quote(text[:1000])  # Limiter à 1000 chars par requête
+        url = f'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=fr&dt=t&q={encoded}'
+        
+        html = fetch_url(url, timeout=8)
+        if html:
+            data = json.loads(html)
+            translated = ''.join([s[0] for s in data[0] if s[0]])
+            if translated and len(translated) > 10:
+                return translated
+    except Exception as e:
+        log.error(f"[Translate] Error: {e}")
+    
+    return text  # Retourner l'original si la traduction échoue
 
 
 def build_web_info_html(research, subject):
-    """Construit le HTML des informations trouvées sur le web, traduit et reformaté en français"""
+    """Construit le HTML des informations trouvées sur le web, traduit en français"""
     if not research or not research.get('found'):
         return ""
     
@@ -1609,57 +1680,61 @@ def build_web_info_html(research, subject):
         extract = wiki['extract']
         if len(extract) > 500:
             extract = extract[:500].rsplit(' ', 1)[0] + '...'
+        # Traduire si en anglais
+        extract = translate_to_french(extract)
         html += f'<div style="background:#f0f4ff;padding:20px;border-radius:10px;margin:20px 0;border-left:4px solid #667eea">'
         html += f'<p style="margin:0">{extract}</p>'
         html += f'</div>'
     
-    # Résultats de recherche - nettoyer, dédupliquer, filtrer le bruit
+    # Résultats de recherche
     results = research.get('search_results', [])
     if results:
         clean_results = []
         seen = set()
         
-        # Mots-clés de bruit à filtrer (menus de navigation, etc.)
+        # Mots de bruit à filtrer
         junk_patterns = [
             'fashionfootwear', 'artdesignmusic', 'cookie', 'privacy', 'subscribe',
             'newsletter', 'sign up', 'log in', 'download the', 'scan the qr',
             'some languages may be', 'accuracy may vary', 'turn on code suggestion',
             'brand ranking', 'brand directory', 'magazine', 'morefashion',
-            'don\'t show again', 'app stores', 'cmd', 'copyright'
+            'don\'t show again', 'app stores', 'cmd', 'copyright', 'terms of use',
+            'all rights reserved', 'follow us', 'stay ahead', 'get the latest'
         ]
         
         for r in results:
             r_clean = r.strip()
             r_lower = r_clean.lower()
             
-            # Filtrer le bruit
             if any(junk in r_lower for junk in junk_patterns):
                 continue
-            
-            # Filtrer les résultats trop courts ou pas pertinents
             if len(r_clean) < 50:
                 continue
             
-            # Dédupliquer
             key = r_lower[:60]
             if key in seen:
                 continue
             seen.add(key)
             
-            # Limiter la longueur
             if len(r_clean) > 400:
                 r_clean = r_clean[:400].rsplit(' ', 1)[0] + '...'
             
             # Nettoyer les entités HTML
-            r_clean = r_clean.replace('&quot;', '"').replace('&#039;', "'").replace('&amp;', '&').replace('&#x27;', "'")
+            r_clean = r_clean.replace('&quot;', '"').replace('&#039;', "'").replace('&amp;', '&').replace('&#x27;', "'").replace('\u201c', '"').replace('\u201d', '"').replace('\u2019', "'")
             
             clean_results.append(r_clean)
         
         if clean_results:
-            html += f'<h2>Ce que l\'on sait sur la {subject}</h2>'
-            html += '<div style="margin:20px 0">'
+            # Traduire chaque résultat en français
+            translated_results = []
             for r in clean_results[:6]:
-                html += f'<p>{r}</p>'
+                translated = translate_to_french(r)
+                translated_results.append(translated)
+            
+            html += f'<h2>Ce que l\'on sait sur la {subject}</h2>'
+            html += '<div style="margin:20px 0;padding:15px;background:#f8f9fa;border-radius:10px">'
+            for r in translated_results:
+                html += f'<p style="margin:10px 0;line-height:1.6">{r}</p>'
             html += '</div>'
     
     return html
@@ -2521,6 +2596,18 @@ def api_blog_test_search():
         }
     except Exception as e:
         results['tests']['full_research'] = {'status': 'ERROR', 'error': str(e)}
+    
+    # Test 5: Google Translate
+    try:
+        test_text = "The Nike Mind 001 is a neuroscience-based footwear."
+        translated = translate_to_french(test_text)
+        results['tests']['google_translate'] = {
+            'status': 'OK' if translated != test_text else 'FAILED',
+            'original': test_text,
+            'translated': translated
+        }
+    except Exception as e:
+        results['tests']['google_translate'] = {'status': 'ERROR', 'error': str(e)}
     
     return jsonify(results)
     
