@@ -1478,41 +1478,57 @@ def get_products_for_linking():
 
 
 def find_matching_products(subject, products):
-    """Trouve les produits correspondant au sujet"""
+    """Trouve les produits correspondant au sujet - amélioré pour les noms longs et collabs"""
     matches = []
     subject_lower = subject.lower()
     
     # Nettoyer le sujet pour extraire les mots-clés importants
-    # Ex: "Air Jordan 4" -> ["jordan", "4"]
-    # Ex: "Nike Dunk Low" -> ["dunk", "low"]
-    subject_clean = subject_lower.replace('-', ' ').replace('air ', '').replace('nike ', '').replace('adidas ', '').replace('new balance ', '')
+    subject_clean = subject_lower.replace('-', ' ')
+    # Garder tous les mots significatifs
+    stop_words = ['air', 'nike', 'adidas', 'new', 'balance', 'retro', 'high', 'low', 'mid', 'og', 'sp', 'se', 'the', 'le', 'la', 'de', 'a', 'x']
     keywords = [kw for kw in subject_clean.split() if len(kw) > 1]
+    important_keywords = [kw for kw in keywords if kw not in stop_words]
     
     for p in products:
         title_lower = p['title'].lower()
         score = 0
         
-        # Vérifier chaque mot-clé
-        for kw in keywords:
+        # Vérifier chaque mot-clé important
+        for kw in important_keywords:
             if kw in title_lower:
-                # Bonus si c'est un mot important (chiffre de modèle, nom du modèle)
-                if kw.isdigit() or kw in ['dunk', 'jordan', 'yeezy', 'samba', 'campus', 'force', 'max', 'gel']:
+                if kw.isdigit() or kw in ['dunk', 'jordan', 'yeezy', 'samba', 'campus', 'force', 'max', 'gel', 'mind', 'fragment', 'union', 'travis', 'sacai', 'off-white']:
                     score += 3
                 else:
-                    score += 1
+                    score += 2
+        
+        # Vérifier aussi les mots non-importants (air, nike, etc.)
+        for kw in keywords:
+            if kw in stop_words and kw in title_lower:
+                score += 0.5
         
         # Bonus si le sujet complet est dans le titre
         if subject_lower in title_lower:
-            score += 10
+            score += 20
         
-        # Bonus pour correspondance partielle forte
-        # Ex: "jordan 4" dans "Air Jordan 4 Retro Military Black"
-        subject_parts = subject_lower.split()
-        if len(subject_parts) >= 2:
-            # Chercher "jordan 4", "dunk low", etc.
-            key_combo = ' '.join(subject_parts[-2:])  # Les 2 derniers mots
-            if key_combo in title_lower:
+        # Bonus pour correspondances partielles fortes
+        # Chercher des combinaisons de 2-3 mots clés
+        for i in range(len(important_keywords) - 1):
+            combo = important_keywords[i] + ' ' + important_keywords[i+1]
+            if combo in title_lower:
+                score += 5
+        
+        # Chercher le nom du modèle sans la marque
+        # Ex: "Jordan 1" dans "Air Jordan 1 Retro..."
+        if len(important_keywords) >= 2:
+            model_combo = ' '.join(important_keywords[:3])
+            if model_combo in title_lower:
                 score += 8
+        
+        # Bonus pour les collabs
+        collab_names = ['fragment', 'union', 'travis', 'sacai', 'off-white', 'fear of god', 'a ma maniere', 'patta']
+        for collab in collab_names:
+            if collab in subject_lower and collab in title_lower:
+                score += 5
         
         if score > 0:
             matches.append((score, p))
@@ -1531,10 +1547,10 @@ def generate_article_content(article_type, subject, keywords, tone, length, prod
     
     log.info(f"[Blog] Found {len(matching_products)} matching products for '{subject}'")
     
-    # Liens vers produits - VERSION AMÉLIORÉE avec images
+    # Liens vers produits avec section dédiée
     product_links = ""
     if matching_products:
-        product_links = "<h3>Découvrez sur KP SHOES</h3>"
+        product_links = f'<h2>Acheter la {subject} sur KP SHOES</h2><p>Retrouvez cette paire et d\'autres modèles similaires dans notre boutique. Toutes nos paires sont <strong>100% authentiques</strong>.</p>'
         product_links += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:15px;margin:20px 0">'
         
         for p in matching_products[:6]:  # Max 6 produits
@@ -1581,7 +1597,7 @@ def generate_article_content(article_type, subject, keywords, tone, length, prod
 
 
 def build_web_info_html(research, subject):
-    """Construit le HTML des informations trouvées sur le web"""
+    """Construit le HTML des informations trouvées sur le web, traduit et reformaté en français"""
     if not research or not research.get('found'):
         return ""
     
@@ -1591,33 +1607,58 @@ def build_web_info_html(research, subject):
     wiki = research.get('wikipedia')
     if wiki and wiki.get('extract'):
         extract = wiki['extract']
-        # Limiter à 500 chars
         if len(extract) > 500:
             extract = extract[:500].rsplit(' ', 1)[0] + '...'
         html += f'<div style="background:#f0f4ff;padding:20px;border-radius:10px;margin:20px 0;border-left:4px solid #667eea">'
         html += f'<p style="margin:0">{extract}</p>'
         html += f'</div>'
     
-    # Résultats de recherche
+    # Résultats de recherche - nettoyer, dédupliquer, filtrer le bruit
     results = research.get('search_results', [])
     if results:
-        # Nettoyer et dédupliquer
         clean_results = []
         seen = set()
+        
+        # Mots-clés de bruit à filtrer (menus de navigation, etc.)
+        junk_patterns = [
+            'fashionfootwear', 'artdesignmusic', 'cookie', 'privacy', 'subscribe',
+            'newsletter', 'sign up', 'log in', 'download the', 'scan the qr',
+            'some languages may be', 'accuracy may vary', 'turn on code suggestion',
+            'brand ranking', 'brand directory', 'magazine', 'morefashion',
+            'don\'t show again', 'app stores', 'cmd', 'copyright'
+        ]
+        
         for r in results:
-            # Enlever les doublons et les résultats trop courts
             r_clean = r.strip()
-            r_lower = r_clean.lower()[:50]
-            if r_lower not in seen and len(r_clean) > 40:
-                seen.add(r_lower)
-                # Limiter la longueur
-                if len(r_clean) > 300:
-                    r_clean = r_clean[:300].rsplit(' ', 1)[0] + '...'
-                clean_results.append(r_clean)
+            r_lower = r_clean.lower()
+            
+            # Filtrer le bruit
+            if any(junk in r_lower for junk in junk_patterns):
+                continue
+            
+            # Filtrer les résultats trop courts ou pas pertinents
+            if len(r_clean) < 50:
+                continue
+            
+            # Dédupliquer
+            key = r_lower[:60]
+            if key in seen:
+                continue
+            seen.add(key)
+            
+            # Limiter la longueur
+            if len(r_clean) > 400:
+                r_clean = r_clean[:400].rsplit(' ', 1)[0] + '...'
+            
+            # Nettoyer les entités HTML
+            r_clean = r_clean.replace('&quot;', '"').replace('&#039;', "'").replace('&amp;', '&').replace('&#x27;', "'")
+            
+            clean_results.append(r_clean)
         
         if clean_results:
+            html += f'<h2>Ce que l\'on sait sur la {subject}</h2>'
             html += '<div style="margin:20px 0">'
-            for r in clean_results[:5]:
+            for r in clean_results[:6]:
                 html += f'<p>{r}</p>'
             html += '</div>'
     
@@ -1887,14 +1928,26 @@ def generate_history_article(subject, product_links, collection_link, tone, web_
     meta_description = f"Découvrez l'histoire fascinante de la {subject}. De ses origines à son statut d'icône streetwear, retour sur un modèle légendaire."[:160]
     summary = f"La {subject} est bien plus qu'une sneaker. Découvrez son histoire fascinante, de sa création à son statut d'icône culturelle."
     
+    # Section produit
+    product_section = ""
+    if product_links:
+        product_section = product_links
+    
     body = f"""
-<p>Découvrez l'histoire complète de la <strong>{subject}</strong>.</p>
+<p>Découvrez l'histoire complète de la <strong>{subject}</strong>, une paire qui a marqué l'univers de la sneaker.</p>
 
 {web_info_html}
 
 {collection_link}
 
-{product_links}
+{product_section}
+
+<h2>Pourquoi cette paire est-elle si recherchée ?</h2>
+<ul>
+<li><strong>Un design iconique</strong> : Un modèle qui a su traverser les époques</li>
+<li><strong>Une qualité premium</strong> : Des matériaux sélectionnés pour une durabilité optimale</li>
+<li><strong>Un héritage culturel</strong> : Une sneaker adoptée par les passionnés du monde entier</li>
+</ul>
 
 <p><strong>Retrouvez la {subject} sur KP SHOES. Chaque paire est 100% authentique et vérifiée par nos experts.</strong></p>
 """
@@ -1908,7 +1961,7 @@ def generate_history_article(subject, product_links, collection_link, tone, web_
 
 {collection_link}
 
-{product_links}
+{product_section}
 
 <p><strong>Retrouvez vos sneakers sur KP SHOES - 100% authentiques et vérifiées par nos experts.</strong></p>
 """
