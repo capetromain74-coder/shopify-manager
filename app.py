@@ -408,7 +408,7 @@ function load(){
     if(loading)return;loading=true;
     document.getElementById("msg").textContent="Chargement... "+P.length+" produits";
     document.getElementById("msg").className="msg on";
-    fetch("/api/products?since_id="+sinceId+"&limit=250").then(function(r){return r.json();}).then(function(d){
+    fetch("/api/products?since_id="+sinceId+"&limit=50").then(function(r){return r.json();}).then(function(d){
         if(d.collections)C=d.collections;
         if(d.products&&d.products.length>0){
             for(var i=0;i<d.products.length;i++){
@@ -421,7 +421,7 @@ function load(){
                 totalV+=(p.variants||[]).length;P.push(p);
             }
             sinceId=d.products[d.products.length-1].id;updateStats();filter();loading=false;
-            if(d.products.length>=250)setTimeout(load,100);else{document.getElementById("msg").className="msg";}
+            if(d.products.length>=50)setTimeout(load,100);else{document.getElementById("msg").className="msg";}
         }else{document.getElementById("msg").className="msg";loading=false;filter();}
     }).catch(function(e){document.getElementById("msg").textContent="Erreur: "+e.message;loading=false;});
 }
@@ -1175,7 +1175,7 @@ def product_detail(product_id):
 @app.route('/api/products')
 def api_products():
     since_id = request.args.get('since_id', '0')
-    limit = request.args.get('limit', '250')
+    limit = request.args.get('limit', '50')
     r = shopify_request(f'products.json?limit={limit}&since_id={since_id}')
     products = r.get('products', []) if r else []
     return jsonify({'products': products, 'collections': get_collections()})
@@ -1448,7 +1448,7 @@ def get_products_for_linking():
     
     # Récupérer jusqu'à 250 produits (5 pages de 50)
     for _ in range(2):
-        r = shopify_request(f'products.json?limit=250&since_id={since_id}&fields=id,title,handle,variants,images')
+        r = shopify_request(f'products.json?limit=250&since_id={since_id}')
         if not r or 'products' not in r or not r['products']:
             break
         
