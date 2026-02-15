@@ -1767,7 +1767,7 @@ def build_web_info_html(research, subject):
             extract = extract[:500].rsplit(' ', 1)[0] + '...'
         # Traduire si en anglais
         extract = translate_to_french(extract)
-        html += f'<div style="padding:20px;border-radius:10px;margin:20px 0;border-left:4px solid #667eea">'
+        html += f'<div style="margin:20px 0">'
         html += f'<p style="margin:0">{extract}</p>'
         html += f'</div>'
     
@@ -1817,7 +1817,7 @@ def build_web_info_html(research, subject):
                 translated_results.append(translated)
             
             html += f'<h2>Ce que l\'on sait sur la {subject}</h2>'
-            html += '<div style="margin:20px 0;padding:15px;border-radius:10px">'
+            html += '<div style="margin:20px 0">'
             for r in translated_results:
                 html += f'<p style="margin:10px 0;line-height:1.6">{r}</p>'
             html += '</div>'
