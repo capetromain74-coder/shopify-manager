@@ -909,7 +909,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <div class="spinner"></div>
 <div>
 <div style="font-weight:600">Génération en cours...</div>
-<div style="font-size:11px;color:#888" id="loadingStatus">Recherche d'informations sur internet...</div>
+<div style="font-size:11px;color:#888" id="loadingStatus">Recherche des tendances actuelles...</div>
 </div>
 </div>
 
@@ -972,10 +972,10 @@ function generateArticle() {
     
     var statusEl = document.getElementById('loadingStatus');
     var statuses = [
-        'Recherche d'informations sur internet...',
+        'Recherche des tendances actuelles...',
         'Récupération de l\\'image depuis GOAT...',
         'Recherche de vos produits correspondants...',
-        'Redaction du contenu enrichi...',
+        'Génération du contenu SEO...',
         'Optimisation des liens internes...',
         'Finalisation de l\\'article...'
     ];
@@ -1438,145 +1438,6 @@ def api_delete_article(blog_id, article_id):
 
 
 # ══════════════════════════════════════════════════════════════
-# RECHERCHE WEB GRATUITE (DuckDuckGo + Wikipedia)
-# ══════════════════════════════════════════════════════════════
-
-def web_search(query, max_results=8):
-    """Recherche DuckDuckGo HTML (gratuit, pas de clé API)"""
-    try:
-        import urllib.request, urllib.parse
-        url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
-        req = urllib.request.Request(url, headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        })
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        with urllib.request.urlopen(req, context=ctx, timeout=10) as r:
-            html = r.read().decode('utf-8', errors='ignore')
-        
-        results = []
-        # Parser les résultats DuckDuckGo HTML
-        snippets = re.findall(r'class="result__snippet">(.*?)</a>', html, re.DOTALL)
-        titles = re.findall(r'class="result__a"[^>]*>(.*?)</a>', html, re.DOTALL)
-        
-        for i in range(min(len(snippets), len(titles), max_results)):
-            title = re.sub(r'<[^>]+>', '', titles[i]).strip()
-            snippet = re.sub(r'<[^>]+>', '', snippets[i]).strip()
-            if title and snippet:
-                results.append({'title': title, 'snippet': snippet})
-        
-        log.info(f"[WebSearch] '{query}' -> {len(results)} results")
-        return results
-    except Exception as e:
-        log.error(f"[WebSearch] Error: {e}")
-        return []
-
-
-def get_wikipedia_summary(query, lang='fr'):
-    """Récupère un résumé Wikipedia (gratuit, pas de clé)"""
-    try:
-        import urllib.request, urllib.parse
-        url = f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(query)}"
-        req = urllib.request.Request(url, headers={
-            'User-Agent': 'KPShoesBlog/1.0'
-        })
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        with urllib.request.urlopen(req, context=ctx, timeout=8) as r:
-            data = json.loads(r.read().decode('utf-8'))
-        
-        if data.get('extract'):
-            log.info(f"[Wikipedia] Found: {data.get('title', query)}")
-            return {
-                'title': data.get('title', ''),
-                'extract': data.get('extract', ''),
-                'description': data.get('description', '')
-            }
-    except Exception as e:
-        log.error(f"[Wikipedia] Error for '{query}': {e}")
-    
-    # Essayer en anglais si pas trouvé en français
-    if lang == 'fr':
-        return get_wikipedia_summary(query, 'en')
-    return None
-
-
-def research_sneaker(subject):
-    """Fait des recherches web complètes sur un modèle de sneaker"""
-    info = {
-        'history': '',
-        'sizing': '',
-        'style': '',
-        'care': '',
-        'release': '',
-        'facts': [],
-        'wikipedia': '',
-        'colorways': [],
-        'price': '',
-        'year': '',
-        'designer': '',
-        'materials': '',
-    }
-    
-    # 1. Wikipedia
-    wiki = get_wikipedia_summary(subject)
-    if wiki and wiki.get('extract'):
-        info['wikipedia'] = wiki['extract']
-        info['facts'].append(wiki['extract'])
-    
-    # 2. Recherche histoire / infos générales
-    results = web_search(f"{subject} sneaker history origin year designer")
-    for r in results:
-        snippet = r['snippet'].lower()
-        info['facts'].append(r['snippet'])
-        # Extraire l'année
-        years = re.findall(r'\b(19[5-9]\d|20[0-2]\d)\b', r['snippet'])
-        if years and not info['year']:
-            info['year'] = years[0]
-        # Extraire le designer
-        for kw in ['designed by', 'créée par', 'dessinée par', 'conçue par', 'designer']:
-            if kw in snippet:
-                info['designer'] = r['snippet'][:150]
-                break
-    
-    # 3. Recherche sizing
-    sizing_results = web_search(f"{subject} taille sizing guide fit grand petit")
-    for r in sizing_results:
-        info['sizing'] += r['snippet'] + ' '
-    
-    # 4. Recherche style
-    style_results = web_search(f"{subject} outfit comment porter style look")
-    for r in style_results:
-        info['style'] += r['snippet'] + ' '
-    
-    # 5. Recherche entretien
-    care_results = web_search(f"{subject} sneaker nettoyer entretien clean")
-    for r in care_results:
-        info['care'] += r['snippet'] + ' '
-    
-    # 6. Recherche releases / colorways
-    release_results = web_search(f"{subject} 2025 2026 release colorway new")
-    for r in release_results:
-        info['release'] += r['snippet'] + ' '
-    
-    # 7. Recherche prix
-    price_results = web_search(f"{subject} prix retail price EUR")
-    for r in price_results:
-        prices = re.findall(r'(\d{2,3})\s*[€$]|[€$]\s*(\d{2,3})', r['snippet'])
-        if prices and not info['price']:
-            info['price'] = prices[0][0] or prices[0][1]
-            info['price'] = f"{info['price']}€"
-    
-    # Compiler les faits en texte utilisable
-    info['history'] = ' '.join(info['facts'][:5])
-    
-    log.info(f"[Research] Done for '{subject}': year={info['year']}, price={info['price']}, facts={len(info['facts'])}")
-    return info
-
-
-# ══════════════════════════════════════════════════════════════
 # BLOG GENERATOR API
 # ══════════════════════════════════════════════════════════════
 
@@ -1585,7 +1446,7 @@ def get_products_for_linking():
     products = []
     since_id = 0
     
-    # Récupérer jusqu'à 500 produits (2 pages de 250)
+    # Récupérer jusqu'à 250 produits (5 pages de 50)
     for _ in range(2):
         r = shopify_request(f'products.json?limit=250&since_id={since_id}&fields=id,title,handle,variants,images')
         if not r or 'products' not in r or not r['products']:
@@ -1607,6 +1468,8 @@ def get_products_for_linking():
             })
         
         since_id = r['products'][-1]['id']
+        
+        # Si moins de 50 produits, on a tout récupéré
         if len(r['products']) < 250:
             break
     
@@ -1660,7 +1523,7 @@ def find_matching_products(subject, products):
 
 
 def generate_article_content(article_type, subject, keywords, tone, length, products, collections):
-    """Génère le contenu de l'article avec recherche web réelle"""
+    """Génère le contenu de l'article selon le type"""
     
     # Trouver les produits et collections liés
     matching_products = find_matching_products(subject, products)
@@ -1668,75 +1531,114 @@ def generate_article_content(article_type, subject, keywords, tone, length, prod
     
     log.info(f"[Blog] Found {len(matching_products)} matching products for '{subject}'")
     
-    # Liens vers produits
+    # Liens vers produits - VERSION AMÉLIORÉE avec images
     product_links = ""
     if matching_products:
         product_links = "<h3>Découvrez sur KP SHOES</h3>"
         product_links += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:15px;margin:20px 0">'
-        for p in matching_products[:6]:
-            img_html = f'<img src="{p["image"]}" style="width:100%;height:120px;object-fit:contain;background:#f5f5f5;border-radius:8px">' if p.get('image') else '<div style="width:100%;height:120px;background:#f5f5f5;border-radius:8px"></div>'
-            product_links += f'<a href="{p["url"]}" style="text-decoration:none;color:inherit;display:block">{img_html}<div style="font-size:12px;margin-top:8px;color:#333;text-align:center;line-height:1.3">{p["title"][:50]}{"..." if len(p["title"]) > 50 else ""}</div></a>'
+        
+        for p in matching_products[:6]:  # Max 6 produits
+            img_html = ""
+            if p.get('image'):
+                img_html = f'<img src="{p["image"]}" style="width:100%;height:120px;object-fit:contain;background:#f5f5f5;border-radius:8px">'
+            else:
+                img_html = '<div style="width:100%;height:120px;background:#f5f5f5;border-radius:8px"></div>'
+            
+            product_links += f'''<a href="{p['url']}" style="text-decoration:none;color:inherit;display:block">
+                {img_html}
+                <div style="font-size:12px;margin-top:8px;color:#333;text-align:center;line-height:1.3">{p['title'][:50]}{"..." if len(p['title']) > 50 else ""}</div>
+            </a>'''
+        
         product_links += "</div>"
     
+    # Lien collection
     collection_link = ""
     if matching_collection:
         collection_link = f'<p style="margin:20px 0">👉 <strong><a href="{matching_collection["url"]}">Voir toute la collection {matching_collection["title"]}</a></strong></p>'
     
-    # ═══ RECHERCHE WEB ═══
-    log.info(f"[Blog] Launching web research for '{subject}'...")
-    research = research_sneaker(subject)
+    # Construire le bloc HTML des infos web trouvées
+    web_info_html = build_web_info_html(research, subject)
     
-    # Générer selon le type avec les données de recherche
+    # Générer selon le type
     if article_type == "guide_taille":
-        return generate_sizing_guide(subject, product_links, collection_link, tone, research)
+        return generate_sizing_guide(subject, product_links, collection_link, tone, web_info_html, research)
     elif article_type == "release":
-        return generate_release_article(subject, product_links, collection_link, tone, research)
+        return generate_release_article(subject, product_links, collection_link, tone, web_info_html, research)
     elif article_type == "tendance":
-        return generate_trend_article(subject, product_links, collection_link, tone, matching_products, research)
+        return generate_trend_article(subject, product_links, collection_link, tone, matching_products, web_info_html, research)
     elif article_type == "comparatif":
-        return generate_comparison_article(subject, product_links, collection_link, tone, research)
+        return generate_comparison_article(subject, product_links, collection_link, tone, web_info_html, research)
     elif article_type == "histoire":
-        return generate_history_article(subject, product_links, collection_link, tone, research)
+        return generate_history_article(subject, product_links, collection_link, tone, web_info_html, research)
     elif article_type == "entretien":
-        return generate_care_article(subject, product_links, collection_link, tone, research)
+        return generate_care_article(subject, product_links, collection_link, tone, web_info_html, research)
     elif article_type == "style":
-        return generate_style_article(subject, product_links, collection_link, tone, research)
+        return generate_style_article(subject, product_links, collection_link, tone, web_info_html, research)
     else:
-        return generate_custom_article(subject, keywords, product_links, collection_link, tone, research)
+        return generate_custom_article(subject, keywords, product_links, collection_link, tone, web_info_html, research)
 
 
-def generate_sizing_guide(subject, product_links, collection_link, tone, research=None):
-    """Génère un guide de tailles avec infos web réelles"""
+
+
+def build_web_info_html(research, subject):
+    """Construit le HTML des informations trouvées sur le web"""
+    if not research or not research.get('found'):
+        return ""
+    
+    html = ""
+    
+    # Wikipedia
+    wiki = research.get('wikipedia')
+    if wiki and wiki.get('extract'):
+        extract = wiki['extract']
+        # Limiter à 500 chars
+        if len(extract) > 500:
+            extract = extract[:500].rsplit(' ', 1)[0] + '...'
+        html += f'<div style="background:#f0f4ff;padding:20px;border-radius:10px;margin:20px 0;border-left:4px solid #667eea">'
+        html += f'<p style="margin:0">{extract}</p>'
+        html += f'</div>'
+    
+    # Résultats de recherche
+    results = research.get('search_results', [])
+    if results:
+        # Nettoyer et dédupliquer
+        clean_results = []
+        seen = set()
+        for r in results:
+            # Enlever les doublons et les résultats trop courts
+            r_clean = r.strip()
+            r_lower = r_clean.lower()[:50]
+            if r_lower not in seen and len(r_clean) > 40:
+                seen.add(r_lower)
+                # Limiter la longueur
+                if len(r_clean) > 300:
+                    r_clean = r_clean[:300].rsplit(' ', 1)[0] + '...'
+                clean_results.append(r_clean)
+        
+        if clean_results:
+            html += '<div style="margin:20px 0">'
+            for r in clean_results[:5]:
+                html += f'<p>{r}</p>'
+            html += '</div>'
+    
+    return html
+
+
+def generate_sizing_guide(subject, product_links, collection_link, tone, web_info_html='', research=None):
+    """Génère un guide de tailles"""
     title = f"Comment taille la {subject} ? Guide complet des tailles 2026"
+    
     meta_title = f"Comment taille la {subject} ? Guide tailles 2026 | KP SHOES"[:70]
     meta_description = f"Découvrez comment taille la {subject}. Tableau des tailles EU/US/UK, conseils pour pieds larges et comparaison avec d'autres modèles. Guide complet."[:160]
-    summary = f"Vous vous demandez comment taille la {subject} ? Découvrez notre guide complet avec tableau des tailles, conseils pour bien choisir et comparaisons."
-    
-    # Infos recherchées sur le web
-    sizing_info = ""
-    if research and research.get('sizing'):
-        raw = research['sizing'][:800]
-        # Nettoyer et structurer
-        sentences = [s.strip() for s in re.split(r'[.!]', raw) if len(s.strip()) > 20]
-        if sentences:
-            sizing_info = "<h2>Ce que disent les acheteurs</h2><p>Voici les retours de la communauté sneakers sur le sizing de la {subject} :</p><ul>".format(subject=subject)
-            for s in sentences[:5]:
-                sizing_info += f"<li>{s.strip()}.</li>"
-            sizing_info += "</ul>"
-    
-    wiki_info = ""
-    if research and research.get('wikipedia'):
-        wiki_info = f"<p>{research['wikipedia'][:400]}</p>"
+    summary = f"Vous vous demandez comment taille la {subject} ? Découvrez notre guide complet avec tableau des tailles et conseils."
     
     body = f"""
 <p>Vous vous demandez <strong>comment taille la {subject}</strong> ? Ce guide complet vous aide à choisir la bonne pointure. Chez <strong>KP SHOES</strong>, nous garantissons l'authenticité de chaque paire.</p>
 
-{wiki_info}
+{web_info_html}
 
 <h2>La {subject} taille-t-elle grand ou petit ?</h2>
-<p>D'après les retours de la communauté sneakers et nos propres tests, la {subject} est réputée pour <strong>tailler normalement</strong>. Si vous êtes entre deux tailles, nous vous conseillons de prendre la taille supérieure pour plus de confort, surtout si vous avez les pieds larges.</p>
-
-{sizing_info}
+<p>La {subject} est réputée pour <strong>tailler normalement</strong>. Si vous êtes entre deux tailles, nous vous conseillons de prendre la taille supérieure pour plus de confort, surtout si vous avez les pieds larges.</p>
 
 <h2>Tableau des tailles {subject}</h2>
 <table style="width:100%;border-collapse:collapse;margin:20px 0">
@@ -1757,34 +1659,50 @@ def generate_sizing_guide(subject, product_links, collection_link, tone, researc
 <li><strong>Pieds larges</strong> : Prenez une demi-taille au-dessus</li>
 <li><strong>Pieds fins</strong> : Restez sur votre taille habituelle</li>
 <li><strong>Entre deux tailles</strong> : Optez pour la taille supérieure</li>
-<li><strong>Pour le style</strong> : Certains preferent une taille au-dessus pour un look plus loose</li>
+<li><strong>Pour le style</strong> : Certains préfèrent une taille au-dessus pour un look plus loose</li>
+</ul>
+
+<h2>Comparaison avec d'autres modèles</h2>
+<p>Si vous connaissez votre taille dans d'autres modèles, voici quelques repères :</p>
+<ul>
+<li>Même taille que les Nike Air Force 1</li>
+<li>Même taille que les Nike Dunk Low</li>
+<li>Une demi-taille au-dessus des Adidas (Samba, Campus)</li>
+<li>Même taille que les New Balance 550</li>
 </ul>
 
 {collection_link}
 
 {product_links}
 
-<h2>FAQ</h2>
+<h2>FAQ - Questions fréquentes</h2>
 <h3>La {subject} taille-t-elle grand ?</h3>
-<p>Selon les retours communautaires, la {subject} taille globalement normalement. Prenez votre taille habituelle.</p>
+<p>Non, la {subject} taille normalement. Prenez votre taille habituelle Nike.</p>
+
+<h3>Dois-je prendre une taille au-dessus ?</h3>
+<p>Uniquement si vous avez les pieds larges ou si vous êtes entre deux tailles.</p>
 
 <h3>Comment mesurer son pied ?</h3>
-<p>Mesurez votre pied le soir (quand il est legerement gonfle) du talon au bout du gros orteil, et reportez-vous au tableau ci-dessus.</p>
+<p>Mesurez votre pied le soir (quand il est légèrement gonflé) du talon au bout du gros orteil, et reportez-vous au tableau ci-dessus.</p>
 
-<p><strong>Chez KP SHOES, toutes nos sneakers sont 100% authentiques et verifiees par nos experts.</strong> Livraison rapide et paiement securise.</p>
+<p><strong>Chez KP SHOES, toutes nos sneakers sont 100% authentiques et vérifiées par nos experts.</strong> Livraison rapide et paiement sécurisé.</p>
 """
     
     return {
-        'title': title, 'body_html': body,
+        'title': title,
+        'body_html': body,
         'tags': f'guide taille, {subject}, sizing, pointure',
         'handle': f'guide-taille-{subject.lower().replace(" ", "-")}',
-        'meta_title': meta_title, 'meta_description': meta_description,
-        'summary_html': summary, 'needs_image': True, 'image_search_term': subject
+        'meta_title': meta_title,
+        'meta_description': meta_description,
+        'summary_html': summary,
+        'needs_image': True,
+        'image_search_term': subject
     }
 
 
-def generate_release_article(subject, product_links, collection_link, tone, research=None):
-    """Génère un article sur les sorties avec recherche web"""
+def generate_release_article(subject, product_links, collection_link, tone, web_info_html='', research=None):
+    """Génère un article sur les sorties"""
     import datetime
     month = datetime.datetime.now().strftime('%B %Y')
     
@@ -1793,25 +1711,8 @@ def generate_release_article(subject, product_links, collection_link, tone, rese
     meta_description = f"Découvrez toutes les sorties {subject} prévues en 2026. Calendrier des releases, dates de sortie et conseils pour cop les paires limitées."[:160]
     summary = f"Toutes les sorties {subject} à ne pas manquer. Calendrier des releases, dates clés et conseils pour réussir vos achats."
     
-    # Infos web sur les releases
-    release_web_info = ""
-    if research and research.get('release'):
-        raw = research['release'][:600]
-        sentences = [s.strip() for s in re.split(r'[.!]', raw) if len(s.strip()) > 20]
-        if sentences:
-            release_web_info = "<p>Voici ce que l'on sait des dernieres sorties et releases :</p><ul>"
-            for s in sentences[:5]:
-                release_web_info += f"<li>{s.strip()}.</li>"
-            release_web_info += "</ul>"
-    
-    wiki_info = ""
-    if research and research.get('wikipedia'):
-        wiki_info = f"<p>{research['wikipedia'][:300]}</p>"
-    
     body = f"""
-<p>Decouvrez toutes les <strong>sorties {subject}</strong> prevues pour {month}. Restez informe des dernieres releases et ne manquez aucune paire sur <strong>KP SHOES</strong>.</p>
-
-{wiki_info}
+<p>Découvrez toutes les <strong>sorties {subject}</strong> prévues pour {month}. Restez informé des dernières releases et ne manquez aucune paire sur <strong>KP SHOES</strong>.</p>
 
 <h2>Les releases {subject} à ne pas manquer</h2>
 <p>L'année 2026 s'annonce riche en sorties pour les fans de {subject}. Voici les dates clés à retenir.</p>
@@ -1827,9 +1728,7 @@ def generate_release_article(subject, product_links, collection_link, tone, rese
 {collection_link}
 
 <h2>Les coloris les plus attendus</h2>
-{release_web_info}
-
-<p>Parmi les sorties les plus anticipées, certains coloris font deja parler d'eux dans la communaute sneakers. Les collaborations et les editions limitees restent les plus recherchees.</p>
+<p>Parmi les sorties les plus anticipées, certains coloris font déjà parler d'eux dans la communauté sneakers. Les collaborations et les éditions limitées restent les plus recherchées.</p>
 
 {product_links}
 
@@ -1852,7 +1751,7 @@ def generate_release_article(subject, product_links, collection_link, tone, rese
     }
 
 
-def generate_trend_article(subject, product_links, collection_link, tone, matching_products, research=None):
+def generate_trend_article(subject, product_links, collection_link, tone, matching_products, web_info_html='', research=None):
     """Génère un article sur les tendances"""
     title = "Sneakers tendance 2026 : Les modèles les plus hype du moment"
     meta_title = "Sneakers tendance 2026 : Les modèles incontournables | KP SHOES"
@@ -1865,25 +1764,10 @@ def generate_trend_article(subject, product_links, collection_link, tone, matchi
         meta_description = f"Découvrez pourquoi la {subject} est LA sneaker tendance de 2026. Style, confort et hype : tout ce qu'il faut savoir."[:160]
         summary = f"La {subject} s'impose comme l'une des sneakers les plus tendance de 2026. Découvrez pourquoi elle fait l'unanimité."
     
-    # Infos web tendances
-    trend_web_info = ""
-    if research:
-        all_info = []
-        for key in ['wikipedia', 'history']:
-            if research.get(key):
-                all_info.append(research[key][:300])
-        if research.get('facts'):
-            for f in research['facts'][:3]:
-                all_info.append(f[:200])
-        if all_info:
-            trend_web_info = "<h2>Ce qu'il faut savoir</h2>"
-            for info in all_info[:3]:
-                trend_web_info += f"<p>{info}</p>"
-    
     body = f"""
-<p>Quelles sont les <strong>sneakers les plus tendance en 2026</strong> ? Entre retours de classiques et nouvelles silhouettes, le marche de la sneaker continue d'evoluer.</p>
+<p>Quelles sont les <strong>sneakers les plus tendance en 2026</strong> ? Le marché de la sneaker continue d'évoluer.</p>
 
-{trend_web_info}
+{web_info_html}
 
 <h2>Les tendances sneakers 2026</h2>
 
@@ -1924,7 +1808,7 @@ def generate_trend_article(subject, product_links, collection_link, tone, matchi
     }
 
 
-def generate_comparison_article(subject, product_links, collection_link, tone, research=None):
+def generate_comparison_article(subject, product_links, collection_link, tone, web_info_html='', research=None):
     """Génère un article comparatif"""
     # Parser le sujet pour extraire les 2 modèles
     models = subject.split(' vs ') if ' vs ' in subject else [subject, 'Nike Dunk Low']
@@ -1996,71 +1880,37 @@ def generate_comparison_article(subject, product_links, collection_link, tone, r
     }
 
 
-def generate_history_article(subject, product_links, collection_link, tone, research=None):
-    """Génère un article sur l'histoire d'un modèle avec recherche web"""
+def generate_history_article(subject, product_links, collection_link, tone, web_info_html='', research=None):
+    """Génère un article sur l'histoire d'un modèle avec infos web"""
     title = f"L'histoire de la {subject} : De sa création à aujourd'hui"
     meta_title = f"Histoire de la {subject} : Origines et évolution | KP SHOES"[:70]
     meta_description = f"Découvrez l'histoire fascinante de la {subject}. De ses origines à son statut d'icône streetwear, retour sur un modèle légendaire."[:160]
     summary = f"La {subject} est bien plus qu'une sneaker. Découvrez son histoire fascinante, de sa création à son statut d'icône culturelle."
     
-    # Construire le contenu avec les recherches web
-    wiki_section = ""
-    if research and research.get('wikipedia'):
-        wiki_section = f"<h2>Presentation</h2><p>{research['wikipedia']}</p>"
-    
-    history_facts = ""
-    if research and research.get('facts'):
-        facts = research['facts']
-        if facts:
-            history_facts = "<h2>Les faits marquants</h2>"
-            for fact in facts[:5]:
-                if len(fact) > 30:
-                    history_facts += f"<p>{fact[:400]}</p>"
-    
-    year_info = ""
-    if research and research.get('year'):
-        year_info = f" Creee en {research['year']},"
-    
-    designer_info = ""
-    if research and research.get('designer'):
-        designer_info = f"<p><em>{research['designer'][:200]}</em></p>"
-    
     body = f"""
-<p>La <strong>{subject}</strong> est bien plus qu'une simple paire de sneakers.{year_info} c'est une icone qui a marque l'histoire de la culture streetwear et du sport.</p>
+<p>Découvrez l'histoire complète de la <strong>{subject}</strong>.</p>
 
-{wiki_section}
-
-{designer_info}
-
-<h2>Les origines</h2>
-{history_facts if history_facts else f"<p>La {subject} a ete concue pour repondre aux besoins des athletes professionnels avant de devenir un symbole de la culture urbaine.</p>"}
-
-<h2>L'evolution a travers les decennies</h2>
-<h3>La consecration streetwear</h3>
-<p>C'est dans les annees 90-2000 que la {subject} a veritablement conquis les rues. Adoptee par les rappeurs, les skateurs et les amateurs de mode, elle est devenue un incontournable du style urbain.</p>
-
-<h3>Aujourd'hui</h3>
-<p>En 2026, la {subject} continue de fasciner. Les reeditions et les collaborations avec des artistes et designers maintiennent l'engouement.</p>
+{web_info_html}
 
 {collection_link}
 
-<h2>Les coloris emblématiques</h2>
-<ul>
-<li>Les versions OG (Original) restent les plus recherchées</li>
-<li>Les collaborations limitées atteignent des prix records</li>
-<li>Les coloris rétro séduisent les collectionneurs</li>
-</ul>
+{product_links}
+
+<p><strong>Retrouvez la {subject} sur KP SHOES. Chaque paire est 100% authentique et vérifiée par nos experts.</strong></p>
+"""
+    
+    # Si pas d'info web, ajouter un message honnête
+    if not web_info_html:
+        body = f"""
+<p>Nous n'avons pas trouvé suffisamment d'informations vérifiées sur la <strong>{subject}</strong> pour rédiger un article d'histoire complet et fiable.</p>
+
+<p>Chez <strong>KP SHOES</strong>, nous préférons ne pas publier d'informations incorrectes. Nous vous invitons à vérifier ce modèle directement sur le site officiel de la marque.</p>
+
+{collection_link}
 
 {product_links}
 
-<h2>Pourquoi la {subject} est-elle si populaire ?</h2>
-<ul>
-<li><strong>Un design intemporel</strong> : Ses lignes n'ont pas pris une ride</li>
-<li><strong>Une qualité reconnue</strong> : Des matériaux premium pour une durabilité optimale</li>
-<li><strong>Un héritage culturel</strong> : Portée par des légendes du sport et de la musique</li>
-</ul>
-
-<p><strong>Retrouvez la {subject} sur KP SHOES. Chaque paire est 100% authentique et vérifiée par nos experts.</strong></p>
+<p><strong>Retrouvez vos sneakers sur KP SHOES - 100% authentiques et vérifiées par nos experts.</strong></p>
 """
     
     return {
@@ -2076,26 +1926,17 @@ def generate_history_article(subject, product_links, collection_link, tone, rese
     }
 
 
-def generate_care_article(subject, product_links, collection_link, tone, research=None):
+def generate_care_article(subject, product_links, collection_link, tone, web_info_html='', research=None):
     """Génère un article sur l'entretien"""
     title = f"Comment nettoyer et entretenir ses {subject} ? Guide complet"
     meta_title = f"Comment nettoyer ses {subject} ? Guide entretien | KP SHOES"[:70]
     meta_description = f"Découvrez comment nettoyer et entretenir vos {subject}. Conseils d'experts, erreurs à éviter et astuces pour prolonger leur durée de vie."[:160]
     summary = f"Vos {subject} méritent le meilleur entretien. Découvrez nos conseils d'experts pour les garder impeccables."
     
-    # Infos web entretien
-    care_web_info = ""
-    if research and research.get('care'):
-        raw = research['care'][:600]
-        sentences = [s.strip() for s in re.split(r'[.!]', raw) if len(s.strip()) > 20]
-        if sentences:
-            care_web_info = "<h2>Conseils de la communaute</h2><ul>"
-            for s in sentences[:4]:
-                care_web_info += f"<li>{s.strip()}.</li>"
-            care_web_info += "</ul>"
-    
     body = f"""
-<p>Vos <strong>{subject}</strong> meritent un entretien regulier pour rester impeccables. Decouvrez nos conseils d'experts pour nettoyer, proteger et prolonger la vie de vos sneakers.</p>
+<p>Vos <strong>{subject}</strong> méritent un entretien régulier pour rester impeccables.</p>
+
+{web_info_html}
 
 <h2>Le matériel nécessaire</h2>
 <ul>
@@ -2119,9 +1960,7 @@ def generate_care_article(subject, product_links, collection_link, tone, researc
 <h3>4. Séchage</h3>
 <p>Laissez sécher à l'air libre, loin des sources de chaleur directe. Bourrez l'intérieur avec du papier journal pour absorber l'humidité et maintenir la forme.</p>
 
-{care_web_info}
-
-<h2>Conseils selon les materiaux</h2>
+<h2>Conseils selon les matériaux</h2>
 <h3>Cuir</h3>
 <p>Utilisez un nettoyant spécial cuir et appliquez une crème nourrissante après le nettoyage.</p>
 
@@ -2166,28 +2005,17 @@ def generate_care_article(subject, product_links, collection_link, tone, researc
     }
 
 
-def generate_style_article(subject, product_links, collection_link, tone, research=None):
+def generate_style_article(subject, product_links, collection_link, tone, web_info_html='', research=None):
     """Génère un article sur le style"""
     title = f"Comment porter la {subject} ? Idées de looks et outfits 2026"
     meta_title = f"Comment porter la {subject} ? Idées looks 2026 | KP SHOES"[:70]
     meta_description = f"Découvrez comment porter la {subject}. Looks casual, streetwear et smart casual : nos idées d'outfits pour tous les styles."[:160]
     summary = f"La {subject} est ultra polyvalente. Découvrez nos idées de looks pour la porter avec style au quotidien."
     
-    # Infos web style
-    style_web_info = ""
-    if research and research.get('style'):
-        raw = research['style'][:600]
-        sentences = [s.strip() for s in re.split(r'[.!]', raw) if len(s.strip()) > 20]
-        if sentences:
-            style_web_info = "<h2>Inspirations trouvees sur le web</h2><ul>"
-            for s in sentences[:4]:
-                style_web_info += f"<li>{s.strip()}.</li>"
-            style_web_info += "</ul>"
-    
     body = f"""
-<p>La <strong>{subject}</strong> est une sneaker polyvalente qui s'adapte a de nombreux styles. Decouvrez nos conseils pour creer des looks tendance.</p>
+<p>La <strong>{subject}</strong> est une sneaker polyvalente. Découvrez nos conseils pour créer des looks tendance.</p>
 
-{style_web_info}
+{web_info_html}
 
 <h2>Look casual quotidien</h2>
 <p>Pour un style décontracté au quotidien :</p>
@@ -2249,51 +2077,34 @@ def generate_style_article(subject, product_links, collection_link, tone, resear
     }
 
 
-def generate_custom_article(subject, keywords, product_links, collection_link, tone, research=None):
+def generate_custom_article(subject, keywords, product_links, collection_link, tone, web_info_html='', research=None):
     """Génère un article personnalisé"""
     title = f"{subject} : Tout ce que vous devez savoir en 2026"
     meta_title = f"{subject} : Guide complet 2026 | KP SHOES"[:70]
     meta_description = f"Découvrez tout ce qu'il faut savoir sur {subject}. Guide complet, conseils d'achat et sélection des meilleures paires sur KP SHOES."[:160]
     summary = f"Tout ce qu'il faut savoir sur {subject}. Guide complet et conseils d'achat par les experts KP SHOES."
     
-    # Infos web pour article personnalise
-    web_content = ""
-    if research:
-        if research.get('wikipedia'):
-            web_content += f"<h2>Presentation</h2><p>{research['wikipedia']}</p>"
-        
-        if research.get('facts'):
-            web_content += "<h2>Ce qu'il faut savoir</h2>"
-            for fact in research['facts'][:5]:
-                if len(fact) > 30:
-                    web_content += f"<p>{fact[:400]}</p>"
-        
-        if research.get('year'):
-            web_content += f"<p><strong>Annee de creation :</strong> {research['year']}</p>"
-        if research.get('price'):
-            web_content += f"<p><strong>Prix retail :</strong> environ {research['price']}</p>"
-    
     body = f"""
-<p>Decouvrez tout ce qu'il faut savoir sur <strong>{subject}</strong>. Chez <strong>KP SHOES</strong>, nous vous proposons les meilleures paires 100% authentiques.</p>
+<p>Découvrez tout ce qu'il faut savoir sur <strong>{subject}</strong>. Chez <strong>KP SHOES</strong>, nous vous proposons les meilleures paires 100% authentiques.</p>
 
-{web_content if web_content else f"<h2>Pourquoi choisir {subject} ?</h2><p>{subject} represente le meilleur de la culture sneaker actuelle.</p>"}
+{web_info_html}
 
-<h2>Ou acheter {subject} authentique ?</h2>
-<p>Pour etre sur d'obtenir une paire authentique, privilegiez les revendeurs de confiance comme <strong>KP SHOES</strong>. Nous verifions chaque paire avant expedition.</p>
+<h2>Où acheter {subject} authentique ?</h2>
+<p>Pour être sûr d'obtenir une paire authentique, privilégiez les revendeurs de confiance comme <strong>KP SHOES</strong>. Nous vérifions chaque paire avant expédition.</p>
 
 {collection_link}
 
 {product_links}
 
-<h2>Notre engagement qualite</h2>
+<h2>Notre engagement qualité</h2>
 <ul>
-<li>Authenticite garantie a 100%</li>
-<li>Verification par nos experts</li>
-<li>Livraison rapide et securisee</li>
-<li>Service client reactif</li>
+<li>✅ Authenticité garantie à 100%</li>
+<li>✅ Vérification par nos experts</li>
+<li>✅ Livraison rapide et sécurisée</li>
+<li>✅ Service client réactif</li>
 </ul>
 
-<p><strong>Faites confiance a KP SHOES pour vos sneakers authentiques.</strong></p>
+<p><strong>Faites confiance à KP SHOES pour vos sneakers authentiques.</strong></p>
 """
     
     return {
@@ -2309,6 +2120,224 @@ def generate_custom_article(subject, keywords, product_links, collection_link, t
     }
 
 
+
+
+# ══════════════════════════════════════════════════════════════
+# RECHERCHE WEB POUR LE BLOG (Wikipedia + DuckDuckGo + Google)
+# ══════════════════════════════════════════════════════════════
+
+def fetch_url(url, timeout=10):
+    """Fetch une URL avec gestion d'erreurs"""
+    try:
+        import urllib.request
+        req = urllib.request.Request(url, headers={
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+        })
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with urllib.request.urlopen(req, context=ctx, timeout=timeout) as r:
+            return r.read().decode('utf-8', errors='ignore')
+    except Exception as e:
+        log.error(f"[Fetch] Error fetching {url[:80]}: {e}")
+        return None
+
+
+def search_wikipedia(query):
+    """Recherche Wikipedia FR puis EN"""
+    for lang in ['fr', 'en']:
+        try:
+            import urllib.parse
+            # API opensearch pour trouver le bon titre
+            search_url = f"https://{lang}.wikipedia.org/w/api.php?action=opensearch&search={urllib.parse.quote(query)}&limit=3&format=json"
+            html = fetch_url(search_url, timeout=8)
+            if html:
+                data = json.loads(html)
+                if data and len(data) >= 4 and data[1]:
+                    # Prendre le premier résultat
+                    title = data[1][0]
+                    # Récupérer le résumé
+                    summary_url = f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(title)}"
+                    summary_html = fetch_url(summary_url, timeout=8)
+                    if summary_html:
+                        summary_data = json.loads(summary_html)
+                        if summary_data.get('extract'):
+                            log.info(f"[Wikipedia] Found '{title}' ({lang})")
+                            return {
+                                'title': summary_data.get('title', ''),
+                                'extract': summary_data['extract'],
+                                'lang': lang
+                            }
+        except Exception as e:
+            log.error(f"[Wikipedia] Error ({lang}): {e}")
+    return None
+
+
+def search_duckduckgo(query, max_results=6):
+    """Recherche DuckDuckGo Lite (plus fiable que HTML)"""
+    results = []
+    try:
+        import urllib.parse
+        url = f"https://lite.duckduckgo.com/lite/?q={urllib.parse.quote(query)}"
+        html = fetch_url(url, timeout=10)
+        if not html:
+            return results
+        
+        # Parser les résultats de DuckDuckGo Lite
+        # Les snippets sont dans des <td> après les liens
+        snippets = re.findall(r'class="result-snippet">(.*?)</td>', html, re.DOTALL)
+        links = re.findall(r'class="result-link"[^>]*>(.*?)</a>', html, re.DOTALL)
+        
+        if not snippets:
+            # Fallback : essayer le format standard
+            snippets = re.findall(r'<td[^>]*class="[^"]*snippet[^"]*"[^>]*>(.*?)</td>', html, re.DOTALL)
+        if not links:
+            links = re.findall(r'<a[^>]*class="[^"]*result-link[^"]*"[^>]*>(.*?)</a>', html, re.DOTALL)
+        
+        # Aussi chercher dans le format alternatif
+        if not snippets:
+            # Format DuckDuckGo Lite alternatif
+            blocks = re.findall(r'<tr>.*?<td.*?>(.*?)</td>.*?</tr>', html, re.DOTALL)
+            for block in blocks:
+                clean = re.sub(r'<[^>]+>', '', block).strip()
+                if len(clean) > 50 and 'duckduckgo' not in clean.lower():
+                    snippets.append(clean)
+        
+        for i in range(min(len(snippets), max_results)):
+            text = re.sub(r'<[^>]+>', '', snippets[i]).strip()
+            if len(text) > 30:
+                results.append(text)
+        
+        log.info(f"[DDG] '{query}' -> {len(results)} results")
+    except Exception as e:
+        log.error(f"[DDG] Error: {e}")
+    return results
+
+
+def search_google_scrape(query, max_results=5):
+    """Recherche Google (fallback, scrape basique)"""
+    results = []
+    try:
+        import urllib.parse
+        url = f"https://www.google.com/search?q={urllib.parse.quote(query)}&hl=fr&num=5"
+        html = fetch_url(url, timeout=10)
+        if not html:
+            return results
+        
+        # Extraire les snippets Google
+        # Les descriptions sont souvent dans des <span> après les liens
+        spans = re.findall(r'<span[^>]*>(.*?)</span>', html, re.DOTALL)
+        for span in spans:
+            text = re.sub(r'<[^>]+>', '', span).strip()
+            if len(text) > 80 and len(text) < 500 and 'google' not in text.lower() and 'cookie' not in text.lower():
+                results.append(text)
+                if len(results) >= max_results:
+                    break
+        
+        log.info(f"[Google] '{query}' -> {len(results)} results")
+    except Exception as e:
+        log.error(f"[Google] Error: {e}")
+    return results
+
+
+def do_web_research(subject, article_type):
+    """Fait une recherche web complète et retourne les infos trouvées"""
+    info = {
+        'wikipedia': None,
+        'search_results': [],
+        'found': False
+    }
+    
+    # 1. Wikipedia
+    wiki = search_wikipedia(subject)
+    if wiki:
+        info['wikipedia'] = wiki
+        info['found'] = True
+    
+    # 2. Recherches ciblées selon le type d'article
+    queries = []
+    if article_type == 'histoire':
+        queries = [
+            f"{subject} sneaker history origin",
+            f"{subject} shoe creation designer year",
+            f"{subject} histoire origine creation"
+        ]
+    elif article_type == 'guide_taille':
+        queries = [
+            f"{subject} sizing fit true to size",
+            f"{subject} taille guide sizing review",
+            f"{subject} runs big small half size"
+        ]
+    elif article_type == 'release':
+        queries = [
+            f"{subject} 2025 2026 release date colorway",
+            f"{subject} new release drop date",
+            f"{subject} sortie date prix retail"
+        ]
+    elif article_type == 'entretien':
+        queries = [
+            f"{subject} how to clean care guide",
+            f"{subject} nettoyer entretenir nettoyage",
+            f"{subject} materials upper sole"
+        ]
+    elif article_type == 'style':
+        queries = [
+            f"{subject} outfit ideas how to style",
+            f"{subject} comment porter look tenue",
+            f"{subject} styling outfit inspiration"
+        ]
+    elif article_type == 'comparatif':
+        queries = [
+            f"{subject} vs comparison review",
+            f"{subject} comparatif avis test"
+        ]
+    elif article_type == 'tendance':
+        queries = [
+            f"{subject} trend 2025 2026 popular",
+            f"{subject} tendance hype popularity"
+        ]
+    else:
+        queries = [
+            f"{subject} sneaker review",
+            f"{subject} avis test"
+        ]
+    
+    # Exécuter les recherches (DDG d'abord, Google en fallback)
+    all_results = []
+    for q in queries[:3]:  # Max 3 queries pour la vitesse
+        results = search_duckduckgo(q)
+        if not results:
+            results = search_google_scrape(q)
+        all_results.extend(results)
+    
+    if all_results:
+        info['search_results'] = all_results[:10]
+        info['found'] = True
+    
+    log.info(f"[Research] subject='{subject}', type='{article_type}', wiki={'yes' if info['wikipedia'] else 'no'}, results={len(info['search_results'])}")
+    return info
+
+
+@app.route('/api/blog/research', methods=['POST'])
+def api_blog_research():
+    """Endpoint de recherche web pour le blog generator"""
+    data = request.json
+    subject = data.get('subject', '').strip()
+    article_type = data.get('type', 'custom')
+    
+    if not subject:
+        return jsonify({'error': 'Sujet manquant'}), 400
+    
+    try:
+        info = do_web_research(subject, article_type)
+        return jsonify(info)
+    except Exception as e:
+        log.error(f"[Research] Error: {e}")
+        return jsonify({'wikipedia': None, 'search_results': [], 'found': False})
+
+
 @app.route('/api/blog/generate', methods=['POST'])
 def api_generate_blog():
     """Génère un article de blog SEO"""
@@ -2321,14 +2350,19 @@ def api_generate_blog():
     length = data.get('length', 'medium')
     
     try:
+        # Recherche web sur le sujet
+        log.info(f"[Blog] Starting web research for '{subject}' ({article_type})")
+        research = do_web_research(subject, article_type)
+        log.info(f"[Blog] Research done: found={research.get('found')}")
+        
         # Récupérer les produits et collections pour le maillage interne
         products = get_products_for_linking()
         collections = get_collections()
         
-        # Générer le contenu
+        # Générer le contenu avec les données de recherche
         article = generate_article_content(
             article_type, subject, keywords, tone, length,
-            products, collections
+            products, collections, research
         )
         
         # Récupérer une image depuis GOAT si nécessaire
