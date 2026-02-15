@@ -2123,7 +2123,7 @@ def generate_custom_article(subject, keywords, product_links, collection_link, t
 
 
 # ══════════════════════════════════════════════════════════════
-# RECHERCHE WEB POUR LE BLOG (SearXNG + DuckDuckGo API + Wikipedia)
+# RECHERCHE WEB POUR LE BLOG (scraping direct des sites sneakers)
 # ══════════════════════════════════════════════════════════════
 
 def fetch_url(url, timeout=10):
@@ -2132,7 +2132,7 @@ def fetch_url(url, timeout=10):
         import urllib.request
         req = urllib.request.Request(url, headers={
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/html, */*',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
         })
         ctx = ssl.create_default_context()
@@ -2143,6 +2143,41 @@ def fetch_url(url, timeout=10):
     except Exception as e:
         log.error(f"[Fetch] {url[:60]}: {e}")
         return None
+
+
+def extract_text_from_html(html, min_length=50, max_paragraphs=15):
+    """Extrait les paragraphes de texte utile d'une page HTML"""
+    if not html:
+        return []
+    
+    paragraphs = []
+    
+    # Extraire les <p>
+    p_tags = re.findall(r'<p[^>]*>(.*?)</p>', html, re.DOTALL)
+    for p in p_tags:
+        text = re.sub(r'<[^>]+>', '', p).strip()
+        text = re.sub(r'\s+', ' ', text)
+        if len(text) >= min_length and len(text) < 2000:
+            # Filtrer le contenu inutile
+            lower = text.lower()
+            skip = False
+            for junk in ['cookie', 'privacy policy', 'subscribe', 'newsletter', 'sign up', 'log in', 
+                         'accept all', 'javascript', 'copyright', 'terms of service', 'politique de confidentialite']:
+                if junk in lower:
+                    skip = True
+                    break
+            if not skip:
+                paragraphs.append(text)
+    
+    # Aussi extraire les <meta description>
+    meta = re.findall(r'<meta[^>]*name=["\']description["\'][^>]*content=["\'](.*?)["\']', html, re.DOTALL)
+    if not meta:
+        meta = re.findall(r'<meta[^>]*content=["\'](.*?)["\'][^>]*name=["\']description["\']', html, re.DOTALL)
+    for m in meta:
+        if len(m) > 40:
+            paragraphs.insert(0, m.strip())
+    
+    return paragraphs[:max_paragraphs]
 
 
 def search_wikipedia(query):
@@ -2172,172 +2207,127 @@ def search_wikipedia(query):
     return None
 
 
-def search_searxng(query, max_results=8):
-    """Recherche via instances SearXNG publiques (API JSON, pas de blocage serveur)"""
+def search_sneaker_sites(subject):
+    """Scrape directement les sites sneakers (marche depuis Render)"""
     import urllib.parse
+    all_results = []
+    slug = subject.lower().replace(' ', '-')
+    query_encoded = urllib.parse.quote(subject)
     
-    # Liste d'instances SearXNG publiques avec API JSON activée
-    instances = [
-        'https://search.bus-hit.me',
-        'https://search.sapti.me',
-        'https://searxng.site',
-        'https://search.ononoki.org',
-        'https://searx.tiekoetter.com',
-        'https://search.hbubli.cc',
+    # Liste de sites à scraper avec leurs URLs de recherche/article
+    sites = [
+        # Nike officiel - pages produit et news
+        f"https://www.nike.com/a/{slug}-release-info",
+        f"https://www.nike.com/a/nike-{slug}-release-info",
+        # SneakerNews
+        f"https://sneakernews.com/?s={query_encoded}",
+        # Hypebeast
+        f"https://hypebeast.com/search?s={query_encoded}",
+        # Sneaker Freaker
+        f"https://www.sneakerfreaker.com/search?q={query_encoded}",
     ]
     
-    for instance in instances:
+    for url in sites:
         try:
-            url = f"{instance}/search?q={urllib.parse.quote(query)}&format=json&language=fr"
-            html = fetch_url(url, timeout=8)
-            if not html:
-                continue
-            
-            data = json.loads(html)
-            results = []
-            
-            for r in data.get('results', [])[:max_results]:
-                text = r.get('content', '') or r.get('title', '')
-                if text and len(text) > 30:
-                    # Nettoyer le HTML
-                    text = re.sub(r'<[^>]+>', '', text).strip()
-                    results.append(text)
-            
-            if results:
-                log.info(f"[SearXNG] '{query}' via {instance} -> {len(results)} results")
-                return results
+            html = fetch_url(url, timeout=10)
+            if html and len(html) > 1000:
+                paragraphs = extract_text_from_html(html)
+                if paragraphs:
+                    log.info(f"[Scrape] {url[:50]} -> {len(paragraphs)} paragraphs")
+                    all_results.extend(paragraphs)
         except Exception as e:
-            log.error(f"[SearXNG] {instance}: {e}")
-            continue
+            log.error(f"[Scrape] {url[:50]}: {e}")
     
-    return []
-
-
-def search_ddg_api(query, max_results=6):
-    """Recherche DuckDuckGo via l'API Instant Answer (JSON, pas de blocage)"""
+    # Aussi essayer une recherche Google via scraping (parfois marche)
     try:
-        import urllib.parse
-        # API Instant Answer de DuckDuckGo (pas le HTML qui bloque)
-        url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1&skip_disambig=1"
-        html = fetch_url(url, timeout=8)
-        if not html:
-            return []
-        
-        data = json.loads(html)
-        results = []
-        
-        # Abstract (résumé principal)
-        if data.get('Abstract'):
-            results.append(data['Abstract'])
-        
-        # RelatedTopics
-        for topic in data.get('RelatedTopics', [])[:max_results]:
-            if isinstance(topic, dict) and topic.get('Text'):
-                results.append(topic['Text'])
-        
-        # Results
-        for r in data.get('Results', [])[:3]:
-            if isinstance(r, dict) and r.get('Text'):
-                results.append(r['Text'])
-        
-        if results:
-            log.info(f"[DDG API] '{query}' -> {len(results)} results")
-        return results
+        google_url = f"https://www.google.com/search?q={query_encoded}+sneaker&hl=fr&num=10"
+        html = fetch_url(google_url, timeout=8)
+        if html:
+            # Google met les snippets dans divers elements
+            snippets = re.findall(r'<div[^>]*class="[^"]*BNeawe[^"]*"[^>]*>(.*?)</div>', html, re.DOTALL)
+            if not snippets:
+                snippets = re.findall(r'<span[^>]*>((?:(?!</span>).){80,400})</span>', html, re.DOTALL)
+            for s in snippets[:5]:
+                text = re.sub(r'<[^>]+>', '', s).strip()
+                if len(text) > 60 and 'google' not in text.lower() and 'cookie' not in text.lower():
+                    all_results.append(text)
+                    log.info(f"[Google] Got snippet: {text[:60]}...")
     except Exception as e:
-        log.error(f"[DDG API] Error: {e}")
-        return []
+        log.error(f"[Google] {e}")
+    
+    return all_results
 
 
-def search_brave(query, max_results=6):
-    """Recherche via Brave Search (web scrape, bon fallback)"""
-    try:
-        import urllib.parse
-        url = f"https://search.brave.com/search?q={urllib.parse.quote(query)}&source=web"
-        html = fetch_url(url, timeout=10)
-        if not html:
-            return []
-        
-        results = []
-        # Extraire les snippets de Brave
-        snippets = re.findall(r'class="snippet-description[^"]*"[^>]*>(.*?)</p>', html, re.DOTALL)
-        if not snippets:
-            snippets = re.findall(r'<p class="snippet-content[^"]*">(.*?)</p>', html, re.DOTALL)
-        if not snippets:
-            # Format alternatif
-            snippets = re.findall(r'data-testid="snippet-description"[^>]*>(.*?)</p>', html, re.DOTALL)
-        
-        for s in snippets[:max_results]:
-            text = re.sub(r'<[^>]+>', '', s).strip()
-            if len(text) > 30:
-                results.append(text)
-        
-        if results:
-            log.info(f"[Brave] '{query}' -> {len(results)} results")
-        return results
-    except Exception as e:
-        log.error(f"[Brave] Error: {e}")
-        return []
+def search_brand_page(subject):
+    """Essaie de trouver la page officielle de la marque"""
+    import urllib.parse
+    s = subject.lower()
+    
+    urls = []
+    if 'nike' in s or 'jordan' in s or 'dunk' in s or 'force' in s or 'air max' in s:
+        slug = subject.lower().replace(' ', '-')
+        urls = [
+            f"https://www.nike.com/{slug.replace('nike-', '')}",
+            f"https://www.nike.com/a/{slug}-release-info",
+            f"https://www.nike.com/a/nike-{slug.replace('nike-', '')}-release-info",
+            f"https://about.nike.com/en/newsroom/releases/{slug}",
+        ]
+    elif 'adidas' in s or 'samba' in s or 'campus' in s or 'gazelle' in s or 'yeezy' in s:
+        urls = [f"https://www.adidas.fr/search?q={urllib.parse.quote(subject)}"]
+    elif 'new balance' in s or 'nb ' in s:
+        urls = [f"https://www.newbalance.fr/search?q={urllib.parse.quote(subject)}"]
+    elif 'asics' in s or 'gel' in s:
+        urls = [f"https://www.asics.com/fr/fr-fr/search?q={urllib.parse.quote(subject)}"]
+    
+    results = []
+    for url in urls[:3]:
+        try:
+            html = fetch_url(url, timeout=10)
+            if html and len(html) > 1000:
+                paragraphs = extract_text_from_html(html)
+                if paragraphs:
+                    log.info(f"[Brand] {url[:50]} -> {len(paragraphs)} paragraphs")
+                    results.extend(paragraphs)
+        except Exception as e:
+            log.error(f"[Brand] {url[:50]}: {e}")
+    
+    return results
 
 
 def do_web_research(subject, article_type):
-    """Fait une recherche web complète avec plusieurs sources en fallback"""
+    """Fait une recherche web via scraping direct des sites sneakers"""
     info = {
         'wikipedia': None,
         'search_results': [],
         'found': False
     }
     
-    # 1. Wikipedia
     log.info(f"[Research] Starting for '{subject}' ({article_type})")
+    
+    # 1. Wikipedia (marche parfois)
     wiki = search_wikipedia(subject)
     if wiki:
         info['wikipedia'] = wiki
         info['found'] = True
     
-    # 2. Construire les requêtes selon le type
-    queries = []
-    if article_type == 'histoire':
-        queries = [f"{subject} history origin creation", f"{subject} histoire"]
-    elif article_type == 'guide_taille':
-        queries = [f"{subject} sizing true to size fit", f"{subject} taille grand petit"]
-    elif article_type == 'release':
-        queries = [f"{subject} 2026 release date colorway", f"{subject} sortie prix"]
-    elif article_type == 'entretien':
-        queries = [f"{subject} how to clean care", f"{subject} nettoyer entretien"]
-    elif article_type == 'style':
-        queries = [f"{subject} outfit how to style wear", f"{subject} comment porter"]
-    elif article_type == 'comparatif':
-        queries = [f"{subject} vs comparison review"]
-    elif article_type == 'tendance':
-        queries = [f"{subject} trend popular 2026"]
-    else:
-        queries = [f"{subject} sneaker review info"]
+    # 2. Scraper les sites sneakers directement
+    results = search_sneaker_sites(subject)
     
-    # 3. Chercher via SearXNG (meilleure source pour les serveurs)
-    all_results = []
-    for q in queries[:2]:
-        results = search_searxng(q)
-        if results:
-            all_results.extend(results)
-            break  # Une requête suffit si on a des résultats
+    # 3. Page officielle de la marque
+    brand_results = search_brand_page(subject)
+    results.extend(brand_results)
     
-    # 4. Fallback DDG API
-    if not all_results:
-        for q in queries[:2]:
-            results = search_ddg_api(q)
-            if results:
-                all_results.extend(results)
-                break
+    # 4. Dédupliquer et nettoyer
+    seen = set()
+    clean_results = []
+    for r in results:
+        key = r[:80].lower()
+        if key not in seen and len(r) > 40:
+            seen.add(key)
+            clean_results.append(r)
     
-    # 5. Fallback Brave
-    if not all_results:
-        for q in queries[:1]:
-            results = search_brave(q)
-            if results:
-                all_results.extend(results)
-    
-    if all_results:
-        info['search_results'] = all_results[:10]
+    if clean_results:
+        info['search_results'] = clean_results[:15]
         info['found'] = True
     
     log.info(f"[Research] Done: wiki={'yes' if info['wikipedia'] else 'no'}, results={len(info['search_results'])}, found={info['found']}")
@@ -2360,50 +2350,40 @@ def api_blog_test_search():
     except Exception as e:
         results['tests']['wikipedia'] = {'status': 'ERROR', 'error': str(e)}
     
-    # Test 2: SearXNG
+    # Test 2: Sneaker sites scraping
     try:
-        searx = search_searxng(f"{subject} sneaker")
-        results['tests']['searxng'] = {
-            'status': 'OK' if searx else 'NO RESULTS',
-            'count': len(searx),
-            'data': searx[:3]
+        sneaker = search_sneaker_sites(subject)
+        results['tests']['sneaker_sites'] = {
+            'status': 'OK' if sneaker else 'NO RESULTS',
+            'count': len(sneaker),
+            'data': [s[:200] for s in sneaker[:5]]
         }
     except Exception as e:
-        results['tests']['searxng'] = {'status': 'ERROR', 'error': str(e)}
+        results['tests']['sneaker_sites'] = {'status': 'ERROR', 'error': str(e)}
     
-    # Test 3: DDG API
+    # Test 3: Brand page
     try:
-        ddg = search_ddg_api(f"{subject} sneaker")
-        results['tests']['ddg_api'] = {
-            'status': 'OK' if ddg else 'NO RESULTS',
-            'count': len(ddg),
-            'data': ddg[:3]
+        brand = search_brand_page(subject)
+        results['tests']['brand_page'] = {
+            'status': 'OK' if brand else 'NO RESULTS',
+            'count': len(brand),
+            'data': [s[:200] for s in brand[:5]]
         }
     except Exception as e:
-        results['tests']['ddg_api'] = {'status': 'ERROR', 'error': str(e)}
+        results['tests']['brand_page'] = {'status': 'ERROR', 'error': str(e)}
     
-    # Test 4: Brave
+    # Test 4: Full research
     try:
-        brave = search_brave(f"{subject} sneaker")
-        results['tests']['brave'] = {
-            'status': 'OK' if brave else 'NO RESULTS',
-            'count': len(brave),
-            'data': brave[:3]
+        full = do_web_research(subject, 'histoire')
+        results['tests']['full_research'] = {
+            'status': 'OK' if full.get('found') else 'NO RESULTS',
+            'result_count': len(full.get('search_results', [])),
+            'data': [s[:200] for s in full.get('search_results', [])[:3]]
         }
     except Exception as e:
-        results['tests']['brave'] = {'status': 'ERROR', 'error': str(e)}
+        results['tests']['full_research'] = {'status': 'ERROR', 'error': str(e)}
     
-    # Test 5: Fetch direct nike.com
-    try:
-        import urllib.parse
-        test_url = f"https://www.nike.com/a/nike-mind-release-info"
-        html = fetch_url(test_url, timeout=8)
-        results['tests']['nike_direct'] = {
-            'status': 'OK' if html and len(html) > 100 else 'BLOCKED',
-            'length': len(html) if html else 0
-        }
-    except Exception as e:
-        results['tests']['nike_direct'] = {'status': 'ERROR', 'error': str(e)}
+    return jsonify(results)
     
     return jsonify(results)
 
