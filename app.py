@@ -2336,47 +2336,51 @@ def search_wikipedia(query):
 
 
 def search_sneaker_sites(subject):
-    """Scrape les sites sneakers : pages de recherche -> URLs d'articles -> contenu"""
+    """Scrape les sites sneakers : URLs directes + pages de recherche -> articles -> contenu"""
     import urllib.parse
     all_results = []
     slug = subject.lower().replace(' ', '-')
     query_encoded = urllib.parse.quote(subject)
     
-    # Extraire les mots-clés importants du sujet pour matcher les articles
     subject_lower = subject.lower()
-    # Enlever les termes génériques pour garder le modèle
-    generic = ['retro', 'high', 'low', 'mid', 'og', 'sp', 'se', 'premium', 'men', 'women', 'mens', 'womens']
+    generic = ['retro', 'high', 'low', 'mid', 'og', 'sp', 'se', 'premium', 'men', 'women', 'mens', 'womens', 'the', 'a', 'x']
     keywords = [w for w in subject_lower.split() if w not in generic and len(w) > 1]
     
-    # ── ÉTAPE 1 : URLs directes construites dynamiquement ──
-    # Construire des slugs intelligents
-    # Ex: "Air Jordan 1 Retro High OG SP Fragment x Union LA" -> essayer "air-jordan-1-fragment-union"
+    # ── ÉTAPE 1 : Construire des URLs directes intelligentes ──
     direct_urls = []
     
-    # Slug complet
+    # Variantes de slug pour about.nike.com
+    # Ex: "Nike Mind 001" -> essayer "nike-mind-001", "nike-mind", "mind-001"
+    slug_parts = slug.split('-')
+    
+    # Slug complet et variantes
     direct_urls.append(f"https://about.nike.com/en/newsroom/releases/{slug}-official-images")
-    direct_urls.append(f"https://about.nike.com/en/newsroom/releases/{slug}")
     
-    # Slug simplifié (sans retro/high/og/sp etc)
-    simple_words = [w for w in subject_lower.replace('x ', '').split() if w not in generic]
+    # Slug simplifié (enlever les termes génériques)
+    simple_words = [w for w in subject_lower.split() if w not in generic]
     simple_slug = '-'.join(simple_words)
-    if simple_slug != slug:
-        direct_urls.append(f"https://about.nike.com/en/newsroom/releases/{simple_slug}-official-images")
+    direct_urls.append(f"https://about.nike.com/en/newsroom/releases/{simple_slug}-official-images")
     
-    # SneakerNews pattern
+    # Variantes courtes : "nike-mind" pour "Nike Mind 001"
+    if len(slug_parts) >= 2:
+        # Les 2-3 premiers mots
+        for length in [3, 2]:
+            short = '-'.join(slug_parts[:length])
+            direct_urls.append(f"https://about.nike.com/en/newsroom/releases/{short}-official-images")
+    
+    # SneakerNews
     direct_urls.append(f"https://sneakernews.com/{slug}-release-date/")
+    
+    # Dédupliquer les URLs
+    direct_urls = list(dict.fromkeys(direct_urls))
     
     for url in direct_urls:
         try:
             html = fetch_url(url, timeout=10)
             if html and len(html) > 5000:
                 paragraphs = extract_text_from_html(html, min_length=60)
-                # Vérifier que le contenu parle bien du sujet (au moins 1 keyword)
-                relevant = []
-                for p in paragraphs:
-                    p_lower = p.lower()
-                    if any(kw in p_lower for kw in keywords[:5]):
-                        relevant.append(p)
+                # Vérifier pertinence : au moins 1 keyword du sujet
+                relevant = [p for p in paragraphs if any(kw in p.lower() for kw in keywords[:5])]
                 
                 if relevant:
                     log.info(f"[Direct] {url[:60]} -> {len(relevant)} relevant paragraphs")
@@ -2386,7 +2390,7 @@ def search_sneaker_sites(subject):
         except Exception as e:
             log.error(f"[Direct] {url[:60]}: {e}")
     
-    # ── ÉTAPE 2 : Pages de recherche -> trouver les liens d'articles -> scraper ──
+    # ── ÉTAPE 2 : Pages de recherche -> liens d'articles -> scraper ──
     if len(all_results) < 3:
         search_pages = [
             f"https://sneakernews.com/?s={query_encoded}",
