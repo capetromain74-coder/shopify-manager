@@ -2208,88 +2208,158 @@ def search_wikipedia(query):
 
 
 def search_sneaker_sites(subject):
-    """Scrape directement les sites sneakers (marche depuis Render)"""
+    """Scrape les sites sneakers : d'abord les pages de recherche pour trouver les URLs, puis les articles"""
     import urllib.parse
     all_results = []
     slug = subject.lower().replace(' ', '-')
     query_encoded = urllib.parse.quote(subject)
+    query_plus = urllib.parse.quote_plus(subject)
     
-    # Liste de sites à scraper avec leurs URLs de recherche/article
-    sites = [
-        # Nike officiel - pages produit et news
-        f"https://www.nike.com/a/{slug}-release-info",
-        f"https://www.nike.com/a/nike-{slug}-release-info",
-        # SneakerNews
-        f"https://sneakernews.com/?s={query_encoded}",
-        # Hypebeast
-        f"https://hypebeast.com/search?s={query_encoded}",
-        # Sneaker Freaker
-        f"https://www.sneakerfreaker.com/search?q={query_encoded}",
+    # ── ÉTAPE 1 : Scraper des pages qui ont du vrai contenu HTML ──
+    # about.nike.com a du contenu en HTML brut (pas JS)
+    direct_urls = [
+        f"https://about.nike.com/en/newsroom/releases/nike-mind-001-mind-002-official-images",
+        f"https://about.nike.com/en/newsroom/releases/{slug}-official-images",
+        f"https://about.nike.com/en/newsroom/releases/{slug.replace('nike-', '')}",
+        f"https://sneakernews.com/{slug}-release-date/",
+        f"https://sneakernews.com/2026/01/07/{slug}-release-date/",
     ]
     
-    for url in sites:
+    for url in direct_urls:
         try:
             html = fetch_url(url, timeout=10)
-            if html and len(html) > 1000:
-                paragraphs = extract_text_from_html(html)
+            if html and len(html) > 5000:
+                paragraphs = extract_text_from_html(html, min_length=60)
                 if paragraphs:
-                    log.info(f"[Scrape] {url[:50]} -> {len(paragraphs)} paragraphs")
+                    log.info(f"[Direct] {url[:60]} -> {len(paragraphs)} paragraphs")
                     all_results.extend(paragraphs)
+                    if len(all_results) >= 5:
+                        break
         except Exception as e:
-            log.error(f"[Scrape] {url[:50]}: {e}")
+            log.error(f"[Direct] {url[:60]}: {e}")
     
-    # Aussi essayer une recherche Google via scraping (parfois marche)
-    try:
-        google_url = f"https://www.google.com/search?q={query_encoded}+sneaker&hl=fr&num=10"
-        html = fetch_url(google_url, timeout=8)
-        if html:
-            # Google met les snippets dans divers elements
-            snippets = re.findall(r'<div[^>]*class="[^"]*BNeawe[^"]*"[^>]*>(.*?)</div>', html, re.DOTALL)
-            if not snippets:
-                snippets = re.findall(r'<span[^>]*>((?:(?!</span>).){80,400})</span>', html, re.DOTALL)
-            for s in snippets[:5]:
-                text = re.sub(r'<[^>]+>', '', s).strip()
-                if len(text) > 60 and 'google' not in text.lower() and 'cookie' not in text.lower():
-                    all_results.append(text)
-                    log.info(f"[Google] Got snippet: {text[:60]}...")
-    except Exception as e:
-        log.error(f"[Google] {e}")
+    # ── ÉTAPE 2 : Pages de recherche -> trouver les liens d'articles -> scraper ──
+    if len(all_results) < 3:
+        search_pages = [
+            f"https://sneakernews.com/?s={query_encoded}",
+            f"https://hypebeast.com/search?s={query_encoded}",
+        ]
+        
+        for search_url in search_pages:
+            try:
+                html = fetch_url(search_url, timeout=10)
+                if not html:
+                    continue
+                
+                # Trouver les URLs d'articles dans les résultats de recherche
+                article_urls = re.findall(r'href="(https?://[^"]*' + re.escape(slug.split('-')[0]) + r'[^"]*)"', html)
+                if not article_urls:
+                    # Essayer avec juste le nom du modèle
+                    words = subject.lower().split()
+                    for word in words:
+                        if len(word) > 3:
+                            article_urls = re.findall(r'href="(https?://(?:sneakernews|hypebeast)[^"]*' + re.escape(word) + r'[^"]*)"', html)
+                            if article_urls:
+                                break
+                
+                # Dédupliquer
+                seen_urls = set()
+                unique_urls = []
+                for u in article_urls:
+                    if u not in seen_urls and '/search' not in u and '/tag/' not in u:
+                        seen_urls.add(u)
+                        unique_urls.append(u)
+                
+                # Scraper les 2 premiers articles
+                for article_url in unique_urls[:2]:
+                    try:
+                        article_html = fetch_url(article_url, timeout=10)
+                        if article_html and len(article_html) > 5000:
+                            paragraphs = extract_text_from_html(article_html, min_length=60)
+                            if paragraphs:
+                                log.info(f"[Article] {article_url[:60]} -> {len(paragraphs)} paragraphs")
+                                all_results.extend(paragraphs)
+                    except Exception as e:
+                        log.error(f"[Article] {article_url[:60]}: {e}")
+            except Exception as e:
+                log.error(f"[Search] {search_url[:60]}: {e}")
+    
+    # ── ÉTAPE 3 : Scraper la page produit Nike (contenu dans script JSON-LD) ──
+    if len(all_results) < 3:
+        try:
+            nike_url = f"https://www.nike.com/t/{slug}-mens-pregame-mules"
+            html = fetch_url(nike_url, timeout=10)
+            if html:
+                # Extraire les données JSON-LD
+                json_ld = re.findall(r'<script type="application/ld\+json">(.*?)</script>', html, re.DOTALL)
+                for jld in json_ld:
+                    try:
+                        data = json.loads(jld)
+                        desc = data.get('description', '')
+                        if desc and len(desc) > 40:
+                            all_results.append(desc)
+                    except:
+                        pass
+                # Aussi les meta
+                meta_desc = re.findall(r'content="([^"]{60,500})"', html)
+                for m in meta_desc[:2]:
+                    if 'mind' in m.lower() or subject.lower().split()[-1] in m.lower():
+                        all_results.append(m)
+        except Exception as e:
+            log.error(f"[Nike product] {e}")
     
     return all_results
 
 
 def search_brand_page(subject):
-    """Essaie de trouver la page officielle de la marque"""
+    """Scrape les pages officielles de la marque"""
     import urllib.parse
     s = subject.lower()
+    results = []
+    
+    # Construire des slugs variés
+    slug = subject.lower().replace(' ', '-')
+    slug_clean = slug.replace('nike-', '').replace('adidas-', '').replace('new-balance-', '')
+    query_encoded = urllib.parse.quote(subject)
     
     urls = []
-    if 'nike' in s or 'jordan' in s or 'dunk' in s or 'force' in s or 'air max' in s:
-        slug = subject.lower().replace(' ', '-')
+    if 'nike' in s or 'jordan' in s or 'dunk' in s or 'force' in s or 'air max' in s or 'mind' in s:
         urls = [
-            f"https://www.nike.com/{slug.replace('nike-', '')}",
-            f"https://www.nike.com/a/{slug}-release-info",
-            f"https://www.nike.com/a/nike-{slug.replace('nike-', '')}-release-info",
-            f"https://about.nike.com/en/newsroom/releases/{slug}",
+            f"https://about.nike.com/en/newsroom/releases/nike-{slug_clean}-official-images",
+            f"https://about.nike.com/en/newsroom/releases/{slug}-official-images",
+            f"https://www.nike.com/a/nike-{slug_clean}-release-info",
+            f"https://www.nike.com/a/{slug_clean}-release-info",
         ]
     elif 'adidas' in s or 'samba' in s or 'campus' in s or 'gazelle' in s or 'yeezy' in s:
-        urls = [f"https://www.adidas.fr/search?q={urllib.parse.quote(subject)}"]
+        urls = [
+            f"https://news.adidas.com/search?q={query_encoded}",
+        ]
     elif 'new balance' in s or 'nb ' in s:
-        urls = [f"https://www.newbalance.fr/search?q={urllib.parse.quote(subject)}"]
+        slug_nb = slug.replace('new-balance-', '')
+        urls = [
+            f"https://www.newbalance.com/search/?q={query_encoded}",
+        ]
     elif 'asics' in s or 'gel' in s:
-        urls = [f"https://www.asics.com/fr/fr-fr/search?q={urllib.parse.quote(subject)}"]
+        urls = [
+            f"https://www.asics.com/us/en-us/search?q={query_encoded}",
+        ]
+    elif 'ugg' in s or 'tasman' in s or 'tazz' in s:
+        urls = [
+            f"https://www.ugg.com/search?q={query_encoded}",
+        ]
     
-    results = []
-    for url in urls[:3]:
+    for url in urls[:4]:
         try:
             html = fetch_url(url, timeout=10)
-            if html and len(html) > 1000:
-                paragraphs = extract_text_from_html(html)
+            if html and len(html) > 5000:
+                paragraphs = extract_text_from_html(html, min_length=60)
                 if paragraphs:
-                    log.info(f"[Brand] {url[:50]} -> {len(paragraphs)} paragraphs")
+                    log.info(f"[Brand] {url[:60]} -> {len(paragraphs)} paragraphs")
                     results.extend(paragraphs)
+                    if len(results) >= 5:
+                        break
         except Exception as e:
-            log.error(f"[Brand] {url[:50]}: {e}")
+            log.error(f"[Brand] {url[:60]}: {e}")
     
     return results
 
