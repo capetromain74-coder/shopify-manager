@@ -2344,6 +2344,70 @@ def do_web_research(subject, article_type):
     return info
 
 
+@app.route('/api/blog/test-search')
+def api_blog_test_search():
+    """Route de test pour diagnostiquer la recherche web"""
+    subject = request.args.get('q', 'Nike Mind 001')
+    results = {'subject': subject, 'tests': {}}
+    
+    # Test 1: Wikipedia
+    try:
+        wiki = search_wikipedia(subject)
+        results['tests']['wikipedia'] = {
+            'status': 'OK' if wiki else 'NO RESULTS',
+            'data': wiki
+        }
+    except Exception as e:
+        results['tests']['wikipedia'] = {'status': 'ERROR', 'error': str(e)}
+    
+    # Test 2: SearXNG
+    try:
+        searx = search_searxng(f"{subject} sneaker")
+        results['tests']['searxng'] = {
+            'status': 'OK' if searx else 'NO RESULTS',
+            'count': len(searx),
+            'data': searx[:3]
+        }
+    except Exception as e:
+        results['tests']['searxng'] = {'status': 'ERROR', 'error': str(e)}
+    
+    # Test 3: DDG API
+    try:
+        ddg = search_ddg_api(f"{subject} sneaker")
+        results['tests']['ddg_api'] = {
+            'status': 'OK' if ddg else 'NO RESULTS',
+            'count': len(ddg),
+            'data': ddg[:3]
+        }
+    except Exception as e:
+        results['tests']['ddg_api'] = {'status': 'ERROR', 'error': str(e)}
+    
+    # Test 4: Brave
+    try:
+        brave = search_brave(f"{subject} sneaker")
+        results['tests']['brave'] = {
+            'status': 'OK' if brave else 'NO RESULTS',
+            'count': len(brave),
+            'data': brave[:3]
+        }
+    except Exception as e:
+        results['tests']['brave'] = {'status': 'ERROR', 'error': str(e)}
+    
+    # Test 5: Fetch direct nike.com
+    try:
+        import urllib.parse
+        test_url = f"https://www.nike.com/a/nike-mind-release-info"
+        html = fetch_url(test_url, timeout=8)
+        results['tests']['nike_direct'] = {
+            'status': 'OK' if html and len(html) > 100 else 'BLOCKED',
+            'length': len(html) if html else 0
+        }
+    except Exception as e:
+        results['tests']['nike_direct'] = {'status': 'ERROR', 'error': str(e)}
+    
+    return jsonify(results)
+
+
 @app.route('/api/blog/research', methods=['POST'])
 def api_blog_research():
     """Endpoint de recherche web pour le blog generator"""
