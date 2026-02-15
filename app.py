@@ -2208,31 +2208,51 @@ def search_wikipedia(query):
 
 
 def search_sneaker_sites(subject):
-    """Scrape les sites sneakers : d'abord les pages de recherche pour trouver les URLs, puis les articles"""
+    """Scrape les sites sneakers : pages de recherche -> URLs d'articles -> contenu"""
     import urllib.parse
     all_results = []
     slug = subject.lower().replace(' ', '-')
     query_encoded = urllib.parse.quote(subject)
-    query_plus = urllib.parse.quote_plus(subject)
     
-    # ── ÉTAPE 1 : Scraper des pages qui ont du vrai contenu HTML ──
-    # about.nike.com a du contenu en HTML brut (pas JS)
-    direct_urls = [
-        f"https://about.nike.com/en/newsroom/releases/nike-mind-001-mind-002-official-images",
-        f"https://about.nike.com/en/newsroom/releases/{slug}-official-images",
-        f"https://about.nike.com/en/newsroom/releases/{slug.replace('nike-', '')}",
-        f"https://sneakernews.com/{slug}-release-date/",
-        f"https://sneakernews.com/2026/01/07/{slug}-release-date/",
-    ]
+    # Extraire les mots-clés importants du sujet pour matcher les articles
+    subject_lower = subject.lower()
+    # Enlever les termes génériques pour garder le modèle
+    generic = ['retro', 'high', 'low', 'mid', 'og', 'sp', 'se', 'premium', 'men', 'women', 'mens', 'womens']
+    keywords = [w for w in subject_lower.split() if w not in generic and len(w) > 1]
+    
+    # ── ÉTAPE 1 : URLs directes construites dynamiquement ──
+    # Construire des slugs intelligents
+    # Ex: "Air Jordan 1 Retro High OG SP Fragment x Union LA" -> essayer "air-jordan-1-fragment-union"
+    direct_urls = []
+    
+    # Slug complet
+    direct_urls.append(f"https://about.nike.com/en/newsroom/releases/{slug}-official-images")
+    direct_urls.append(f"https://about.nike.com/en/newsroom/releases/{slug}")
+    
+    # Slug simplifié (sans retro/high/og/sp etc)
+    simple_words = [w for w in subject_lower.replace('x ', '').split() if w not in generic]
+    simple_slug = '-'.join(simple_words)
+    if simple_slug != slug:
+        direct_urls.append(f"https://about.nike.com/en/newsroom/releases/{simple_slug}-official-images")
+    
+    # SneakerNews pattern
+    direct_urls.append(f"https://sneakernews.com/{slug}-release-date/")
     
     for url in direct_urls:
         try:
             html = fetch_url(url, timeout=10)
             if html and len(html) > 5000:
                 paragraphs = extract_text_from_html(html, min_length=60)
-                if paragraphs:
-                    log.info(f"[Direct] {url[:60]} -> {len(paragraphs)} paragraphs")
-                    all_results.extend(paragraphs)
+                # Vérifier que le contenu parle bien du sujet (au moins 1 keyword)
+                relevant = []
+                for p in paragraphs:
+                    p_lower = p.lower()
+                    if any(kw in p_lower for kw in keywords[:5]):
+                        relevant.append(p)
+                
+                if relevant:
+                    log.info(f"[Direct] {url[:60]} -> {len(relevant)} relevant paragraphs")
+                    all_results.extend(relevant)
                     if len(all_results) >= 5:
                         break
         except Exception as e:
@@ -2251,62 +2271,58 @@ def search_sneaker_sites(subject):
                 if not html:
                     continue
                 
-                # Trouver les URLs d'articles dans les résultats de recherche
-                article_urls = re.findall(r'href="(https?://[^"]*' + re.escape(slug.split('-')[0]) + r'[^"]*)"', html)
-                if not article_urls:
-                    # Essayer avec juste le nom du modèle
-                    words = subject.lower().split()
-                    for word in words:
-                        if len(word) > 3:
-                            article_urls = re.findall(r'href="(https?://(?:sneakernews|hypebeast)[^"]*' + re.escape(word) + r'[^"]*)"', html)
-                            if article_urls:
-                                break
+                # Trouver les URLs d'articles - chercher avec les mots-clés importants
+                article_urls = []
+                # D'abord essayer de trouver des liens qui contiennent les keywords
+                all_links = re.findall(r'href="(https?://(?:sneakernews\.com|hypebeast\.com)/[^"]{20,})"', html)
                 
-                # Dédupliquer
-                seen_urls = set()
-                unique_urls = []
-                for u in article_urls:
-                    if u not in seen_urls and '/search' not in u and '/tag/' not in u:
-                        seen_urls.add(u)
-                        unique_urls.append(u)
+                for link in all_links:
+                    link_lower = link.lower()
+                    # Compter combien de keywords sont dans l'URL
+                    match_count = sum(1 for kw in keywords if kw in link_lower)
+                    if match_count >= 2 and '/search' not in link_lower and '/tag/' not in link_lower and '/author/' not in link_lower:
+                        article_urls.append((match_count, link))
                 
-                # Scraper les 2 premiers articles
+                # Trier par pertinence
+                article_urls.sort(key=lambda x: x[0], reverse=True)
+                unique_urls = list(dict.fromkeys([u[1] for u in article_urls]))
+                
+                # Scraper les 2 premiers articles pertinents
                 for article_url in unique_urls[:2]:
                     try:
                         article_html = fetch_url(article_url, timeout=10)
                         if article_html and len(article_html) > 5000:
                             paragraphs = extract_text_from_html(article_html, min_length=60)
-                            if paragraphs:
-                                log.info(f"[Article] {article_url[:60]} -> {len(paragraphs)} paragraphs")
-                                all_results.extend(paragraphs)
+                            # Filtrer pour la pertinence
+                            relevant = [p for p in paragraphs if any(kw in p.lower() for kw in keywords[:5])]
+                            if relevant:
+                                log.info(f"[Article] {article_url[:60]} -> {len(relevant)} relevant paragraphs")
+                                all_results.extend(relevant)
                     except Exception as e:
                         log.error(f"[Article] {article_url[:60]}: {e}")
+                
+                if len(all_results) >= 5:
+                    break
             except Exception as e:
                 log.error(f"[Search] {search_url[:60]}: {e}")
     
-    # ── ÉTAPE 3 : Scraper la page produit Nike (contenu dans script JSON-LD) ──
+    # ── ÉTAPE 3 : JSON-LD et meta depuis nike.com ──
     if len(all_results) < 3:
         try:
-            nike_url = f"https://www.nike.com/t/{slug}-mens-pregame-mules"
-            html = fetch_url(nike_url, timeout=10)
+            nike_search_url = f"https://www.nike.com/w?q={query_encoded}"
+            html = fetch_url(nike_search_url, timeout=10)
             if html:
-                # Extraire les données JSON-LD
                 json_ld = re.findall(r'<script type="application/ld\+json">(.*?)</script>', html, re.DOTALL)
                 for jld in json_ld:
                     try:
                         data = json.loads(jld)
                         desc = data.get('description', '')
-                        if desc and len(desc) > 40:
+                        if desc and len(desc) > 40 and any(kw in desc.lower() for kw in keywords[:3]):
                             all_results.append(desc)
                     except:
                         pass
-                # Aussi les meta
-                meta_desc = re.findall(r'content="([^"]{60,500})"', html)
-                for m in meta_desc[:2]:
-                    if 'mind' in m.lower() or subject.lower().split()[-1] in m.lower():
-                        all_results.append(m)
         except Exception as e:
-            log.error(f"[Nike product] {e}")
+            log.error(f"[Nike search] {e}")
     
     return all_results
 
