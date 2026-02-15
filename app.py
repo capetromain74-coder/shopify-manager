@@ -2123,7 +2123,7 @@ def generate_custom_article(subject, keywords, product_links, collection_link, t
 
 
 # ══════════════════════════════════════════════════════════════
-# RECHERCHE WEB POUR LE BLOG (Wikipedia + DuckDuckGo + Google)
+# RECHERCHE WEB POUR LE BLOG (SearXNG + DuckDuckGo API + Wikipedia)
 # ══════════════════════════════════════════════════════════════
 
 def fetch_url(url, timeout=10):
@@ -2131,8 +2131,8 @@ def fetch_url(url, timeout=10):
     try:
         import urllib.request
         req = urllib.request.Request(url, headers={
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/html, */*',
             'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
         })
         ctx = ssl.create_default_context()
@@ -2141,24 +2141,21 @@ def fetch_url(url, timeout=10):
         with urllib.request.urlopen(req, context=ctx, timeout=timeout) as r:
             return r.read().decode('utf-8', errors='ignore')
     except Exception as e:
-        log.error(f"[Fetch] Error fetching {url[:80]}: {e}")
+        log.error(f"[Fetch] {url[:60]}: {e}")
         return None
 
 
 def search_wikipedia(query):
-    """Recherche Wikipedia FR puis EN"""
+    """Recherche Wikipedia FR puis EN via l'API"""
     for lang in ['fr', 'en']:
         try:
             import urllib.parse
-            # API opensearch pour trouver le bon titre
             search_url = f"https://{lang}.wikipedia.org/w/api.php?action=opensearch&search={urllib.parse.quote(query)}&limit=3&format=json"
             html = fetch_url(search_url, timeout=8)
             if html:
                 data = json.loads(html)
                 if data and len(data) >= 4 and data[1]:
-                    # Prendre le premier résultat
                     title = data[1][0]
-                    # Récupérer le résumé
                     summary_url = f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(title)}"
                     summary_html = fetch_url(summary_url, timeout=8)
                     if summary_html:
@@ -2175,75 +2172,115 @@ def search_wikipedia(query):
     return None
 
 
-def search_duckduckgo(query, max_results=6):
-    """Recherche DuckDuckGo Lite (plus fiable que HTML)"""
-    results = []
+def search_searxng(query, max_results=8):
+    """Recherche via instances SearXNG publiques (API JSON, pas de blocage serveur)"""
+    import urllib.parse
+    
+    # Liste d'instances SearXNG publiques avec API JSON activée
+    instances = [
+        'https://search.bus-hit.me',
+        'https://search.sapti.me',
+        'https://searxng.site',
+        'https://search.ononoki.org',
+        'https://searx.tiekoetter.com',
+        'https://search.hbubli.cc',
+    ]
+    
+    for instance in instances:
+        try:
+            url = f"{instance}/search?q={urllib.parse.quote(query)}&format=json&language=fr"
+            html = fetch_url(url, timeout=8)
+            if not html:
+                continue
+            
+            data = json.loads(html)
+            results = []
+            
+            for r in data.get('results', [])[:max_results]:
+                text = r.get('content', '') or r.get('title', '')
+                if text and len(text) > 30:
+                    # Nettoyer le HTML
+                    text = re.sub(r'<[^>]+>', '', text).strip()
+                    results.append(text)
+            
+            if results:
+                log.info(f"[SearXNG] '{query}' via {instance} -> {len(results)} results")
+                return results
+        except Exception as e:
+            log.error(f"[SearXNG] {instance}: {e}")
+            continue
+    
+    return []
+
+
+def search_ddg_api(query, max_results=6):
+    """Recherche DuckDuckGo via l'API Instant Answer (JSON, pas de blocage)"""
     try:
         import urllib.parse
-        url = f"https://lite.duckduckgo.com/lite/?q={urllib.parse.quote(query)}"
+        # API Instant Answer de DuckDuckGo (pas le HTML qui bloque)
+        url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1&skip_disambig=1"
+        html = fetch_url(url, timeout=8)
+        if not html:
+            return []
+        
+        data = json.loads(html)
+        results = []
+        
+        # Abstract (résumé principal)
+        if data.get('Abstract'):
+            results.append(data['Abstract'])
+        
+        # RelatedTopics
+        for topic in data.get('RelatedTopics', [])[:max_results]:
+            if isinstance(topic, dict) and topic.get('Text'):
+                results.append(topic['Text'])
+        
+        # Results
+        for r in data.get('Results', [])[:3]:
+            if isinstance(r, dict) and r.get('Text'):
+                results.append(r['Text'])
+        
+        if results:
+            log.info(f"[DDG API] '{query}' -> {len(results)} results")
+        return results
+    except Exception as e:
+        log.error(f"[DDG API] Error: {e}")
+        return []
+
+
+def search_brave(query, max_results=6):
+    """Recherche via Brave Search (web scrape, bon fallback)"""
+    try:
+        import urllib.parse
+        url = f"https://search.brave.com/search?q={urllib.parse.quote(query)}&source=web"
         html = fetch_url(url, timeout=10)
         if not html:
-            return results
+            return []
         
-        # Parser les résultats de DuckDuckGo Lite
-        # Les snippets sont dans des <td> après les liens
-        snippets = re.findall(r'class="result-snippet">(.*?)</td>', html, re.DOTALL)
-        links = re.findall(r'class="result-link"[^>]*>(.*?)</a>', html, re.DOTALL)
-        
+        results = []
+        # Extraire les snippets de Brave
+        snippets = re.findall(r'class="snippet-description[^"]*"[^>]*>(.*?)</p>', html, re.DOTALL)
         if not snippets:
-            # Fallback : essayer le format standard
-            snippets = re.findall(r'<td[^>]*class="[^"]*snippet[^"]*"[^>]*>(.*?)</td>', html, re.DOTALL)
-        if not links:
-            links = re.findall(r'<a[^>]*class="[^"]*result-link[^"]*"[^>]*>(.*?)</a>', html, re.DOTALL)
-        
-        # Aussi chercher dans le format alternatif
+            snippets = re.findall(r'<p class="snippet-content[^"]*">(.*?)</p>', html, re.DOTALL)
         if not snippets:
-            # Format DuckDuckGo Lite alternatif
-            blocks = re.findall(r'<tr>.*?<td.*?>(.*?)</td>.*?</tr>', html, re.DOTALL)
-            for block in blocks:
-                clean = re.sub(r'<[^>]+>', '', block).strip()
-                if len(clean) > 50 and 'duckduckgo' not in clean.lower():
-                    snippets.append(clean)
+            # Format alternatif
+            snippets = re.findall(r'data-testid="snippet-description"[^>]*>(.*?)</p>', html, re.DOTALL)
         
-        for i in range(min(len(snippets), max_results)):
-            text = re.sub(r'<[^>]+>', '', snippets[i]).strip()
+        for s in snippets[:max_results]:
+            text = re.sub(r'<[^>]+>', '', s).strip()
             if len(text) > 30:
                 results.append(text)
         
-        log.info(f"[DDG] '{query}' -> {len(results)} results")
+        if results:
+            log.info(f"[Brave] '{query}' -> {len(results)} results")
+        return results
     except Exception as e:
-        log.error(f"[DDG] Error: {e}")
-    return results
-
-
-def search_google_scrape(query, max_results=5):
-    """Recherche Google (fallback, scrape basique)"""
-    results = []
-    try:
-        import urllib.parse
-        url = f"https://www.google.com/search?q={urllib.parse.quote(query)}&hl=fr&num=5"
-        html = fetch_url(url, timeout=10)
-        if not html:
-            return results
-        
-        # Extraire les snippets Google
-        # Les descriptions sont souvent dans des <span> après les liens
-        spans = re.findall(r'<span[^>]*>(.*?)</span>', html, re.DOTALL)
-        for span in spans:
-            text = re.sub(r'<[^>]+>', '', span).strip()
-            if len(text) > 80 and len(text) < 500 and 'google' not in text.lower() and 'cookie' not in text.lower():
-                results.append(text)
-                if len(results) >= max_results:
-                    break
-        
-        log.info(f"[Google] '{query}' -> {len(results)} results")
-    except Exception as e:
-        log.error(f"[Google] Error: {e}")
-    return results
+        log.error(f"[Brave] Error: {e}")
+        return []
 
 
 def do_web_research(subject, article_type):
-    """Fait une recherche web complète et retourne les infos trouvées"""
+    """Fait une recherche web complète avec plusieurs sources en fallback"""
     info = {
         'wikipedia': None,
         'search_results': [],
@@ -2251,72 +2288,59 @@ def do_web_research(subject, article_type):
     }
     
     # 1. Wikipedia
+    log.info(f"[Research] Starting for '{subject}' ({article_type})")
     wiki = search_wikipedia(subject)
     if wiki:
         info['wikipedia'] = wiki
         info['found'] = True
     
-    # 2. Recherches ciblées selon le type d'article
+    # 2. Construire les requêtes selon le type
     queries = []
     if article_type == 'histoire':
-        queries = [
-            f"{subject} sneaker history origin",
-            f"{subject} shoe creation designer year",
-            f"{subject} histoire origine creation"
-        ]
+        queries = [f"{subject} history origin creation", f"{subject} histoire"]
     elif article_type == 'guide_taille':
-        queries = [
-            f"{subject} sizing fit true to size",
-            f"{subject} taille guide sizing review",
-            f"{subject} runs big small half size"
-        ]
+        queries = [f"{subject} sizing true to size fit", f"{subject} taille grand petit"]
     elif article_type == 'release':
-        queries = [
-            f"{subject} 2025 2026 release date colorway",
-            f"{subject} new release drop date",
-            f"{subject} sortie date prix retail"
-        ]
+        queries = [f"{subject} 2026 release date colorway", f"{subject} sortie prix"]
     elif article_type == 'entretien':
-        queries = [
-            f"{subject} how to clean care guide",
-            f"{subject} nettoyer entretenir nettoyage",
-            f"{subject} materials upper sole"
-        ]
+        queries = [f"{subject} how to clean care", f"{subject} nettoyer entretien"]
     elif article_type == 'style':
-        queries = [
-            f"{subject} outfit ideas how to style",
-            f"{subject} comment porter look tenue",
-            f"{subject} styling outfit inspiration"
-        ]
+        queries = [f"{subject} outfit how to style wear", f"{subject} comment porter"]
     elif article_type == 'comparatif':
-        queries = [
-            f"{subject} vs comparison review",
-            f"{subject} comparatif avis test"
-        ]
+        queries = [f"{subject} vs comparison review"]
     elif article_type == 'tendance':
-        queries = [
-            f"{subject} trend 2025 2026 popular",
-            f"{subject} tendance hype popularity"
-        ]
+        queries = [f"{subject} trend popular 2026"]
     else:
-        queries = [
-            f"{subject} sneaker review",
-            f"{subject} avis test"
-        ]
+        queries = [f"{subject} sneaker review info"]
     
-    # Exécuter les recherches (DDG d'abord, Google en fallback)
+    # 3. Chercher via SearXNG (meilleure source pour les serveurs)
     all_results = []
-    for q in queries[:3]:  # Max 3 queries pour la vitesse
-        results = search_duckduckgo(q)
-        if not results:
-            results = search_google_scrape(q)
-        all_results.extend(results)
+    for q in queries[:2]:
+        results = search_searxng(q)
+        if results:
+            all_results.extend(results)
+            break  # Une requête suffit si on a des résultats
+    
+    # 4. Fallback DDG API
+    if not all_results:
+        for q in queries[:2]:
+            results = search_ddg_api(q)
+            if results:
+                all_results.extend(results)
+                break
+    
+    # 5. Fallback Brave
+    if not all_results:
+        for q in queries[:1]:
+            results = search_brave(q)
+            if results:
+                all_results.extend(results)
     
     if all_results:
         info['search_results'] = all_results[:10]
         info['found'] = True
     
-    log.info(f"[Research] subject='{subject}', type='{article_type}', wiki={'yes' if info['wikipedia'] else 'no'}, results={len(info['search_results'])}")
+    log.info(f"[Research] Done: wiki={'yes' if info['wikipedia'] else 'no'}, results={len(info['search_results'])}, found={info['found']}")
     return info
 
 
