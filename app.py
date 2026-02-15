@@ -1644,7 +1644,7 @@ def generate_article_content(article_type, subject, keywords, tone, length, prod
         # Mettre la paire exacte en premier, bien mise en avant
         if exact_product:
             exact_img = f'<img src="{exact_product["image"]}" style="width:100%;max-width:300px;height:auto;border-radius:10px;margin:10px auto;display:block">' if exact_product.get('image') else ''
-            product_links += f'''<div style="text-align:center;margin:20px 0;padding:20px;background:#f5f5f5;border-radius:12px">
+            product_links += f'''<div style="text-align:center;margin:20px 0;padding:20px;border-radius:12px">
                 {exact_img}
                 <div style="font-size:16px;font-weight:600;margin:10px 0;color:#333">{exact_product['title']}</div>
                 <a href="{exact_product['url']}" style="display:inline-block;padding:10px 25px;background:#667eea;color:white;text-decoration:none;border-radius:8px;font-weight:600;margin:10px 0">Voir cette paire →</a>
@@ -1656,7 +1656,7 @@ def generate_article_content(article_type, subject, keywords, tone, length, prod
             product_links += '<p style="margin-top:20px"><strong>Paires similaires disponibles :</strong></p>'
             product_links += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:15px;margin:10px 0">'
             for p in other_products[:5]:
-                img_html = f'<img src="{p["image"]}" style="width:100%;height:120px;object-fit:contain;background:#f5f5f5;border-radius:8px">' if p.get('image') else '<div style="width:100%;height:120px;background:#f5f5f5;border-radius:8px"></div>'
+                img_html = f'<img src="{p["image"]}" style="width:100%;height:120px;object-fit:contain;border-radius:8px">' if p.get('image') else '<div style="width:100%;height:120px;border-radius:8px"></div>'
                 product_links += f'''<a href="{p['url']}" style="text-decoration:none;color:inherit;display:block">
                     {img_html}
                     <div style="font-size:12px;margin-top:8px;color:#333;text-align:center;line-height:1.3">{p['title'][:50]}{"..." if len(p['title']) > 50 else ""}</div>
@@ -1707,17 +1707,31 @@ def translate_to_french(text):
     if not text or len(text) < 10:
         return text
     
-    # Détecter si c'est déjà en français (heuristique simple)
+    # Détecter si c'est déjà en français
     french_indicators = [' le ', ' la ', ' les ', ' des ', ' une ', ' est ', ' sont ', ' dans ', ' pour ', ' avec ', ' cette ', ' sur ', ' qui ', ' que ']
     text_lower = text.lower()
     french_count = sum(1 for ind in french_indicators if ind in text_lower)
     if french_count >= 3:
-        return text  # Déjà en français
+        return text
     
     try:
         import urllib.parse
-        # API Google Translate gratuite (endpoint non-officiel mais fonctionnel)
-        encoded = urllib.parse.quote(text[:1000])  # Limiter à 1000 chars par requête
+        # Protéger les noms de produits/marques avant traduction
+        # Remplacer temporairement par des placeholders
+        protected = {}
+        protected_text = text
+        brands = ['Nike Mind', 'Air Jordan', 'Air Force', 'Air Max', 'Dunk Low', 'Dunk High', 
+                  'New Balance', 'Nike SB', 'Jordan Brand', 'Mind 001', 'Mind 002',
+                  'Fragment', 'Union LA', 'Travis Scott', 'Off-White', 'Sacai']
+        idx = 0
+        for brand in brands:
+            if brand in protected_text:
+                placeholder = f'XBRAND{idx}X'
+                protected[placeholder] = brand
+                protected_text = protected_text.replace(brand, placeholder)
+                idx += 1
+        
+        encoded = urllib.parse.quote(protected_text[:2000])
         url = f'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=fr&dt=t&q={encoded}'
         
         html = fetch_url(url, timeout=8)
@@ -1725,11 +1739,17 @@ def translate_to_french(text):
             data = json.loads(html)
             translated = ''.join([s[0] for s in data[0] if s[0]])
             if translated and len(translated) > 10:
+                # Restaurer les noms protégés
+                for placeholder, original in protected.items():
+                    translated = translated.replace(placeholder, original)
+                    # Google Translate met parfois des espaces autour
+                    translated = translated.replace(placeholder.lower(), original)
+                    translated = translated.replace(placeholder.replace('X', 'x'), original)
                 return translated
     except Exception as e:
         log.error(f"[Translate] Error: {e}")
     
-    return text  # Retourner l'original si la traduction échoue
+    return text
 
 
 def build_web_info_html(research, subject):
@@ -1747,7 +1767,7 @@ def build_web_info_html(research, subject):
             extract = extract[:500].rsplit(' ', 1)[0] + '...'
         # Traduire si en anglais
         extract = translate_to_french(extract)
-        html += f'<div style="background:#f0f4ff;padding:20px;border-radius:10px;margin:20px 0;border-left:4px solid #667eea">'
+        html += f'<div style="padding:20px;border-radius:10px;margin:20px 0;border-left:4px solid #667eea">'
         html += f'<p style="margin:0">{extract}</p>'
         html += f'</div>'
     
@@ -1797,7 +1817,7 @@ def build_web_info_html(research, subject):
                 translated_results.append(translated)
             
             html += f'<h2>Ce que l\'on sait sur la {subject}</h2>'
-            html += '<div style="margin:20px 0;padding:15px;background:#f8f9fa;border-radius:10px">'
+            html += '<div style="margin:20px 0;padding:15px;border-radius:10px">'
             for r in translated_results:
                 html += f'<p style="margin:10px 0;line-height:1.6">{r}</p>'
             html += '</div>'
