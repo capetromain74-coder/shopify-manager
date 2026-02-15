@@ -1522,8 +1522,8 @@ def find_matching_products(subject, products):
     return [m[1] for m in matches[:10]]
 
 
-def generate_article_content(article_type, subject, keywords, tone, length, products, collections):
-    """Génère le contenu de l'article selon le type"""
+def generate_article_content(article_type, subject, keywords, tone, length, products, collections, research=None):
+    """Génère le contenu de l'article - utilise les données de recherche web si disponibles"""
     
     # Trouver les produits et collections liés
     matching_products = find_matching_products(subject, products)
