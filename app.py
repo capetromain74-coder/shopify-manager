@@ -1442,12 +1442,12 @@ def api_delete_article(blog_id, article_id):
 # ══════════════════════════════════════════════════════════════
 
 def get_products_for_linking():
-    """Récupère les produits pour créer des liens internes"""
+    """Récupère TOUS les produits Shopify pour créer des liens internes"""
     products = []
     since_id = 0
     
-    # Récupérer jusqu'à 250 produits (5 pages de 50)
-    for _ in range(2):
+    # Boucler jusqu'à avoir tous les produits
+    for _ in range(20):  # Max 20 pages = 5000 produits
         r = shopify_request(f'products.json?limit=250&since_id={since_id}')
         if not r or 'products' not in r or not r['products']:
             break
@@ -1469,12 +1469,74 @@ def get_products_for_linking():
         
         since_id = r['products'][-1]['id']
         
-        # Si moins de 50 produits, on a tout récupéré
+        # Si moins de 250 produits retournés, on a tout
         if len(r['products']) < 250:
             break
     
     log.info(f"[Blog] Loaded {len(products)} products for linking")
     return products
+
+
+def search_product_by_title(subject):
+    """Recherche un produit spécifique par son titre via l'API Shopify"""
+    import urllib.parse
+    
+    # Essayer une recherche directe
+    r = shopify_request(f'products.json?title={urllib.parse.quote(subject)}&limit=5')
+    if r and r.get('products'):
+        for p in r['products']:
+            img = ''
+            if p.get('images') and len(p['images']) > 0:
+                img = p['images'][0].get('src', '')
+            return {
+                'id': p['id'],
+                'title': p['title'],
+                'handle': p['handle'],
+                'sku': p['variants'][0].get('sku', '') if p.get('variants') else '',
+                'image': img,
+                'url': f"https://{SITE_DOMAIN}/products/{p['handle']}"
+            }
+    
+    # Fallback : recherche avec des mots-clés
+    # Extraire les mots importants du sujet
+    words = subject.lower().split()
+    stop = ['air', 'nike', 'adidas', 'new', 'balance', 'retro', 'high', 'low', 'mid', 'og', 'sp', 'se', 'the', 'a', 'x', 'men', 'women']
+    important = [w for w in words if w not in stop and len(w) > 1]
+    
+    # Essayer avec les 3-4 mots-clés les plus importants
+    for num_words in [4, 3, 2]:
+        if len(important) >= num_words:
+            search_terms = ' '.join(important[:num_words])
+            r = shopify_request(f'products.json?title={urllib.parse.quote(search_terms)}&limit=10')
+            if r and r.get('products'):
+                # Scorer les résultats
+                best = None
+                best_score = 0
+                subject_lower = subject.lower()
+                for p in r['products']:
+                    title_lower = p['title'].lower()
+                    score = sum(1 for w in important if w in title_lower)
+                    if subject_lower in title_lower or title_lower in subject_lower:
+                        score += 20
+                    if score > best_score:
+                        best_score = score
+                        best = p
+                
+                if best and best_score >= 2:
+                    img = ''
+                    if best.get('images') and len(best['images']) > 0:
+                        img = best['images'][0].get('src', '')
+                    log.info(f"[Blog] Found product by search: {best['title']} (score={best_score})")
+                    return {
+                        'id': best['id'],
+                        'title': best['title'],
+                        'handle': best['handle'],
+                        'sku': best['variants'][0].get('sku', '') if best.get('variants') else '',
+                        'image': img,
+                        'url': f"https://{SITE_DOMAIN}/products/{best['handle']}"
+                    }
+    
+    return None
 
 
 def find_matching_products(subject, products):
@@ -1547,19 +1609,22 @@ def generate_article_content(article_type, subject, keywords, tone, length, prod
     
     log.info(f"[Blog] Found {len(matching_products)} matching products for '{subject}'")
     
-    # ── Chercher la paire EXACTE dans les produits ──
-    exact_product = None
-    subject_lower = subject.lower()
-    for p in products:
-        title_lower = p['title'].lower()
-        # Match exact ou quasi-exact
-        if subject_lower in title_lower or title_lower in subject_lower:
-            exact_product = p
-            break
+    # ── Chercher la paire EXACTE ──
+    # D'abord via l'API Shopify (recherche directe par titre)
+    exact_product = search_product_by_title(subject)
     
-    # Si pas de match exact, chercher avec les mots-clés importants (au moins 80% de match)
+    # Si pas trouvé via API, chercher dans la liste chargée
+    if not exact_product:
+        subject_lower = subject.lower()
+        for p in products:
+            title_lower = p['title'].lower()
+            if subject_lower in title_lower or title_lower in subject_lower:
+                exact_product = p
+                break
+    
+    # Si toujours pas, chercher avec scoring dans les matching
     if not exact_product and matching_products:
-        subject_words = set(w for w in subject_lower.split() if len(w) > 2)
+        subject_words = set(w for w in subject.lower().split() if len(w) > 2)
         best_score = 0
         for p in matching_products:
             p_words = set(w for w in p['title'].lower().split() if len(w) > 2)
