@@ -2286,14 +2286,30 @@ def extract_text_from_html(html, min_length=50, max_paragraphs=15):
         text = re.sub(r'<[^>]+>', '', p).strip()
         text = re.sub(r'\s+', ' ', text)
         if len(text) >= min_length and len(text) < 2000:
-            # Filtrer le contenu inutile
             lower = text.lower()
             skip = False
-            for junk in ['cookie', 'privacy policy', 'subscribe', 'newsletter', 'sign up', 'log in', 
-                         'accept all', 'javascript', 'copyright', 'terms of service', 'politique de confidentialite']:
+            # Liste étendue de bruit à filtrer
+            junk_list = [
+                'cookie', 'privacy policy', 'subscribe', 'newsletter', 'sign up', 
+                'log in', 'accept all', 'javascript', 'copyright', 'terms of service',
+                'politique de confidentialite', 'kicksfinder is an online database',
+                'fashionfootwear', 'artdesignmusic', 'brand ranking', 'brand directory',
+                'scan the qr', 'download the app', 'app stores', 'stay ahead of the curve',
+                'get the latest', 'follow us', 'all rights reserved', 'terms of use',
+                'accuracy may vary', 'some languages may be', 'don\'t show again',
+                'turn on code', 'cmd', 'www.kicksfinder.com', 'online database of the most popular',
+                'complete list of retailers'
+            ]
+            for junk in junk_list:
                 if junk in lower:
                     skip = True
                     break
+            # Aussi filtrer les textes qui ressemblent à des menus de navigation (mots collés sans espaces)
+            if not skip and len(text) > 80:
+                # Ratio espaces/texte trop bas = menu de navigation
+                space_ratio = text.count(' ') / len(text)
+                if space_ratio < 0.05:
+                    skip = True
             if not skip:
                 paragraphs.append(text)
     
@@ -2302,8 +2318,10 @@ def extract_text_from_html(html, min_length=50, max_paragraphs=15):
     if not meta:
         meta = re.findall(r'<meta[^>]*content=["\'](.*?)["\'][^>]*name=["\']description["\']', html, re.DOTALL)
     for m in meta:
-        if len(m) > 40:
-            paragraphs.insert(0, m.strip())
+        m_clean = m.strip()
+        m_lower = m_clean.lower()
+        if len(m_clean) > 40 and 'kicksfinder' not in m_lower and 'online database' not in m_lower:
+            paragraphs.insert(0, m_clean)
     
     return paragraphs[:max_paragraphs]
 
@@ -2460,54 +2478,74 @@ def search_sneaker_sites(subject):
 
 
 def search_brand_page(subject):
-    """Scrape les pages officielles de la marque"""
+    """Scrape les pages officielles de la marque - cherche dynamiquement les bons articles"""
     import urllib.parse
     s = subject.lower()
     results = []
+    keywords = [w for w in s.split() if len(w) > 2 and w not in ['the', 'retro', 'high', 'low', 'mid', 'og', 'sp', 'se']]
     
-    # Construire des slugs variés
     slug = subject.lower().replace(' ', '-')
     slug_clean = slug.replace('nike-', '').replace('adidas-', '').replace('new-balance-', '')
     query_encoded = urllib.parse.quote(subject)
     
-    urls = []
     if 'nike' in s or 'jordan' in s or 'dunk' in s or 'force' in s or 'air max' in s or 'mind' in s:
-        urls = [
-            f"https://about.nike.com/en/newsroom/releases/nike-{slug_clean}-official-images",
-            f"https://about.nike.com/en/newsroom/releases/{slug}-official-images",
-            f"https://www.nike.com/a/nike-{slug_clean}-release-info",
-            f"https://www.nike.com/a/{slug_clean}-release-info",
-        ]
-    elif 'adidas' in s or 'samba' in s or 'campus' in s or 'gazelle' in s or 'yeezy' in s:
-        urls = [
-            f"https://news.adidas.com/search?q={query_encoded}",
-        ]
-    elif 'new balance' in s or 'nb ' in s:
-        slug_nb = slug.replace('new-balance-', '')
-        urls = [
-            f"https://www.newbalance.com/search/?q={query_encoded}",
-        ]
-    elif 'asics' in s or 'gel' in s:
-        urls = [
-            f"https://www.asics.com/us/en-us/search?q={query_encoded}",
-        ]
-    elif 'ugg' in s or 'tasman' in s or 'tazz' in s:
-        urls = [
-            f"https://www.ugg.com/search?q={query_encoded}",
-        ]
-    
-    for url in urls[:4]:
+        # ── Scraper la page newsroom about.nike.com pour trouver le bon article ──
         try:
-            html = fetch_url(url, timeout=10)
-            if html and len(html) > 5000:
-                paragraphs = extract_text_from_html(html, min_length=60)
-                if paragraphs:
-                    log.info(f"[Brand] {url[:60]} -> {len(paragraphs)} paragraphs")
-                    results.extend(paragraphs)
-                    if len(results) >= 5:
-                        break
+            newsroom_url = "https://about.nike.com/en/newsroom/releases"
+            html = fetch_url(newsroom_url, timeout=12)
+            if html:
+                # Chercher les liens qui contiennent les mots-clés du sujet
+                all_links = re.findall(r'href="(/en/newsroom/releases/[^"]+)"', html)
+                for link in all_links:
+                    link_lower = link.lower()
+                    match_count = sum(1 for kw in keywords if kw in link_lower)
+                    if match_count >= 2:
+                        full_url = f"https://about.nike.com{link}"
+                        log.info(f"[Brand] Found newsroom article: {full_url}")
+                        article_html = fetch_url(full_url, timeout=10)
+                        if article_html and len(article_html) > 5000:
+                            paragraphs = extract_text_from_html(article_html, min_length=60)
+                            relevant = [p for p in paragraphs if any(kw in p.lower() for kw in keywords[:4])]
+                            if relevant:
+                                results.extend(relevant)
+                                log.info(f"[Brand] about.nike.com article -> {len(relevant)} paragraphs")
+                        if results:
+                            break
         except Exception as e:
-            log.error(f"[Brand] {url[:60]}: {e}")
+            log.error(f"[Brand] newsroom scrape: {e}")
+        
+        # ── Fallback : URLs directes construites ──
+        if not results:
+            urls = [
+                f"https://about.nike.com/en/newsroom/releases/nike-{slug_clean}-official-images",
+                f"https://about.nike.com/en/newsroom/releases/{slug}-official-images",
+                f"https://www.nike.com/a/nike-{slug_clean}-release-info",
+                f"https://www.nike.com/a/{slug_clean}-release-info",
+            ]
+            for url in urls[:4]:
+                try:
+                    html = fetch_url(url, timeout=10)
+                    if html and len(html) > 5000:
+                        paragraphs = extract_text_from_html(html, min_length=60)
+                        relevant = [p for p in paragraphs if any(kw in p.lower() for kw in keywords[:4])]
+                        if relevant:
+                            results.extend(relevant)
+                            break
+                except Exception as e:
+                    log.error(f"[Brand] {url[:60]}: {e}")
+    
+    elif 'adidas' in s or 'samba' in s or 'campus' in s or 'gazelle' in s or 'yeezy' in s:
+        urls = [f"https://news.adidas.com/search?q={query_encoded}"]
+        for url in urls:
+            try:
+                html = fetch_url(url, timeout=10)
+                if html and len(html) > 5000:
+                    paragraphs = extract_text_from_html(html, min_length=60)
+                    relevant = [p for p in paragraphs if any(kw in p.lower() for kw in keywords[:4])]
+                    if relevant:
+                        results.extend(relevant)
+            except Exception as e:
+                log.error(f"[Brand] {url[:60]}: {e}")
     
     return results
 
