@@ -619,11 +619,35 @@ function fixOneProduct(pid,btn,status,bar,text){
 }
 
 function fixAllProducts(btn,status,bar,text){
-    fetch("/api/images/fix-all",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})})
-    .then(function(r){return r.json();}).then(function(d){
-        if(d.success){bar.style.width="100%";text.textContent=d.processed+" / "+d.processed;status.style.background="#00ff8822";status.style.color="#00ff88";status.textContent="✅ "+d.total_fixed+" images corrigées sur "+d.total_images+" ("+d.processed+" produits)";btn.innerHTML="✅ Terminé!";setTimeout(function(){location.reload();},3000);}
-        else{status.style.background="#ff475722";status.style.color="#ff4757";status.textContent="❌ Erreur: "+(d.error||"Inconnue");btn.disabled=false;btn.innerHTML="Corriger les images";}
-    }).catch(function(e){status.style.background="#ff475722";status.style.color="#ff4757";status.textContent="❌ Erreur: "+e.message;btn.disabled=false;btn.innerHTML="Corriger les images";});
+    // Utiliser tous les produits chargés dans P
+    var pids=[];
+    for(var i=0;i<P.length;i++) pids.push(P[i].id);
+    if(pids.length===0){
+        status.style.background="#ff475722";status.style.color="#ff4757";
+        status.textContent="❌ Aucun produit chargé. Attendez le chargement.";
+        btn.disabled=false;btn.innerHTML="Corriger les images";return;
+    }
+    var done=0;var totalFixed=0;var totalImgs=0;var errors=0;
+    function next(){
+        if(done>=pids.length){
+            bar.style.width="100%";text.textContent=done+" / "+pids.length;
+            status.style.background="#00ff8822";status.style.color="#00ff88";
+            status.textContent="✅ Terminé ! "+totalFixed+" images corrigées sur "+totalImgs+" ("+done+" produits, "+errors+" erreurs)";
+            btn.innerHTML="✅ Terminé!";
+            return;
+        }
+        var pct=Math.round((done/pids.length)*100);
+        bar.style.width=pct+"%";
+        text.textContent=done+" / "+pids.length;
+        status.textContent="⏳ Produit "+(done+1)+" / "+pids.length+"...";
+        
+        fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})})
+        .then(function(r){return r.json();}).then(function(d){
+            if(d.success){totalFixed+=d.fixed;totalImgs+=d.total;}else{errors++;}
+            done++;next();
+        }).catch(function(){errors++;done++;next();});
+    }
+    next();
 }
 
 function fixSelectedProducts(btn,status,bar,text){
