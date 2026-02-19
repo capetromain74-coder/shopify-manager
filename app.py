@@ -1562,7 +1562,7 @@ def rename_image_file(image_gid, new_filename):
 
 
 def fix_product_images(product_id):
-    """Corrige les images d'un produit : nom fichier = handle_N, alt = titre produit"""
+    """Corrige les images d'un produit : nom = Titre_Produit_N.ext, alt = titre produit"""
     import time
     r = shopify_request(f'products/{product_id}.json')
     if not r or 'product' not in r:
@@ -1570,76 +1570,65 @@ def fix_product_images(product_id):
     
     product = r['product']
     title = product['title']
-    handle = product['handle']
     images = product.get('images', [])
     
     if not images:
         return {'success': True, 'fixed': 0, 'total': 0, 'title': title}
     
+    # Nom de fichier basé sur le titre : "Asics Gel-1130 Black Pure Silver" -> "Asics_Gel-1130_Black_Pure_Silver"
+    title_for_filename = title.replace(' ', '_')
+    
+    # Récupérer les media IDs via GraphQL (nécessaire pour renommer)
+    media_gids = []
+    gql_query = """
+    query getProductMedia($id: ID!) {
+        product(id: $id) {
+            media(first: 50) {
+                edges { node { id } }
+            }
+        }
+    }
+    """
+    gql_result = shopify_graphql(gql_query, {"id": f"gid://shopify/Product/{product_id}"})
+    if gql_result and gql_result.get('data', {}).get('product', {}).get('media', {}).get('edges'):
+        media_gids = [e['node']['id'] for e in gql_result['data']['product']['media']['edges']]
+    
     fixed = 0
     for i, img in enumerate(images):
         img_id = img['id']
-        
-        # Nom de fichier : handle avec _ au lieu de -, + numéro. Ex: asics_gel_1130_black_pure_silver_1
-        safe_handle = handle.replace('-', '_')
-        ext = 'jpg'
-        current_src = img.get('src', '') or ''
-        if '.' in current_src.split('/')[-1].split('?')[0]:
-            ext = current_src.split('/')[-1].split('?')[0].split('.')[-1]
-        new_filename = f"{safe_handle}_{i+1}.{ext}"
-        
-        # Alt text : titre exact du produit
         new_alt = title
-        
         current_alt = img.get('alt', '') or ''
+        current_src = img.get('src', '') or ''
         current_filename = current_src.split('/')[-1].split('?')[0] if current_src else ''
         
-        alt_ok = (current_alt == new_alt)
-        filename_ok = (safe_handle in current_filename)
+        # Extension du fichier actuel
+        ext = 'jpg'
+        if '.' in current_filename:
+            ext = current_filename.split('.')[-1].lower()
         
-        if alt_ok and filename_ok:
-            continue
+        new_filename = f"{title_for_filename}_{i+1}.{ext}"
         
-        # Un seul PUT avec alt + filename
-        update_data = {
-            'image': {
-                'id': img_id,
-                'alt': new_alt,
-                'filename': new_filename
-            }
-        }
+        did_something = False
         
-        result = shopify_request(f'products/{product_id}/images/{img_id}.json', 'PUT', update_data)
-        if result:
+        # 1. Alt text via REST
+        if current_alt != new_alt:
+            update_data = {'image': {'id': img_id, 'alt': new_alt}}
+            result = shopify_request(f'products/{product_id}/images/{img_id}.json', 'PUT', update_data)
+            if result:
+                did_something = True
+                log.info(f"[ImageFix] {title} - image {i+1}: alt OK")
+            time.sleep(0.2)
+        
+        # 2. Filename via GraphQL fileUpdate
+        if title_for_filename not in current_filename and i < len(media_gids):
+            rename_result = rename_image_file(media_gids[i], new_filename)
+            if rename_result:
+                did_something = True
+                log.info(f"[ImageFix] {title} - image {i+1}: renamed to '{new_filename}'")
+            time.sleep(0.3)
+        
+        if did_something:
             fixed += 1
-            log.info(f"[ImageFix] {title} - image {i+1}: filename='{new_filename}', alt='{new_alt}'")
-        else:
-            # Si le filename ne passe pas en REST, essayer GraphQL
-            # D'abord mettre le alt seul
-            if not alt_ok:
-                update_alt = {'image': {'id': img_id, 'alt': new_alt}}
-                shopify_request(f'products/{product_id}/images/{img_id}.json', 'PUT', update_alt)
-            
-            # Puis renommer via GraphQL
-            if not filename_ok:
-                gql_query = """
-                query getProductMedia($id: ID!) {
-                    product(id: $id) {
-                        media(first: 50) {
-                            edges { node { id } }
-                        }
-                    }
-                }
-                """
-                gql_result = shopify_graphql(gql_query, {"id": f"gid://shopify/Product/{product_id}"})
-                if gql_result and gql_result.get('data', {}).get('product', {}).get('media', {}).get('edges'):
-                    edges = gql_result['data']['product']['media']['edges']
-                    if i < len(edges):
-                        media_gid = edges[i]['node']['id']
-                        rename_image_file(media_gid, new_filename)
-            fixed += 1
-        
-        time.sleep(0.3)
     
     return {'success': True, 'fixed': fixed, 'total': len(images), 'title': title}
 
@@ -1655,6 +1644,62 @@ def api_fix_images():
     
     result = fix_product_images(product_id)
     return jsonify(result)
+
+
+@app.route('/api/images/test/<int:product_id>')
+def api_test_image_fix(product_id):
+    """Debug: teste le fix d'images sur un produit et retourne les détails"""
+    r = shopify_request(f'products/{product_id}.json')
+    if not r or 'product' not in r:
+        return jsonify({'error': 'Produit non trouvé'})
+    
+    product = r['product']
+    title = product['title']
+    handle = product['handle']
+    images = product.get('images', [])
+    title_for_filename = title.replace(' ', '_')
+    
+    # Récupérer media GIDs
+    gql_query = """
+    query getProductMedia($id: ID!) {
+        product(id: $id) {
+            media(first: 50) {
+                edges { node { id } }
+            }
+        }
+    }
+    """
+    gql_result = shopify_graphql(gql_query, {"id": f"gid://shopify/Product/{product_id}"})
+    media_gids = []
+    gql_raw = gql_result
+    if gql_result and gql_result.get('data', {}).get('product', {}).get('media', {}).get('edges'):
+        media_gids = [e['node']['id'] for e in gql_result['data']['product']['media']['edges']]
+    
+    image_details = []
+    for i, img in enumerate(images):
+        current_src = img.get('src', '') or ''
+        current_filename = current_src.split('/')[-1].split('?')[0] if current_src else ''
+        ext = current_filename.split('.')[-1] if '.' in current_filename else 'jpg'
+        new_filename = f"{title_for_filename}_{i+1}.{ext}"
+        
+        image_details.append({
+            'index': i+1,
+            'current_alt': img.get('alt', ''),
+            'new_alt': title,
+            'current_filename': current_filename,
+            'new_filename': new_filename,
+            'media_gid': media_gids[i] if i < len(media_gids) else 'NOT FOUND',
+            'img_id': img['id']
+        })
+    
+    return jsonify({
+        'product': title,
+        'handle': handle,
+        'images_count': len(images),
+        'media_gids_count': len(media_gids),
+        'graphql_raw': gql_raw,
+        'images': image_details
+    })
 
 
 @app.route('/api/images/fix-all', methods=['POST'])
