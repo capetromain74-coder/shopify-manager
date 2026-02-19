@@ -489,16 +489,16 @@ function render(L){
     if(!L.length&&!loading){el.innerHTML="<div class='loading'>Aucun produit</div>";return;}
     var html="";var max=Math.min(L.length,100);
     for(var i=0;i<max;i++){
-        var p=L[i];var img=(p.image&&p.image.src)?p.image.src:"";
+        var p=L[i];var img=(p.image&&p.image.src)?p.image.src.replace(/'/g,"%27"):"";
         var sku=(p.variants&&p.variants[0])?p.variants[0].sku||"":"";
         var price=(p.variants&&p.variants[0])?p.variants[0].price:"0";
-        var checked=selectedPids.indexOf(p.id)>=0?"checked":"";
-        html+="<div class='card' style='position:relative'>";
-        html+="<input type='checkbox' class='card-check' data-pid='"+p.id+"' "+checked+" onclick='event.stopPropagation();toggleSelect("+p.id+")' style='position:absolute;top:8px;left:8px;width:20px;height:20px;z-index:2;cursor:pointer;accent-color:#00ff88'>";
-        html+="<div onclick='go("+p.id+")'><img src='"+img+"'><div class='card-body'>";
+        var checked=selectedPids.indexOf(p.id)>=0?" checked":"";
+        html+="<div class='card' style='position:relative' data-id='"+p.id+"'>";
+        html+="<input type='checkbox' class='card-check'"+checked+" onclick='event.stopPropagation();toggleSelect("+p.id+")' style='position:absolute;top:8px;left:8px;width:20px;height:20px;z-index:2;cursor:pointer;accent-color:#00ff88'>";
+        html+="<img src='"+img+"' onclick='go("+p.id+")'><div class='card-body' onclick='go("+p.id+")'>";
         html+="<div class='card-title'>"+esc(p.title)+"</div><div class='card-sku'>"+sku+"</div>";
         html+="<div class='card-meta'><span class='card-price'>"+price+" EUR</span><span class='badge "+p._seo+"'>"+p._sc+"%</span></div>";
-        html+="</div></div></div>";
+        html+="</div></div>";
     }
     el.innerHTML=html;
     updateSelectCount();
