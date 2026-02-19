@@ -413,7 +413,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <p style="color:#aaa;font-size:14px;margin-bottom:15px">Renomme les fichiers et corrige le texte alternatif :</p>
 <ul style="color:#aaa;font-size:13px;margin-bottom:20px;padding-left:20px">
 <li><strong style="color:#fff">Nom fichier</strong> : handle-produit_1.jpg, handle-produit_2.jpg...</li>
-<li><strong style="color:#fff">Texte alt</strong> : Titre du produit + KP SHOES</li>
+<li><strong style="color:#fff">Texte alt</strong> : Titre exact du produit</li>
 </ul>
 <div style="margin-bottom:15px">
 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
@@ -1517,8 +1517,52 @@ def api_goat_apply():
 # IMAGE FIX API (renommer fichiers + texte alternatif)
 # ══════════════════════════════════════════════════════════════
 
+def shopify_graphql(query, variables=None):
+    """Exécute une requête GraphQL Shopify"""
+    url = f"https://{SHOP}/admin/api/{API_VERSION}/graphql.json"
+    headers = {'X-Shopify-Access-Token': ACCESS_TOKEN, 'Content-Type': 'application/json'}
+    payload = {'query': query}
+    if variables:
+        payload['variables'] = variables
+    try:
+        req = Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with urlopen(req, context=ctx, timeout=30) as r:
+            return json.loads(r.read().decode('utf-8'))
+    except Exception as e:
+        log.error(f"[Shopify GraphQL] {e}")
+        return None
+
+
+def rename_image_file(image_gid, new_filename):
+    """Renomme un fichier image via GraphQL fileUpdate"""
+    query = """
+    mutation fileUpdate($files: [FileUpdateInput!]!) {
+        fileUpdate(files: $files) {
+            files { id alt }
+            userErrors { field message }
+        }
+    }
+    """
+    variables = {
+        "files": [{
+            "id": image_gid,
+            "filename": new_filename
+        }]
+    }
+    result = shopify_graphql(query, variables)
+    if result and result.get('data', {}).get('fileUpdate', {}).get('userErrors'):
+        errors = result['data']['fileUpdate']['userErrors']
+        if errors:
+            log.error(f"[ImageRename] {errors}")
+            return False
+    return result is not None
+
+
 def fix_product_images(product_id):
-    """Corrige les images d'un produit : nom fichier = handle_N.jpg, alt = titre produit"""
+    """Corrige les images d'un produit : nom fichier = handle_N, alt = titre produit"""
     import time
     r = shopify_request(f'products/{product_id}.json')
     if not r or 'product' not in r:
@@ -1536,23 +1580,27 @@ def fix_product_images(product_id):
     for i, img in enumerate(images):
         img_id = img['id']
         
-        # Nouveau nom de fichier : handle_1.jpg, handle_2.jpg, etc.
-        new_filename = f"{handle}_{i+1}.jpg"
-        # Nouveau texte alternatif : titre exact du produit
-        new_alt = f"{title} KP SHOES"
-        
-        # Vérifier si c'est déjà correct
-        current_alt = img.get('alt', '') or ''
+        # Nom de fichier : handle avec _ au lieu de -, + numéro. Ex: asics_gel_1130_black_pure_silver_1
+        safe_handle = handle.replace('-', '_')
+        ext = 'jpg'
         current_src = img.get('src', '') or ''
-        # Extraire le nom de fichier actuel de l'URL
+        if '.' in current_src.split('/')[-1].split('?')[0]:
+            ext = current_src.split('/')[-1].split('?')[0].split('.')[-1]
+        new_filename = f"{safe_handle}_{i+1}.{ext}"
+        
+        # Alt text : titre exact du produit
+        new_alt = title
+        
+        current_alt = img.get('alt', '') or ''
         current_filename = current_src.split('/')[-1].split('?')[0] if current_src else ''
         
-        needs_update = (current_alt != new_alt) or (new_filename not in current_filename)
+        alt_ok = (current_alt == new_alt)
+        filename_ok = (safe_handle in current_filename)
         
-        if not needs_update:
+        if alt_ok and filename_ok:
             continue
         
-        # Mettre à jour via l'API Shopify
+        # Un seul PUT avec alt + filename
         update_data = {
             'image': {
                 'id': img_id,
@@ -1565,8 +1613,33 @@ def fix_product_images(product_id):
         if result:
             fixed += 1
             log.info(f"[ImageFix] {title} - image {i+1}: filename='{new_filename}', alt='{new_alt}'")
+        else:
+            # Si le filename ne passe pas en REST, essayer GraphQL
+            # D'abord mettre le alt seul
+            if not alt_ok:
+                update_alt = {'image': {'id': img_id, 'alt': new_alt}}
+                shopify_request(f'products/{product_id}/images/{img_id}.json', 'PUT', update_alt)
+            
+            # Puis renommer via GraphQL
+            if not filename_ok:
+                gql_query = """
+                query getProductMedia($id: ID!) {
+                    product(id: $id) {
+                        media(first: 50) {
+                            edges { node { id } }
+                        }
+                    }
+                }
+                """
+                gql_result = shopify_graphql(gql_query, {"id": f"gid://shopify/Product/{product_id}"})
+                if gql_result and gql_result.get('data', {}).get('product', {}).get('media', {}).get('edges'):
+                    edges = gql_result['data']['product']['media']['edges']
+                    if i < len(edges):
+                        media_gid = edges[i]['node']['id']
+                        rename_image_file(media_gid, new_filename)
+            fixed += 1
         
-        time.sleep(0.3)  # Rate limit Shopify
+        time.sleep(0.3)
     
     return {'success': True, 'fixed': fixed, 'total': len(images), 'title': title}
 
@@ -1586,60 +1659,25 @@ def api_fix_images():
 
 @app.route('/api/images/fix-all', methods=['POST'])
 def api_fix_all_images():
-    """Corrige les images de TOUS les produits (nom fichier + alt text)"""
+    """Corrige les images de TOUS les produits via fix_product_images"""
     import time
     
     total_fixed = 0
     total_images = 0
     processed = 0
-    errors = []
     since_id = 0
     
-    for _ in range(20):  # Max 5000 produits
+    for _ in range(20):
         r = shopify_request(f'products.json?limit=250&since_id={since_id}')
         if not r or 'products' not in r or not r['products']:
             break
         
         for product in r['products']:
             pid = product['id']
-            title = product['title']
-            handle = product['handle']
-            images = product.get('images', [])
-            
-            if not images:
-                processed += 1
-                continue
-            
-            for i, img in enumerate(images):
-                img_id = img['id']
-                new_filename = f"{handle}_{i+1}.jpg"
-                new_alt = f"{title} KP SHOES"
-                current_alt = img.get('alt', '') or ''
-                current_src = img.get('src', '') or ''
-                current_filename = current_src.split('/')[-1].split('?')[0] if current_src else ''
-                
-                total_images += 1
-                
-                needs_update = (current_alt != new_alt) or (new_filename not in current_filename)
-                if not needs_update:
-                    continue
-                
-                update_data = {
-                    'image': {
-                        'id': img_id,
-                        'alt': new_alt,
-                        'filename': new_filename
-                    }
-                }
-                
-                result = shopify_request(f'products/{pid}/images/{img_id}.json', 'PUT', update_data)
-                if result:
-                    total_fixed += 1
-                else:
-                    errors.append(f"{title} - image {i+1}")
-                
-                time.sleep(0.3)
-            
+            result = fix_product_images(pid)
+            if result.get('success'):
+                total_fixed += result.get('fixed', 0)
+                total_images += result.get('total', 0)
             processed += 1
             
             if processed % 10 == 0:
@@ -1655,8 +1693,7 @@ def api_fix_all_images():
         'success': True,
         'processed': processed,
         'total_fixed': total_fixed,
-        'total_images': total_images,
-        'errors': errors[:10]
+        'total_images': total_images
     })
 
 
