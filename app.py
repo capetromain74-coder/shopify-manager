@@ -1552,13 +1552,82 @@ def rename_image_file(image_gid, new_filename):
             "filename": new_filename
         }]
     }
+    log.info(f"[ImageRename] Calling GraphQL: gid={image_gid}, filename={new_filename}")
     result = shopify_graphql(query, variables)
-    if result and result.get('data', {}).get('fileUpdate', {}).get('userErrors'):
-        errors = result['data']['fileUpdate']['userErrors']
-        if errors:
-            log.error(f"[ImageRename] {errors}")
-            return False
-    return result is not None
+    log.info(f"[ImageRename] GraphQL result: {result}")
+    
+    if not result:
+        log.error("[ImageRename] GraphQL returned None")
+        return False
+    
+    if result.get('errors'):
+        log.error(f"[ImageRename] GraphQL errors: {result['errors']}")
+        return False
+    
+    user_errors = result.get('data', {}).get('fileUpdate', {}).get('userErrors', [])
+    if user_errors:
+        log.error(f"[ImageRename] userErrors: {user_errors}")
+        return False
+    
+    return True
+
+
+@app.route('/api/images/test-rename/<int:product_id>')
+def api_test_rename(product_id):
+    """Debug: teste le renommage de la première image d'un produit"""
+    r = shopify_request(f'products/{product_id}.json')
+    if not r or 'product' not in r:
+        return jsonify({'error': 'Produit non trouvé'})
+    
+    product = r['product']
+    title = product['title']
+    images = product.get('images', [])
+    title_for_filename = title.replace(' ', '_')
+    
+    if not images:
+        return jsonify({'error': 'Pas d images'})
+    
+    # Récupérer media GID
+    gql_query = """
+    query getProductMedia($id: ID!) {
+        product(id: $id) {
+            media(first: 5) {
+                edges { node { id } }
+            }
+        }
+    }
+    """
+    gql_result = shopify_graphql(gql_query, {"id": f"gid://shopify/Product/{product_id}"})
+    
+    if not gql_result or not gql_result.get('data', {}).get('product', {}).get('media', {}).get('edges'):
+        return jsonify({'error': 'Pas de media GIDs', 'graphql_result': gql_result})
+    
+    media_gid = gql_result['data']['product']['media']['edges'][0]['node']['id']
+    
+    current_src = images[0].get('src', '')
+    current_filename = current_src.split('/')[-1].split('?')[0] if current_src else ''
+    ext = current_filename.split('.')[-1] if '.' in current_filename else 'jpg'
+    new_filename = f"{title_for_filename}_1.{ext}"
+    
+    # Exécuter le rename
+    rename_query = """
+    mutation fileUpdate($files: [FileUpdateInput!]!) {
+        fileUpdate(files: $files) {
+            files { id alt }
+            userErrors { field message }
+        }
+    }
+    """
+    rename_vars = {"files": [{"id": media_gid, "filename": new_filename}]}
+    rename_result = shopify_graphql(rename_query, rename_vars)
+    
+    return jsonify({
+        'product': title,
+        'media_gid': media_gid,
+        'current_filename': current_filename,
+        'new_filename': new_filename,
+        'rename_result': rename_result
+    })
 
 
 def fix_product_images(product_id):
