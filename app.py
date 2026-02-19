@@ -556,12 +556,22 @@ function filterProductsForFix(){
     var h="";
     for(var i=0;i<matches.length;i++){
         var img=(matches[i].images&&matches[i].images.length>0)?matches[i].images[0].src:"";
-        h+="<div onclick='selectProductForFix("+matches[i].id+",\""+matches[i].title.replace(/\x22/g,"&quot;")+"\",\""+img+"\")' style='display:flex;align-items:center;gap:10px;padding:8px;cursor:pointer;border-bottom:1px solid #333'>";
-        if(img)h+="<img src='"+img+"' style='width:40px;height:40px;object-fit:contain;border-radius:4px'>";
-        h+="<span style='font-size:13px;color:#ddd'>"+matches[i].title+"</span></div>";
+        h+="<div class='imgfix-item' data-pid='"+matches[i].id+"' data-img='"+img.replace(/\x27/g,"%27")+"' style='display:flex;align-items:center;gap:10px;padding:8px;cursor:pointer;border-bottom:1px solid #333'>";
+        if(img)h+="<img src='"+img.replace(/\x27/g,"%27")+"' style='width:40px;height:40px;object-fit:contain;border-radius:4px'>";
+        h+="<span style='font-size:13px;color:#ddd'>"+esc(matches[i].title)+"</span></div>";
     }
     if(matches.length===0)h="<div style='padding:10px;color:#666;font-size:13px'>Aucun produit trouvé</div>";
     list.innerHTML=h;
+    // Ajouter les event listeners
+    var items=list.querySelectorAll('.imgfix-item');
+    for(var j=0;j<items.length;j++){
+        items[j].addEventListener('click',function(){
+            var pid=this.getAttribute('data-pid');
+            var img=this.getAttribute('data-img');
+            var title=this.querySelector('span').textContent;
+            selectProductForFix(pid,title,img);
+        });
+    }
 }
 
 function selectProductForFix(pid,title,img){
