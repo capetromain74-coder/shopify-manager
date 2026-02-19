@@ -399,8 +399,10 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <option value="poor">Faible</option>
 </select>
 <button class="btn btn-s" onclick="reload()">Actualiser</button>
+<button class="btn btn-s" onclick="selectAll()">Tout cocher</button>
 <button class="btn btn-o" onclick="openImageFixer()">🖼️ Fix Images</button>
 </div>
+<div id="selectCount" style="display:none;align-items:center;gap:10px;padding:8px 15px;background:#00ff8822;border-radius:8px;margin-top:8px;font-size:13px;color:#00ff88"></div>
 <!-- Modal Fix Images -->
 <div id="imgFixModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto">
 <div style="max-width:600px;margin:40px auto;background:#1a1a2e;border-radius:12px;padding:30px;color:#fff">
@@ -416,6 +418,9 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <div style="margin-bottom:15px">
 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
 <input type="radio" name="imgScope" value="all" checked onchange="document.getElementById('imgSearchBox').style.display='none'"> Tous les produits
+</label>
+<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;margin-top:8px">
+<input type="radio" name="imgScope" value="selection" onchange="document.getElementById('imgSearchBox').style.display='none'"> Seulement la sélection (<span id="imgSelCount">0</span> produits cochés)
 </label>
 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;margin-top:8px">
 <input type="radio" name="imgScope" value="selected" onchange="document.getElementById('imgSearchBox').style.display='block'"> Un produit spécifique
@@ -487,12 +492,35 @@ function render(L){
         var p=L[i];var img=(p.image&&p.image.src)?p.image.src:"";
         var sku=(p.variants&&p.variants[0])?p.variants[0].sku||"":"";
         var price=(p.variants&&p.variants[0])?p.variants[0].price:"0";
-        html+="<div class='card' onclick='go("+p.id+")'><img src='"+img+"'><div class='card-body'>";
+        var checked=selectedPids.indexOf(p.id)>=0?"checked":"";
+        html+="<div class='card' style='position:relative'>";
+        html+="<input type='checkbox' class='card-check' data-pid='"+p.id+"' "+checked+" onclick='event.stopPropagation();toggleSelect("+p.id+")' style='position:absolute;top:8px;left:8px;width:20px;height:20px;z-index:2;cursor:pointer;accent-color:#00ff88'>";
+        html+="<div onclick='go("+p.id+")'><img src='"+img+"'><div class='card-body'>";
         html+="<div class='card-title'>"+esc(p.title)+"</div><div class='card-sku'>"+sku+"</div>";
         html+="<div class='card-meta'><span class='card-price'>"+price+" EUR</span><span class='badge "+p._seo+"'>"+p._sc+"%</span></div>";
-        html+="</div></div>";
+        html+="</div></div></div>";
     }
     el.innerHTML=html;
+    updateSelectCount();
+}
+var selectedPids=[];
+function toggleSelect(pid){
+    var idx=selectedPids.indexOf(pid);
+    if(idx>=0)selectedPids.splice(idx,1);else selectedPids.push(pid);
+    updateSelectCount();
+}
+function selectAll(){
+    selectedPids=[];
+    for(var i=0;i<P.length;i++)selectedPids.push(P[i].id);
+    filter();
+}
+function deselectAll(){selectedPids=[];filter();}
+function updateSelectCount(){
+    var el=document.getElementById("selectCount");
+    if(selectedPids.length>0){
+        el.style.display="flex";
+        el.innerHTML="<span>"+selectedPids.length+" sélectionné"+(selectedPids.length>1?"s":"")+"</span><button onclick='deselectAll()' style='background:none;border:none;color:#ff4757;cursor:pointer;font-size:12px;text-decoration:underline'>Désélectionner</button>";
+    }else{el.style.display="none";}
 }
 function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function go(id){window.location.href="/product/"+id;}
@@ -778,7 +806,10 @@ function applyGoatImages(){
 function toast(m,t){var e=document.createElement("div");e.className="toast "+t;e.textContent=m;document.body.appendChild(e);setTimeout(function(){e.remove();},3000);}
 
 // ── Image Fixer ──
-function openImageFixer(){document.getElementById("imgFixModal").style.display="block";}
+function openImageFixer(){
+    document.getElementById("imgFixModal").style.display="block";
+    document.getElementById("imgSelCount").textContent=selectedPids.length;
+}
 function closeImageFixer(){document.getElementById("imgFixModal").style.display="none";}
 
 function filterProductsForFix(){
@@ -793,7 +824,7 @@ function filterProductsForFix(){
     var h="";
     for(var i=0;i<matches.length;i++){
         var img=(matches[i].images&&matches[i].images.length>0)?matches[i].images[0].src:"";
-        h+="<div onclick='selectProductForFix("+matches[i].id+",\""+matches[i].title.replace(/"/g,"&quot;")+"\",\""+img+"\")' style='display:flex;align-items:center;gap:10px;padding:8px;cursor:pointer;border-bottom:1px solid #333;hover:background:#222'>";
+        h+="<div onclick='selectProductForFix("+matches[i].id+",\""+matches[i].title.replace(/"/g,"&quot;")+"\",\""+img+"\")' style='display:flex;align-items:center;gap:10px;padding:8px;cursor:pointer;border-bottom:1px solid #333'>";
         if(img)h+="<img src='"+img+"' style='width:40px;height:40px;object-fit:contain;border-radius:4px'>";
         h+="<span style='font-size:13px;color:#ddd'>"+matches[i].title+"</span></div>";
     }
@@ -837,6 +868,14 @@ function startImageFix(){
         }
         status.textContent="⏳ Correction du produit...";
         fixOneProduct(pid,btn,status,bar,text);
+    }else if(scope==="selection"){
+        if(selectedPids.length===0){
+            status.style.background="#ff475722";status.style.color="#ff4757";
+            status.textContent="❌ Aucun produit coché. Cochez des produits dans la grille d'abord.";
+            btn.disabled=false;btn.innerHTML="Corriger les images";return;
+        }
+        status.textContent="⏳ Correction de "+selectedPids.length+" produits...";
+        fixSelectedProducts(btn,status,bar,text);
     }else{
         status.textContent="⏳ Correction de tous les produits... (peut prendre plusieurs minutes)";
         fixAllProducts(btn,status,bar,text);
@@ -886,6 +925,34 @@ function fixAllProducts(btn,status,bar,text){
         status.textContent="❌ Erreur: "+e.message;
         btn.disabled=false;btn.innerHTML="Corriger les images";
     });
+}
+
+function fixSelectedProducts(btn,status,bar,text){
+    var pids=selectedPids.slice();
+    var done=0;var totalFixed=0;var totalImgs=0;
+    function next(){
+        if(done>=pids.length){
+            bar.style.width="100%";
+            text.textContent=done+" / "+pids.length;
+            status.style.background="#00ff8822";status.style.color="#00ff88";
+            status.textContent="✅ Terminé ! "+totalFixed+" images corrigées sur "+totalImgs+" ("+done+" produits)";
+            btn.innerHTML="✅ Terminé!";
+            setTimeout(function(){location.reload();},3000);
+            return;
+        }
+        var pct=Math.round((done/pids.length)*100);
+        bar.style.width=pct+"%";
+        text.textContent=done+" / "+pids.length;
+        status.textContent="⏳ Produit "+(done+1)+" / "+pids.length+"...";
+        
+        fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})})
+        .then(function(r){return r.json();})
+        .then(function(d){
+            if(d.success){totalFixed+=d.fixed;totalImgs+=d.total;}
+            done++;next();
+        }).catch(function(){done++;next();});
+    }
+    next();
 }
 
 load();
