@@ -399,6 +399,40 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <option value="poor">Faible</option>
 </select>
 <button class="btn btn-s" onclick="reload()">Actualiser</button>
+<button class="btn btn-o" onclick="openImageFixer()">🖼️ Fix Images</button>
+</div>
+<!-- Modal Fix Images -->
+<div id="imgFixModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto">
+<div style="max-width:600px;margin:40px auto;background:#1a1a2e;border-radius:12px;padding:30px;color:#fff">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+<h2 style="margin:0;font-size:20px">🖼️ Corriger les images produits</h2>
+<button onclick="closeImageFixer()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer">×</button>
+</div>
+<p style="color:#aaa;font-size:14px;margin-bottom:15px">Renomme les fichiers images et corrige le texte alternatif de tous vos produits :</p>
+<ul style="color:#aaa;font-size:13px;margin-bottom:20px;padding-left:20px">
+<li><strong style="color:#fff">Nom fichier</strong> : handle-produit_1.jpg, handle-produit_2.jpg...</li>
+<li><strong style="color:#fff">Texte alt</strong> : Titre exact du produit + KP SHOES</li>
+</ul>
+<div style="margin-bottom:15px">
+<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+<input type="radio" name="imgScope" value="all" checked> Tous les produits
+</label>
+<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;margin-top:8px">
+<input type="radio" name="imgScope" value="selected"> Seulement le produit sélectionné
+</label>
+</div>
+<div id="imgFixStatus" style="display:none;margin:15px 0;padding:12px;border-radius:8px;font-size:13px"></div>
+<div id="imgFixProgress" style="display:none;margin:15px 0">
+<div style="background:#333;border-radius:6px;overflow:hidden;height:8px">
+<div id="imgFixBar" style="width:0%;height:100%;background:linear-gradient(90deg,#00ff88,#00cc6a);transition:width .3s"></div>
+</div>
+<div id="imgFixText" style="text-align:center;font-size:12px;color:#aaa;margin-top:6px">0 / 0</div>
+</div>
+<div style="display:flex;gap:10px">
+<button id="imgFixBtn" onclick="startImageFix()" style="flex:1;padding:12px;background:#00ff88;color:#000;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px">Corriger les images</button>
+<button onclick="closeImageFixer()" style="padding:12px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">Fermer</button>
+</div>
+</div>
 </div>
 <div class="grid" id="grid"><div class="loading"><div class="spinner"></div>Chargement...</div></div>
 </main>
@@ -736,6 +770,89 @@ function applyGoatImages(){
 }
 
 function toast(m,t){var e=document.createElement("div");e.className="toast "+t;e.textContent=m;document.body.appendChild(e);setTimeout(function(){e.remove();},3000);}
+
+// ── Image Fixer ──
+function openImageFixer(){document.getElementById("imgFixModal").style.display="block";}
+function closeImageFixer(){document.getElementById("imgFixModal").style.display="none";}
+
+function startImageFix(){
+    var scope=document.querySelector('input[name="imgScope"]:checked').value;
+    var btn=document.getElementById("imgFixBtn");
+    var status=document.getElementById("imgFixStatus");
+    var progress=document.getElementById("imgFixProgress");
+    var bar=document.getElementById("imgFixBar");
+    var text=document.getElementById("imgFixText");
+    
+    btn.disabled=true;
+    btn.innerHTML="<span class='spinner' style='width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px'></span>Correction en cours...";
+    status.style.display="block";
+    status.style.background="#333";
+    status.style.color="#aaa";
+    status.textContent="⏳ Récupération des produits...";
+    progress.style.display="block";
+    bar.style.width="0%";
+    
+    if(scope==="selected"){
+        // Trouver le produit actuellement ouvert
+        var detail=document.querySelector(".detail");
+        if(!detail||!detail.dataset.pid){
+            status.style.background="#ff475722";status.style.color="#ff4757";
+            status.textContent="❌ Aucun produit sélectionné. Ouvrez un produit d'abord.";
+            btn.disabled=false;btn.innerHTML="Corriger les images";return;
+        }
+        var pid=detail.dataset.pid;
+        status.textContent="⏳ Correction du produit sélectionné...";
+        fixOneProduct(pid,btn,status,bar,text);
+    }else{
+        status.textContent="⏳ Correction de tous les produits...";
+        fixAllProducts(btn,status,bar,text);
+    }
+}
+
+function fixOneProduct(pid,btn,status,bar,text){
+    fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:parseInt(pid)})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        bar.style.width="100%";text.textContent="1 / 1";
+        if(d.success){
+            status.style.background="#00ff8822";status.style.color="#00ff88";
+            status.textContent="✅ "+d.fixed+" images corrigées sur "+d.total+" !";
+            btn.innerHTML="✅ Terminé!";
+            setTimeout(function(){location.reload();},2000);
+        }else{
+            status.style.background="#ff475722";status.style.color="#ff4757";
+            status.textContent="❌ Erreur: "+(d.error||"Inconnue");
+            btn.disabled=false;btn.innerHTML="Corriger les images";
+        }
+    }).catch(function(e){
+        status.style.background="#ff475722";status.style.color="#ff4757";
+        status.textContent="❌ Erreur: "+e.message;
+        btn.disabled=false;btn.innerHTML="Corriger les images";
+    });
+}
+
+function fixAllProducts(btn,status,bar,text){
+    fetch("/api/images/fix-all",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.success){
+            bar.style.width="100%";
+            text.textContent=d.processed+" / "+d.processed;
+            status.style.background="#00ff8822";status.style.color="#00ff88";
+            status.textContent="✅ Terminé ! "+d.total_fixed+" images corrigées sur "+d.total_images+" ("+d.processed+" produits)";
+            btn.innerHTML="✅ Terminé!";
+            setTimeout(function(){location.reload();},3000);
+        }else{
+            status.style.background="#ff475722";status.style.color="#ff4757";
+            status.textContent="❌ Erreur: "+(d.error||"Inconnue");
+            btn.disabled=false;btn.innerHTML="Corriger les images";
+        }
+    }).catch(function(e){
+        status.style.background="#ff475722";status.style.color="#ff4757";
+        status.textContent="❌ Erreur: "+e.message;
+        btn.disabled=false;btn.innerHTML="Corriger les images";
+    });
+}
 
 load();
 </script>
@@ -1333,6 +1450,153 @@ def api_goat_apply():
     except Exception as e:
         log.error(f"[GOAT Apply] Error: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+# ══════════════════════════════════════════════════════════════
+# IMAGE FIX API (renommer fichiers + texte alternatif)
+# ══════════════════════════════════════════════════════════════
+
+def fix_product_images(product_id):
+    """Corrige les images d'un produit : nom fichier = handle_N.jpg, alt = titre produit"""
+    import time
+    r = shopify_request(f'products/{product_id}.json')
+    if not r or 'product' not in r:
+        return {'success': False, 'error': 'Produit non trouvé'}
+    
+    product = r['product']
+    title = product['title']
+    handle = product['handle']
+    images = product.get('images', [])
+    
+    if not images:
+        return {'success': True, 'fixed': 0, 'total': 0, 'title': title}
+    
+    fixed = 0
+    for i, img in enumerate(images):
+        img_id = img['id']
+        
+        # Nouveau nom de fichier : handle_1.jpg, handle_2.jpg, etc.
+        new_filename = f"{handle}_{i+1}.jpg"
+        # Nouveau texte alternatif : titre exact du produit
+        new_alt = f"{title} KP SHOES"
+        
+        # Vérifier si c'est déjà correct
+        current_alt = img.get('alt', '') or ''
+        current_src = img.get('src', '') or ''
+        # Extraire le nom de fichier actuel de l'URL
+        current_filename = current_src.split('/')[-1].split('?')[0] if current_src else ''
+        
+        needs_update = (current_alt != new_alt) or (new_filename not in current_filename)
+        
+        if not needs_update:
+            continue
+        
+        # Mettre à jour via l'API Shopify
+        update_data = {
+            'image': {
+                'id': img_id,
+                'alt': new_alt,
+                'filename': new_filename
+            }
+        }
+        
+        result = shopify_request(f'products/{product_id}/images/{img_id}.json', 'PUT', update_data)
+        if result:
+            fixed += 1
+            log.info(f"[ImageFix] {title} - image {i+1}: filename='{new_filename}', alt='{new_alt}'")
+        
+        time.sleep(0.3)  # Rate limit Shopify
+    
+    return {'success': True, 'fixed': fixed, 'total': len(images), 'title': title}
+
+
+@app.route('/api/images/fix', methods=['POST'])
+def api_fix_images():
+    """Corrige les images d'un seul produit"""
+    data = request.json
+    product_id = data.get('product_id')
+    
+    if not product_id:
+        return jsonify({'success': False, 'error': 'product_id manquant'}), 400
+    
+    result = fix_product_images(product_id)
+    return jsonify(result)
+
+
+@app.route('/api/images/fix-all', methods=['POST'])
+def api_fix_all_images():
+    """Corrige les images de TOUS les produits (nom fichier + alt text)"""
+    import time
+    
+    total_fixed = 0
+    total_images = 0
+    processed = 0
+    errors = []
+    since_id = 0
+    
+    for _ in range(20):  # Max 5000 produits
+        r = shopify_request(f'products.json?limit=250&since_id={since_id}')
+        if not r or 'products' not in r or not r['products']:
+            break
+        
+        for product in r['products']:
+            pid = product['id']
+            title = product['title']
+            handle = product['handle']
+            images = product.get('images', [])
+            
+            if not images:
+                processed += 1
+                continue
+            
+            for i, img in enumerate(images):
+                img_id = img['id']
+                new_filename = f"{handle}_{i+1}.jpg"
+                new_alt = f"{title} KP SHOES"
+                current_alt = img.get('alt', '') or ''
+                current_src = img.get('src', '') or ''
+                current_filename = current_src.split('/')[-1].split('?')[0] if current_src else ''
+                
+                total_images += 1
+                
+                needs_update = (current_alt != new_alt) or (new_filename not in current_filename)
+                if not needs_update:
+                    continue
+                
+                update_data = {
+                    'image': {
+                        'id': img_id,
+                        'alt': new_alt,
+                        'filename': new_filename
+                    }
+                }
+                
+                result = shopify_request(f'products/{pid}/images/{img_id}.json', 'PUT', update_data)
+                if result:
+                    total_fixed += 1
+                else:
+                    errors.append(f"{title} - image {i+1}")
+                
+                time.sleep(0.3)
+            
+            processed += 1
+            
+            if processed % 10 == 0:
+                log.info(f"[ImageFix] Progress: {processed} products, {total_fixed} fixed")
+        
+        since_id = r['products'][-1]['id']
+        if len(r['products']) < 250:
+            break
+    
+    log.info(f"[ImageFix] Done: {processed} products, {total_fixed}/{total_images} images fixed")
+    
+    return jsonify({
+        'success': True,
+        'processed': processed,
+        'total_fixed': total_fixed,
+        'total_images': total_images,
+        'errors': errors[:10]
+    })
 
 
 # ══════════════════════════════════════════════════════════════
