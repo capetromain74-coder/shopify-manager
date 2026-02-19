@@ -400,7 +400,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 </select>
 <button class="btn btn-s" onclick="reload()">Actualiser</button>
 <button class="btn btn-s" onclick="selectAll()">Tout cocher</button>
-<button class="btn btn-o" onclick="openImageFixer()">🖼️ Fix Images</button>
+<button class="btn btn-o" onclick="openImageFixer()">🖼️ Fix Images<span id="fixBadge"></span></button>
 </div>
 <div id="selectCount" style="display:none;align-items:center;gap:10px;padding:8px 15px;background:#00ff8822;border-radius:8px;margin-top:8px;font-size:13px;color:#00ff88"></div>
 <!-- Modal Fix Images -->
@@ -517,16 +517,116 @@ function selectAll(){
 function deselectAll(){selectedPids=[];filter();}
 function updateSelectCount(){
     var el=document.getElementById("selectCount");
+    var badge=document.getElementById("fixBadge");
     if(selectedPids.length>0){
         el.style.display="flex";
         el.innerHTML="<span>"+selectedPids.length+" sélectionné"+(selectedPids.length>1?"s":"")+"</span><button onclick='deselectAll()' style='background:none;border:none;color:#ff4757;cursor:pointer;font-size:12px;text-decoration:underline'>Désélectionner</button>";
-    }else{el.style.display="none";}
+        badge.textContent=" ("+selectedPids.length+")";
+    }else{el.style.display="none";badge.textContent="";}
 }
 function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function go(id){window.location.href="/product/"+id;}
 function reload(){P=[];C=[];sinceId=0;totalV=0;document.getElementById("grid").innerHTML="<div class='loading'><div class='spinner'></div>Chargement...</div>";load();}
 document.getElementById("q").oninput=filter;
 document.getElementById("f").onchange=filter;
+
+// ── Image Fixer (HOME) ──
+function openImageFixer(){
+    document.getElementById("imgFixModal").style.display="block";
+    document.getElementById("imgSelCount").textContent=selectedPids.length;
+    if(selectedPids.length>0){
+        document.querySelector('input[name="imgScope"][value="selection"]').checked=true;
+        document.getElementById('imgSearchBox').style.display='none';
+    }else{
+        document.querySelector('input[name="imgScope"][value="all"]').checked=true;
+        document.getElementById('imgSearchBox').style.display='none';
+    }
+}
+function closeImageFixer(){document.getElementById("imgFixModal").style.display="none";}
+
+function filterProductsForFix(){
+    var q=document.getElementById("imgSearchInput").value.toLowerCase();
+    var list=document.getElementById("imgProductList");
+    if(q.length<2){list.innerHTML="";return;}
+    var matches=[];
+    for(var i=0;i<P.length;i++){
+        if(P[i].title.toLowerCase().indexOf(q)>=0)matches.push(P[i]);
+        if(matches.length>=8)break;
+    }
+    var h="";
+    for(var i=0;i<matches.length;i++){
+        var img=(matches[i].images&&matches[i].images.length>0)?matches[i].images[0].src:"";
+        h+="<div onclick='selectProductForFix("+matches[i].id+",\""+matches[i].title.replace(/\x22/g,"&quot;")+"\",\""+img+"\")' style='display:flex;align-items:center;gap:10px;padding:8px;cursor:pointer;border-bottom:1px solid #333'>";
+        if(img)h+="<img src='"+img+"' style='width:40px;height:40px;object-fit:contain;border-radius:4px'>";
+        h+="<span style='font-size:13px;color:#ddd'>"+matches[i].title+"</span></div>";
+    }
+    if(matches.length===0)h="<div style='padding:10px;color:#666;font-size:13px'>Aucun produit trouvé</div>";
+    list.innerHTML=h;
+}
+
+function selectProductForFix(pid,title,img){
+    document.getElementById("imgSelectedPid").value=pid;
+    document.getElementById("imgProductList").innerHTML="";
+    document.getElementById("imgSearchInput").value="";
+    var sel=document.getElementById("imgSelectedProduct");
+    sel.style.display="flex";sel.style.alignItems="center";sel.style.gap="10px";
+    sel.innerHTML=(img?"<img src='"+img+"' style='width:40px;height:40px;object-fit:contain;border-radius:4px'>":"")+"<span>✅ "+title+"</span>";
+}
+
+function startImageFix(){
+    var scope=document.querySelector('input[name="imgScope"]:checked').value;
+    var btn=document.getElementById("imgFixBtn");
+    var status=document.getElementById("imgFixStatus");
+    var progress=document.getElementById("imgFixProgress");
+    var bar=document.getElementById("imgFixBar");
+    var text=document.getElementById("imgFixText");
+    btn.disabled=true;
+    btn.innerHTML="<span class='spinner' style='width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px'></span>Correction en cours...";
+    status.style.display="block";status.style.background="#333";status.style.color="#aaa";
+    progress.style.display="block";bar.style.width="0%";
+    if(scope==="selected"){
+        var pid=document.getElementById("imgSelectedPid").value;
+        if(!pid){status.style.background="#ff475722";status.style.color="#ff4757";status.textContent="❌ Sélectionnez un produit d'abord.";btn.disabled=false;btn.innerHTML="Corriger les images";return;}
+        status.textContent="⏳ Correction du produit...";
+        fixOneProduct(pid,btn,status,bar,text);
+    }else if(scope==="selection"){
+        if(selectedPids.length===0){status.style.background="#ff475722";status.style.color="#ff4757";status.textContent="❌ Aucun produit coché.";btn.disabled=false;btn.innerHTML="Corriger les images";return;}
+        status.textContent="⏳ Correction de "+selectedPids.length+" produits...";
+        fixSelectedProducts(btn,status,bar,text);
+    }else{
+        status.textContent="⏳ Correction de tous les produits...";
+        fixAllProducts(btn,status,bar,text);
+    }
+}
+
+function fixOneProduct(pid,btn,status,bar,text){
+    fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:parseInt(pid)})})
+    .then(function(r){return r.json();}).then(function(d){
+        bar.style.width="100%";text.textContent="1 / 1";
+        if(d.success){status.style.background="#00ff8822";status.style.color="#00ff88";status.textContent="✅ "+d.fixed+" images corrigées sur "+d.total+" !";btn.innerHTML="✅ Terminé!";setTimeout(function(){location.reload();},2000);}
+        else{status.style.background="#ff475722";status.style.color="#ff4757";status.textContent="❌ Erreur: "+(d.error||"Inconnue");btn.disabled=false;btn.innerHTML="Corriger les images";}
+    }).catch(function(e){status.style.background="#ff475722";status.style.color="#ff4757";status.textContent="❌ Erreur: "+e.message;btn.disabled=false;btn.innerHTML="Corriger les images";});
+}
+
+function fixAllProducts(btn,status,bar,text){
+    fetch("/api/images/fix-all",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})})
+    .then(function(r){return r.json();}).then(function(d){
+        if(d.success){bar.style.width="100%";text.textContent=d.processed+" / "+d.processed;status.style.background="#00ff8822";status.style.color="#00ff88";status.textContent="✅ "+d.total_fixed+" images corrigées sur "+d.total_images+" ("+d.processed+" produits)";btn.innerHTML="✅ Terminé!";setTimeout(function(){location.reload();},3000);}
+        else{status.style.background="#ff475722";status.style.color="#ff4757";status.textContent="❌ Erreur: "+(d.error||"Inconnue");btn.disabled=false;btn.innerHTML="Corriger les images";}
+    }).catch(function(e){status.style.background="#ff475722";status.style.color="#ff4757";status.textContent="❌ Erreur: "+e.message;btn.disabled=false;btn.innerHTML="Corriger les images";});
+}
+
+function fixSelectedProducts(btn,status,bar,text){
+    var pids=selectedPids.slice();var done=0;var totalFixed=0;var totalImgs=0;
+    function next(){
+        if(done>=pids.length){bar.style.width="100%";text.textContent=done+" / "+pids.length;status.style.background="#00ff8822";status.style.color="#00ff88";status.textContent="✅ "+totalFixed+" images corrigées sur "+totalImgs+" ("+done+" produits)";btn.innerHTML="✅ Terminé!";setTimeout(function(){location.reload();},3000);return;}
+        bar.style.width=Math.round((done/pids.length)*100)+"%";text.textContent=done+" / "+pids.length;status.textContent="⏳ Produit "+(done+1)+" / "+pids.length+"...";
+        fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})})
+        .then(function(r){return r.json();}).then(function(d){if(d.success){totalFixed+=d.fixed;totalImgs+=d.total;}done++;next();}).catch(function(){done++;next();});
+    }
+    next();
+}
+
 load();
 </script>
 </body>
@@ -804,156 +904,6 @@ function applyGoatImages(){
 }
 
 function toast(m,t){var e=document.createElement("div");e.className="toast "+t;e.textContent=m;document.body.appendChild(e);setTimeout(function(){e.remove();},3000);}
-
-// ── Image Fixer ──
-function openImageFixer(){
-    document.getElementById("imgFixModal").style.display="block";
-    document.getElementById("imgSelCount").textContent=selectedPids.length;
-}
-function closeImageFixer(){document.getElementById("imgFixModal").style.display="none";}
-
-function filterProductsForFix(){
-    var q=document.getElementById("imgSearchInput").value.toLowerCase();
-    var list=document.getElementById("imgProductList");
-    if(q.length<2){list.innerHTML="";return;}
-    var matches=[];
-    for(var i=0;i<P.length;i++){
-        if(P[i].title.toLowerCase().indexOf(q)>=0)matches.push(P[i]);
-        if(matches.length>=8)break;
-    }
-    var h="";
-    for(var i=0;i<matches.length;i++){
-        var img=(matches[i].images&&matches[i].images.length>0)?matches[i].images[0].src:"";
-        h+="<div onclick='selectProductForFix("+matches[i].id+",\""+matches[i].title.replace(/"/g,"&quot;")+"\",\""+img+"\")' style='display:flex;align-items:center;gap:10px;padding:8px;cursor:pointer;border-bottom:1px solid #333'>";
-        if(img)h+="<img src='"+img+"' style='width:40px;height:40px;object-fit:contain;border-radius:4px'>";
-        h+="<span style='font-size:13px;color:#ddd'>"+matches[i].title+"</span></div>";
-    }
-    if(matches.length===0)h="<div style='padding:10px;color:#666;font-size:13px'>Aucun produit trouvé</div>";
-    list.innerHTML=h;
-}
-
-function selectProductForFix(pid,title,img){
-    document.getElementById("imgSelectedPid").value=pid;
-    document.getElementById("imgProductList").innerHTML="";
-    document.getElementById("imgSearchInput").value="";
-    var sel=document.getElementById("imgSelectedProduct");
-    sel.style.display="flex";
-    sel.style.alignItems="center";
-    sel.style.gap="10px";
-    sel.innerHTML=(img?"<img src='"+img+"' style='width:40px;height:40px;object-fit:contain;border-radius:4px'>":"")+"<span>✅ "+title+"</span>";
-}
-
-function startImageFix(){
-    var scope=document.querySelector('input[name="imgScope"]:checked').value;
-    var btn=document.getElementById("imgFixBtn");
-    var status=document.getElementById("imgFixStatus");
-    var progress=document.getElementById("imgFixProgress");
-    var bar=document.getElementById("imgFixBar");
-    var text=document.getElementById("imgFixText");
-    
-    btn.disabled=true;
-    btn.innerHTML="<span class='spinner' style='width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px'></span>Correction en cours...";
-    status.style.display="block";
-    status.style.background="#333";
-    status.style.color="#aaa";
-    progress.style.display="block";
-    bar.style.width="0%";
-    
-    if(scope==="selected"){
-        var pid=document.getElementById("imgSelectedPid").value;
-        if(!pid){
-            status.style.background="#ff475722";status.style.color="#ff4757";
-            status.textContent="❌ Sélectionnez un produit d'abord.";
-            btn.disabled=false;btn.innerHTML="Corriger les images";return;
-        }
-        status.textContent="⏳ Correction du produit...";
-        fixOneProduct(pid,btn,status,bar,text);
-    }else if(scope==="selection"){
-        if(selectedPids.length===0){
-            status.style.background="#ff475722";status.style.color="#ff4757";
-            status.textContent="❌ Aucun produit coché. Cochez des produits dans la grille d'abord.";
-            btn.disabled=false;btn.innerHTML="Corriger les images";return;
-        }
-        status.textContent="⏳ Correction de "+selectedPids.length+" produits...";
-        fixSelectedProducts(btn,status,bar,text);
-    }else{
-        status.textContent="⏳ Correction de tous les produits... (peut prendre plusieurs minutes)";
-        fixAllProducts(btn,status,bar,text);
-    }
-}
-
-function fixOneProduct(pid,btn,status,bar,text){
-    fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:parseInt(pid)})})
-    .then(function(r){return r.json();})
-    .then(function(d){
-        bar.style.width="100%";text.textContent="1 / 1";
-        if(d.success){
-            status.style.background="#00ff8822";status.style.color="#00ff88";
-            status.textContent="✅ "+d.fixed+" images corrigées sur "+d.total+" !";
-            btn.innerHTML="✅ Terminé!";
-            setTimeout(function(){location.reload();},2000);
-        }else{
-            status.style.background="#ff475722";status.style.color="#ff4757";
-            status.textContent="❌ Erreur: "+(d.error||"Inconnue");
-            btn.disabled=false;btn.innerHTML="Corriger les images";
-        }
-    }).catch(function(e){
-        status.style.background="#ff475722";status.style.color="#ff4757";
-        status.textContent="❌ Erreur: "+e.message;
-        btn.disabled=false;btn.innerHTML="Corriger les images";
-    });
-}
-
-function fixAllProducts(btn,status,bar,text){
-    fetch("/api/images/fix-all",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})})
-    .then(function(r){return r.json();})
-    .then(function(d){
-        if(d.success){
-            bar.style.width="100%";
-            text.textContent=d.processed+" / "+d.processed;
-            status.style.background="#00ff8822";status.style.color="#00ff88";
-            status.textContent="✅ Terminé ! "+d.total_fixed+" images corrigées sur "+d.total_images+" ("+d.processed+" produits)";
-            btn.innerHTML="✅ Terminé!";
-            setTimeout(function(){location.reload();},3000);
-        }else{
-            status.style.background="#ff475722";status.style.color="#ff4757";
-            status.textContent="❌ Erreur: "+(d.error||"Inconnue");
-            btn.disabled=false;btn.innerHTML="Corriger les images";
-        }
-    }).catch(function(e){
-        status.style.background="#ff475722";status.style.color="#ff4757";
-        status.textContent="❌ Erreur: "+e.message;
-        btn.disabled=false;btn.innerHTML="Corriger les images";
-    });
-}
-
-function fixSelectedProducts(btn,status,bar,text){
-    var pids=selectedPids.slice();
-    var done=0;var totalFixed=0;var totalImgs=0;
-    function next(){
-        if(done>=pids.length){
-            bar.style.width="100%";
-            text.textContent=done+" / "+pids.length;
-            status.style.background="#00ff8822";status.style.color="#00ff88";
-            status.textContent="✅ Terminé ! "+totalFixed+" images corrigées sur "+totalImgs+" ("+done+" produits)";
-            btn.innerHTML="✅ Terminé!";
-            setTimeout(function(){location.reload();},3000);
-            return;
-        }
-        var pct=Math.round((done/pids.length)*100);
-        bar.style.width=pct+"%";
-        text.textContent=done+" / "+pids.length;
-        status.textContent="⏳ Produit "+(done+1)+" / "+pids.length+"...";
-        
-        fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})})
-        .then(function(r){return r.json();})
-        .then(function(d){
-            if(d.success){totalFixed+=d.fixed;totalImgs+=d.total;}
-            done++;next();
-        }).catch(function(){done++;next();});
-    }
-    next();
-}
 
 load();
 </script>
