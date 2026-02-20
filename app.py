@@ -439,7 +439,7 @@ def extract_colorway(title):
 def generate_color_description_ai(title, colorway, brand, model_desc):
     """Utilise l'API Claude pour générer une description spécifique au coloris"""
     if not colorway:
-        return ''
+        return '', 'color'
     
     try:
         prompt = f"""Tu es un expert sneakers qui rédige des descriptions produits pour un site e-commerce français (KP SHOES).
@@ -478,7 +478,10 @@ Marque : {brand}
         with urlopen(req, context=ctx, timeout=15) as r:
             result = json.loads(r.read().decode('utf-8'))
             if result.get('content') and result['content'][0].get('text'):
-                return result['content'][0]['text'].strip()
+                sentence = result['content'][0]['text'].strip()
+                # Déterminer le type via le fallback logic
+                _, cw_type = generate_color_sentence_fallback(title, colorway)
+                return sentence, cw_type
     except Exception as e:
         log.error(f"[AI Color] Error: {e}")
     
@@ -488,17 +491,39 @@ Marque : {brand}
 def generate_color_sentence_fallback(title, colorway):
     """Fallback sans IA pour la description coloris"""
     if not colorway:
-        return ''
+        return '', 'color'
     
     collabs = ['Travis Scott', 'Off-White', 'Fragment', 'Union LA', 'Undefeated', 'A Ma Maniere', 
-               'J Balvin', 'PSG', 'Eminem', 'Fear of God', 'Sacai', 'CLOT', 'Stussy',
-               'Patta', 'Concepts', 'atmos', 'Supreme', 'BAPE', 'Kith', 'JJJJound']
+               'A Ma Maniére', 'J Balvin', 'PSG', 'Eminem', 'Fear of God', 'Sacai', 'CLOT', 'Stussy',
+               'Patta', 'Concepts', 'atmos', 'Supreme', 'BAPE', 'Kith', 'JJJJound', 'Nocta',
+               'Billie Eilish', 'Bad Bunny', 'Pharrell', 'Drake', 'UNDFTD']
     
     for collab in collabs:
         if collab.lower() in colorway.lower():
-            return f'Fruit de la collaboration exclusive avec {collab}, cette édition se distingue par un design unique et des détails soignés qui en font une pièce très convoitée.'
+            sentence = f'Fruit de la collaboration exclusive avec {collab}, cette édition se distingue par un design unique et des détails soignés qui en font une pièce très convoitée.'
+            return sentence, 'collab'
     
-    return f'Proposée dans le coloris "{colorway}", cette paire affirme son identité avec une combinaison de teintes et de matières qui lui est propre.'
+    # Détecter si c'est un vrai nom de couleur
+    color_keywords = [
+        'black', 'white', 'red', 'blue', 'green', 'grey', 'gray', 'pink', 'purple',
+        'orange', 'yellow', 'brown', 'beige', 'cream', 'navy', 'olive', 'gold', 'silver',
+        'sail', 'bone', 'sand', 'smoke', 'royal', 'bred', 'panda', 'shadow', 'mocha',
+        'cement', 'infrared', 'scarlet', 'burgundy', 'core black', 'cloud white',
+        'phantom', 'mushroom', 'tan', 'cobalt', 'teal', 'coral', 'mint', 'lavender',
+        'rust', 'sesame', 'slate', 'charcoal', 'chalk', 'dark', 'light', 'pure',
+        'noir', 'blanc', 'rouge', 'bleu', 'vert', 'rose', 'gris',
+    ]
+    
+    cl = colorway.lower()
+    has_color = any(kw in cl for kw in color_keywords)
+    
+    if has_color:
+        sentence = f'Proposée dans le coloris "{colorway}", cette paire affirme son identité avec une combinaison de teintes et de matières qui lui est propre.'
+        return sentence, 'color'
+    
+    # Pas de couleur détectée et pas de collab → c'est probablement un nom de version/édition
+    sentence = f'Cette édition "{colorway}" se démarque par son identité visuelle unique et ses finitions soignées.'
+    return sentence, 'edition'
 
 
 def generate_body_html(product, collections):
@@ -508,7 +533,12 @@ def generate_body_html(product, collections):
     collection = find_collection(title, collections)
     model_desc = get_model_description(title)
     colorway = extract_colorway(title)
-    color_sentence = generate_color_description_ai(title, colorway, brand, model_desc)
+    
+    # Obtenir la phrase + le type (color, collab, edition)
+    if colorway:
+        color_sentence, cw_type = generate_color_description_ai(title, colorway, brand, model_desc)
+    else:
+        color_sentence, cw_type = '', 'color'
     
     lines = []
     
@@ -521,7 +551,7 @@ def generate_body_html(product, collections):
     # Paragraphe 2: Description du modèle
     lines.append(f'<p>{model_desc}</p>')
     
-    # Paragraphe 3: Description spécifique au coloris
+    # Paragraphe 3: Description spécifique au coloris/collab
     if color_sentence:
         lines.append(f'<p>{color_sentence}</p>')
     
@@ -530,8 +560,12 @@ def generate_body_html(product, collections):
     if sku:
         tech_parts.append(f'<strong>Référence&nbsp;:</strong> {sku}')
     tech_parts.append(f'<strong>Marque&nbsp;:</strong> {brand}')
+    # Afficher "Coloris" seulement si c'est une vraie couleur, sinon "Édition" pour les collabs
     if colorway:
-        tech_parts.append(f'<strong>Coloris&nbsp;:</strong> {colorway}')
+        if cw_type == 'collab':
+            tech_parts.append(f'<strong>Édition&nbsp;:</strong> {colorway}')
+        else:
+            tech_parts.append(f'<strong>Coloris&nbsp;:</strong> {colorway}')
     lines.append('<p>' + '<br>'.join(tech_parts) + '</p>')
     
     # Paragraphe 5: Garanties KP SHOES
