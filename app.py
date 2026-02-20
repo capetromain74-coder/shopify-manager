@@ -177,46 +177,78 @@ def analyze_seo(product, meta_title, meta_description):
     body_html = product.get('body_html', '') or ''
     results = {'score': 0, 'max_score': 100, 'checks': []}
     
-    check1 = {'name': 'Meta Title', 'points': 0, 'max': 25, 'status': 'error', 'message': 'Absent'}
+    check1 = {'name': 'Meta Title', 'points': 0, 'max': 20, 'status': 'error', 'message': 'Absent'}
     if meta_title:
         if SITE_NAME in meta_title and len(meta_title) <= 60:
-            check1 = {'name': 'Meta Title', 'points': 25, 'max': 25, 'status': 'success', 'message': 'OK (' + str(len(meta_title)) + ' car.)'}
+            check1 = {'name': 'Meta Title', 'points': 20, 'max': 20, 'status': 'success', 'message': 'OK (' + str(len(meta_title)) + ' car.)'}
         elif len(meta_title) > 60:
-            check1 = {'name': 'Meta Title', 'points': 10, 'max': 25, 'status': 'warning', 'message': 'Trop long'}
+            check1 = {'name': 'Meta Title', 'points': 8, 'max': 20, 'status': 'warning', 'message': 'Trop long'}
         else:
-            check1 = {'name': 'Meta Title', 'points': 15, 'max': 25, 'status': 'warning', 'message': 'Manque KP SHOES'}
+            check1 = {'name': 'Meta Title', 'points': 12, 'max': 20, 'status': 'warning', 'message': 'Manque KP SHOES'}
     results['checks'].append(check1)
     results['score'] += check1['points']
     
-    check2 = {'name': 'Meta Description', 'points': 0, 'max': 25, 'status': 'error', 'message': 'Absente'}
+    check2 = {'name': 'Meta Description', 'points': 0, 'max': 20, 'status': 'error', 'message': 'Absente'}
     if meta_description:
         has_auth = '100%' in meta_description or 'authentique' in meta_description.lower()
         good_len = 100 <= len(meta_description) <= 155
         if has_auth and good_len:
-            check2 = {'name': 'Meta Description', 'points': 25, 'max': 25, 'status': 'success', 'message': 'OK'}
+            check2 = {'name': 'Meta Description', 'points': 20, 'max': 20, 'status': 'success', 'message': 'OK'}
         elif good_len:
-            check2 = {'name': 'Meta Description', 'points': 15, 'max': 25, 'status': 'warning', 'message': 'Manque authenticite'}
+            check2 = {'name': 'Meta Description', 'points': 12, 'max': 20, 'status': 'warning', 'message': 'Manque authenticite'}
         else:
-            check2 = {'name': 'Meta Description', 'points': 10, 'max': 25, 'status': 'warning', 'message': 'Longueur incorrecte'}
+            check2 = {'name': 'Meta Description', 'points': 8, 'max': 20, 'status': 'warning', 'message': 'Longueur incorrecte'}
     results['checks'].append(check2)
     results['score'] += check2['points']
     
-    check3 = {'name': 'Description + Lien', 'points': 0, 'max': 35, 'status': 'error', 'message': 'Manquante'}
+    check3 = {'name': 'Description + Lien', 'points': 0, 'max': 30, 'status': 'error', 'message': 'Manquante'}
     has_desc = len(body_html) > 100
     has_link = 'kpshoes.fr/collections/' in body_html.lower()
     if has_desc and has_link:
-        check3 = {'name': 'Description + Lien', 'points': 35, 'max': 35, 'status': 'success', 'message': 'Complete avec lien'}
+        check3 = {'name': 'Description + Lien', 'points': 30, 'max': 30, 'status': 'success', 'message': 'Complete avec lien'}
     elif has_desc:
-        check3 = {'name': 'Description + Lien', 'points': 15, 'max': 35, 'status': 'warning', 'message': 'Sans lien'}
+        check3 = {'name': 'Description + Lien', 'points': 12, 'max': 30, 'status': 'warning', 'message': 'Sans lien'}
     results['checks'].append(check3)
     results['score'] += check3['points']
     
-    check4 = {'name': 'SKU', 'points': 0, 'max': 15, 'status': 'error', 'message': 'Manquant'}
+    check4 = {'name': 'SKU', 'points': 0, 'max': 10, 'status': 'error', 'message': 'Manquant'}
     sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
     if sku:
-        check4 = {'name': 'SKU', 'points': 15, 'max': 15, 'status': 'success', 'message': sku}
+        check4 = {'name': 'SKU', 'points': 10, 'max': 10, 'status': 'success', 'message': sku}
     results['checks'].append(check4)
     results['score'] += check4['points']
+    
+    # Check Images : alt text + filename
+    images = product.get('images', [])
+    title = product.get('title', '')
+    title_for_filename = title.replace(' ', '_')
+    check5 = {'name': 'Images SEO', 'points': 0, 'max': 20, 'status': 'error', 'message': 'Aucune image'}
+    if images:
+        all_alt_ok = True
+        all_filename_ok = True
+        bad_alt = 0
+        bad_filename = 0
+        for img in images:
+            alt = img.get('alt', '') or ''
+            src = img.get('src', '') or ''
+            filename = src.split('/')[-1].split('?')[0] if src else ''
+            if alt != title:
+                all_alt_ok = False
+                bad_alt += 1
+            if title_for_filename not in filename:
+                all_filename_ok = False
+                bad_filename += 1
+        
+        if all_alt_ok and all_filename_ok:
+            check5 = {'name': 'Images SEO', 'points': 20, 'max': 20, 'status': 'success', 'message': f'{len(images)} images OK'}
+        elif all_alt_ok:
+            check5 = {'name': 'Images SEO', 'points': 10, 'max': 20, 'status': 'warning', 'message': f'Alt OK, {bad_filename} noms a corriger'}
+        elif all_filename_ok:
+            check5 = {'name': 'Images SEO', 'points': 10, 'max': 20, 'status': 'warning', 'message': f'Noms OK, {bad_alt} alt a corriger'}
+        else:
+            check5 = {'name': 'Images SEO', 'points': 0, 'max': 20, 'status': 'error', 'message': f'{bad_alt} alt + {bad_filename} noms a corriger'}
+    results['checks'].append(check5)
+    results['score'] += check5['points']
     
     if results['score'] >= 85: results['status'] = 'excellent'
     elif results['score'] >= 70: results['status'] = 'good'
@@ -461,7 +493,19 @@ function load(){
                 var b=(p.body_html||"").toLowerCase();
                 p._lk=b.indexOf("kpshoes.fr/collections/")>=0;
                 p._ds=(p.body_html||"").length>100;
-                p._sc=(p._ds?30:0)+(p._lk?70:0);
+                // Check images SEO
+                var imgOk=true;
+                var titleFn=(p.title||"").replace(/ /g,"_");
+                if(p.images&&p.images.length>0){
+                    for(var j=0;j<p.images.length;j++){
+                        var alt=p.images[j].alt||"";
+                        var src=p.images[j].src||"";
+                        var fn=src.split("/").pop().split("?")[0];
+                        if(alt!==p.title||fn.indexOf(titleFn)<0){imgOk=false;break;}
+                    }
+                }else{imgOk=false;}
+                p._img=imgOk;
+                p._sc=(p._ds?25:0)+(p._lk?45:0)+(p._img?20:0)+(((p.variants||[])[0]||{}).sku?10:0);
                 if(p._sc>=85)p._seo="excellent";else if(p._sc>=70)p._seo="good";else if(p._sc>=50)p._seo="warning";else p._seo="poor";
                 totalV+=(p.variants||[]).length;P.push(p);
             }
@@ -788,7 +832,7 @@ function render(){
     h+="</div></div></div>";
     
     h+="<div class='section'><div class='section-title'>Analyse SEO <span style='font-size:10px;color:#888;font-weight:normal'>Cliquez pour selectionner</span></div><div class='checks'>";
-    var fields=["meta_title","meta_description","body_html",""];
+    var fields=["meta_title","meta_description","body_html","","images_seo"];
     for(var i=0;i<seo.checks.length;i++){
         var c=seo.checks[i];
         var icon=c.status==="success"?"✓":c.status==="warning"?"!":"✗";
@@ -806,12 +850,27 @@ function render(){
     h+="<div class='meta-box'><div class='meta-label'>DESCRIPTION</div><div class='meta-value' style='max-height:80px;overflow-y:auto'>"+(p.body_html||"Non definie")+"</div></div>";
     h+="</div>";
     
-    h+="<div class='section'><div class='section-title'>Images ("+p.images.length+")</div>";
-    h+="<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px'>";
+    h+="<div class='section'><div class='section-title'>Images ("+p.images.length+") <button class='btn btn-o' onclick='fixImages()' style='float:right;font-size:11px;padding:5px 12px'>🖼️ Fix Images</button></div>";
+    h+="<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px'>";
+    var titleFn=(p.title||"").replace(/ /g,"_");
     for(var i=0;i<p.images.length;i++){
-        h+="<img src='"+p.images[i].src+"' style='width:100%;height:100px;object-fit:contain;background:#1a1a2e;border-radius:6px'>";
+        var img=p.images[i];
+        var src=img.src||"";
+        var alt=img.alt||"";
+        var fn=src.split("/").pop().split("?")[0];
+        var altOk=(alt===p.title);
+        var fnOk=(fn.indexOf(titleFn)>=0);
+        var borderColor=(altOk&&fnOk)?"#00ff88":(altOk||fnOk)?"#ff9500":"#ff4757";
+        h+="<div style='border:2px solid "+borderColor+";border-radius:8px;overflow:hidden;background:#1a1a2e'>";
+        h+="<img src='"+src+"' style='width:100%;height:100px;object-fit:contain'>";
+        h+="<div style='padding:6px;font-size:10px'>";
+        h+="<div style='color:"+(altOk?"#00ff88":"#ff4757")+"'>Alt: "+(altOk?"✓":"✗ "+esc(alt||"vide").substring(0,25))+"</div>";
+        h+="<div style='color:"+(fnOk?"#00ff88":"#ff4757")+";overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>Nom: "+(fnOk?"✓":"✗ "+fn.substring(0,20))+"</div>";
+        h+="</div></div>";
     }
-    h+="</div></div>";
+    h+="</div>";
+    h+="<div id='imgFixResult' style='margin-top:10px'></div>";
+    h+="</div>";
     
     h+="<div class='section'><div class='section-title'>Variantes ("+p.variants.length+")</div>";
     h+="<table><thead><tr><th>Taille</th><th>SKU</th><th>Prix</th><th>Stock</th></tr></thead><tbody>";
@@ -938,6 +997,23 @@ function applyGoatImages(){
 }
 
 function toast(m,t){var e=document.createElement("div");e.className="toast "+t;e.textContent=m;document.body.appendChild(e);setTimeout(function(){e.remove();},3000);}
+
+function fixImages(){
+    var el=document.getElementById("imgFixResult");
+    el.innerHTML="<div style='padding:10px;background:#333;border-radius:8px;font-size:13px;color:#aaa'><span class='spinner' style='width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:8px'></span>Correction des images...</div>";
+    fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.success){
+            el.innerHTML="<div style='padding:10px;background:#00ff8822;border-radius:8px;font-size:13px;color:#00ff88'>✅ "+d.fixed+" images corrigées sur "+d.total+"</div>";
+            setTimeout(function(){location.reload();},1500);
+        }else{
+            el.innerHTML="<div style='padding:10px;background:#ff475722;border-radius:8px;font-size:13px;color:#ff4757'>❌ Erreur: "+(d.error||"Inconnue")+"</div>";
+        }
+    }).catch(function(e){
+        el.innerHTML="<div style='padding:10px;background:#ff475722;border-radius:8px;font-size:13px;color:#ff4757'>❌ "+e.message+"</div>";
+    });
+}
 
 load();
 </script>
