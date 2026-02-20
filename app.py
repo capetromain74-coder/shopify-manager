@@ -793,7 +793,7 @@ def generate_body_html(product, collections):
         # Paragraphe 5: Garanties
         lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque article. Tous nos produits sont vérifiés par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
         
-        return '\n\n'.join(lines)
+        return ''.join(lines)
     
     # ── SNEAKERS (logique existante) ──
     model_desc = get_model_description(title)
@@ -835,7 +835,7 @@ def generate_body_html(product, collections):
     # Paragraphe 5: Garanties KP SHOES
     lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque paire. Toutes nos sneakers sont vérifiées par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
     
-    return '\n\n'.join(lines)
+    return ''.join(lines)
 
 
 def update_seo_field(pid, field, value):
