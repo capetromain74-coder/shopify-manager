@@ -26,7 +26,6 @@ _collections_cache = None
 
 def title_to_filename(title):
     """Convertit un titre produit en nom de fichier safe: 'Air Jordan 4 (2025)' -> 'Air_Jordan_4_2025'"""
-    import re
     fn = title.replace(' ', '_')
     fn = re.sub(r'[^\w\-]', '_', fn)
     fn = re.sub(r'_+', '_', fn)
@@ -132,7 +131,7 @@ MODEL_COLLECTIONS = {
     'nike-p-6000': ['air max'], 'nike-vomero': ['vomero'], 'nike-sacail': ['sacai'],
     'adidas-samba': ['samba'], 'adidas-campus': ['campus'], 'adidas-gazelle': ['gazelle'],
     'adidas-spezial': ['spezial'], 'adidas-forum': ['forum'], 'yeezy-slide': ['yeezy slide'],
-    'yeezy-351': ['yeezy 350', '350 v2'], 'yeezy-350': ['yeezy 700'],
+    'yeezy-351': ['yeezy 350', '350 v2'], 'yeezy-350': ['yeezy 700', '700'],
     'new-balance-550': ['550'], 'new-balance-530': ['530'], 'new-balance-2002r': ['2002r'],
     'new-balance-9060': ['9060'], 'asics-gel-1130': ['gel-1130', 'gel 1130'],
     'asics-gel-kayano': ['kayano'], 'asics-gel-nyc': ['gel-nyc', 'gel nyc'],
@@ -173,9 +172,24 @@ def extract_brand(title):
     t = title.lower()
     if 'jordan' in t: return 'Jordan'
     if 'yeezy' in t: return 'Yeezy'
-    brands = [('Nike', ['nike', 'dunk', 'air force', 'air max', 'nocta']), ('Adidas', ['adidas', 'samba', 'campus', 'gazelle']),
-              ('New Balance', ['new balance']), ('Asics', ['asics']), ('UGG', ['ugg']), ('Puma', ['puma']),
-              ('Crocs', ['crocs']), ('Birkenstock', ['birkenstock']), ('Salomon', ['salomon']), ('Timberland', ['timberland'])]
+    if 'travis scott' in t: return 'Nike x Travis Scott'
+    if 'off-white' in t.replace(' ', '-'): return 'Nike x Off-White'
+    brands = [
+        ('Nike', ['nike', 'dunk', 'air force', 'air max', 'nocta', 'blazer', 'vomero', 'p-6000']),
+        ('Adidas', ['adidas', 'samba', 'campus', 'gazelle', 'spezial', 'forum', 'sl 72', 'adilette']),
+        ('New Balance', ['new balance']),
+        ('Asics', ['asics', 'gel-']),
+        ('UGG', ['ugg', 'tasman', 'tazz']),
+        ('Puma', ['puma']),
+        ('Crocs', ['crocs']),
+        ('Birkenstock', ['birkenstock']),
+        ('Salomon', ['salomon']),
+        ('Timberland', ['timberland']),
+        ('Converse', ['converse', 'chuck taylor']),
+        ('Vans', ['vans', 'old skool', 'sk8-hi']),
+        ('Reebok', ['reebok']),
+        ('On Running', ['on cloud', 'cloudmonster', 'cloudnova']),
+    ]
     for brand, kws in brands:
         for kw in kws:
             if kw in t: return brand
@@ -270,38 +284,62 @@ def analyze_seo(product, meta_title, meta_description):
 MODEL_DESCRIPTIONS = {
     'jordan 4': "Conçue par Tinker Hatfield en 1989, la Air Jordan 4 est une silhouette emblématique qui a marqué l'histoire du basketball et de la culture streetwear.",
     'jordan 3': "La Air Jordan 3, première collaboration entre Michael Jordan et Tinker Hatfield en 1988, a révolutionné le design des sneakers avec son fameux elephant print.",
+    'jordan 2': "La Air Jordan 2, sortie en 1986, se distingue par son design épuré inspiré de la mode italienne, sans logo Swoosh apparent.",
+    'jordan 5': "La Air Jordan 5, dessinée par Tinker Hatfield en 1990, s'inspire des avions de chasse avec sa semelle translucide et ses découpes en dents de requin.",
     'jordan 6': "La Air Jordan 6, portée par MJ lors de son premier titre NBA en 1991, est reconnaissable à son spoiler arrière unique et son design avant-gardiste.",
+    'jordan 7': "La Air Jordan 7, chaussure des Jeux olympiques de 1992, arbore un design coloré inspiré par l'art afro-pop et les motifs géométriques.",
+    'jordan 11': "La Air Jordan 11, chef-d'œuvre de Tinker Hatfield, est la sneaker la plus emblématique de la ligne Jordan avec son upper en cuir verni.",
+    'jordan 12': "La Air Jordan 12, inspirée du drapeau japonais et d'une élégance formelle, accompagna MJ lors de sa saison légendaire 1996-97.",
+    'jordan 13': "La Air Jordan 13, inspirée de la panthère noire, symbolise l'agilité et la grâce de Michael Jordan sur le terrain.",
     'jordan 1 high': "La Air Jordan 1 High, créée en 1985, est la sneaker qui a tout commencé. Un modèle iconique qui a défié les règles de la NBA et lancé un empire.",
     'jordan 1 low': "Version basse de la légendaire Air Jordan 1, parfaite pour un style quotidien sans compromis sur le look emblématique.",
     'jordan 1 mid': "La Air Jordan 1 Mid offre le parfait équilibre entre la High et la Low, avec un style polyvalent adapté à toutes les occasions.",
-    'dunk': "Créée en 1985 pour le basketball universitaire, la Nike Dunk est devenue une icône de la culture sneakers et du skateboarding.",
     'dunk low': "La Nike Dunk Low, version basse du classique de 1985, est devenue un incontournable du streetwear moderne.",
     'dunk high': "La Nike Dunk High conserve l'ADN original du modèle de 1985 avec sa silhouette montante reconnaissable entre toutes.",
+    'dunk': "Créée en 1985 pour le basketball universitaire, la Nike Dunk est devenue une icône de la culture sneakers et du skateboarding.",
     'air force 1': "La Nike Air Force 1, créée en 1982, est un classique intemporel. Première sneaker à intégrer la technologie Air, elle reste une référence absolue.",
+    'air max 1': "La Nike Air Max 1, conçue par Tinker Hatfield en 1987, a introduit la bulle Air visible qui a changé l'industrie du sneaker à jamais.",
+    'air max 90': "La Nike Air Max 90, icône des années 90, se distingue par ses lignes audacieuses et sa technologie Air Max visible au talon.",
+    'air max 95': "La Nike Air Max 95, inspirée de l'anatomie humaine, a révolutionné le design sneaker avec ses dégradés et son Air Max visible sur toute la longueur.",
+    'air max 97': "La Nike Air Max 97, avec ses lignes fluides inspirées des trains à grande vitesse japonais, dispose de la première unité Air pleine longueur.",
+    'air max plus': "La Nike Air Max Plus TN, née en 1998, est devenue un symbole de la culture urbaine avec son design inspiré des couchers de soleil de Floride.",
     'air max': "La gamme Air Max de Nike révolutionne le confort avec sa bulle d'air visible, alliant technologie de pointe et design audacieux.",
+    'vomero': "La Nike Vomero, référence du running premium, offre un amorti maximal et un confort exceptionnel pour les longues distances.",
+    'p-6000': "La Nike P-6000, inspirée des modèles running du début des années 2000, revient sur le devant de la scène avec son esthétique rétro-technique.",
+    'blazer': "La Nike Blazer, née sur les terrains de basket en 1973, est devenue une icône du style décontracté et intemporel.",
     'samba': "L'Adidas Samba, née en 1950 pour le football en salle, est devenue une légende du style casual et une icône de la mode.",
     'campus': "L'Adidas Campus revisite le classique des années 80 avec son design épuré en daim, parfait pour un look rétro-moderne.",
     'gazelle': "L'Adidas Gazelle, créée en 1966, est un modèle vintage intemporel qui traverse les décennies sans prendre une ride.",
     'spezial': "L'Adidas Spezial, née dans les années 70 pour le handball, incarne l'esprit terrace culture et le style casual européen.",
+    'forum': "L'Adidas Forum, star du basketball des années 80, se distingue par son strap iconique et son look imposant.",
+    'sl 72': "L'Adidas SL 72, créée pour les Jeux olympiques de Munich en 1972, incarne le style running vintage à son meilleur.",
+    'adilette': "L'Adidas Adilette, claquette emblématique depuis 1972, allie simplicité et confort avec son design minimaliste reconnaissable.",
     'yeezy slide': "La Yeezy Slide de Kanye West a redéfini la sandale de luxe avec son design minimaliste et son confort incomparable.",
     'yeezy 350': "La Yeezy 350 V2, collaboration iconique entre Kanye West et Adidas, est devenue une pièce collector incontournable.",
     'yeezy 700': "La Yeezy 700 Wave Runner marque le retour du chunky sneaker avec son design audacieux et ses multiples textures.",
+    'foam runner': "La Yeezy Foam Runner, avec son design futuriste moulé d'une seule pièce, a redéfini les codes du footwear contemporain.",
     'new balance 550': "La New Balance 550, ressortie des archives de 1989, incarne le revival du design basketball vintage des années 80.",
     'new balance 530': "La New Balance 530, avec son design running rétro des années 90, offre un look chunky très tendance.",
     'new balance 2002r': "La New Balance 2002R combine le confort moderne avec l'esthétique classique des années 2000.",
     'new balance 9060': "La New Balance 9060 représente la nouvelle génération de sneakers avec son design futuriste et ses lignes audacieuses.",
+    'new balance 1906': "La New Balance 1906R revisite un modèle technique des années 2000 avec la technologie N-ERGY et un style avant-gardiste.",
+    'new balance 990': "La New Balance 990, surnommée la « sneaker à 100 dollars » lors de sa sortie en 1982, reste le symbole du confort premium Made in USA.",
     'gel-1130': "L'Asics Gel-1130, modèle running de 2008 ressuscité, est devenue un must-have du streetwear contemporain.",
-    'gel-kayano': "L'Asics Gel-Kayano combine performance technique et style streetwear avec son design distinctif.",
+    'gel-kayano': "L'Asics Gel-Kayano combine performance technique et style streetwear avec son design distinctif depuis 1993.",
     'gel-nyc': "L'Asics Gel-NYC fusionne plusieurs modèles iconiques pour créer une silhouette unique et contemporaine.",
     'tasman': "La UGG Tasman, avec sa doublure en peau de mouton et son design slip-on, offre un confort incomparable.",
     'tazz': "La UGG Tazz revisite le classique Tasman avec une semelle plateforme tendance.",
     'ultra mini': "La UGG Ultra Mini est la version compacte et moderne du classique boot UGG.",
     'crocs': "Les Crocs, avec leur design unique en Croslite, offrent un confort et une légèreté incomparables.",
+    'birkenstock': "Les Birkenstock, avec leur semelle en liège moulée et leur heritage allemand, sont devenues un essentiel du confort au quotidien.",
+    'salomon': "Les Salomon, issues du trail et de l'outdoor, ont conquis le streetwear avec leur technologie avancée et leur silhouette technique.",
+    'converse': "Les Converse, icônes depuis 1917 avec la Chuck Taylor, restent indémodables et traversent toutes les générations.",
+    'vans': "Les Vans, nées en 1966 à Anaheim, incarnent la culture skate et le style californien décontracté.",
     'travis scott': "Les collaborations Travis Scott x Nike sont devenues des pièces de collection très recherchées.",
     'off-white': "Les collaborations Off-White x Nike de Virgil Abloh ont révolutionné le monde des sneakers avec leur esthétique déconstructiviste.",
 }
 
-DEFAULT_DESC = "Un modèle qui allie design contemporain et qualité premium."
+DEFAULT_DESC = "Un modèle premium qui allie qualité de fabrication et design soigné, pensé pour ceux qui recherchent style et confort au quotidien."
 
 
 def get_model_description(title):
@@ -322,9 +360,145 @@ def generate_meta_title(product):
 def generate_meta_description(product):
     title = product.get('title', '')
     sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
-    if sku:
-        return f"Achetez la {title} ({sku}) sur {SITE_NAME}. 100% Authentique, vérifié par nos experts. Livraison rapide et paiement sécurisé."[:155]
-    return f"Achetez la {title} sur {SITE_NAME}. 100% Authentique, vérifié par nos experts. Livraison rapide et paiement sécurisé."[:155]
+    brand = extract_brand(title)
+    colorway = extract_colorway(title)
+    
+    # Varier les descriptions selon la marque
+    if colorway:
+        desc = f"Achetez la {title} sur {SITE_NAME}. Coloris {colorway}, 100% authentique et vérifiée par nos experts."
+    elif sku:
+        desc = f"Achetez la {title} ({sku}) sur {SITE_NAME}. 100% authentique, vérifiée par nos experts. Livraison rapide."
+    else:
+        desc = f"Achetez la {title} sur {SITE_NAME}. 100% authentique, vérifiée par nos experts. Livraison rapide et sécurisée."
+    
+    # Tronquer à 155 caractères proprement
+    if len(desc) > 155:
+        desc = desc[:152].rsplit(' ', 1)[0] + '...'
+    return desc
+
+
+def extract_colorway(title):
+    """Extrait le coloris/version spécifique du titre produit"""
+    t = title
+    # Enlever la marque
+    brands = ['Nike', 'Adidas', 'New Balance', 'Asics', 'Puma', 'Reebok', 'UGG', 'Crocs', 'Salomon', 'Birkenstock', 'Vans', 'Converse']
+    for b in brands:
+        if t.startswith(b + ' '):
+            t = t[len(b)+1:]
+            break
+    
+    # Enlever le modèle pour garder le coloris
+    models = [
+        # Jordan (du plus spécifique au moins spécifique)
+        'Air Jordan 4 Retro OG SP', 'Air Jordan 4 Retro SE', 'Air Jordan 4 Retro Premium', 'Air Jordan 4 Retro',
+        'Air Jordan 1 Retro High OG SP', 'Air Jordan 1 Retro High OG', 'Air Jordan 1 Retro High',
+        'Air Jordan 1 Retro Low OG SP', 'Air Jordan 1 Retro Low OG', 'Air Jordan 1 Low SE', 'Air Jordan 1 Low',
+        'Air Jordan 1 Mid SE', 'Air Jordan 1 Mid', 'Air Jordan 1 High',
+        'Air Jordan 2 Retro', 'Air Jordan 3 Retro', 'Air Jordan 5 Retro', 'Air Jordan 6 Retro',
+        'Air Jordan 7 Retro', 'Air Jordan 8 Retro', 'Air Jordan 9 Retro',
+        'Air Jordan 11 Retro Low', 'Air Jordan 11 Retro', 'Air Jordan 12 Retro', 'Air Jordan 13 Retro',
+        # Nike
+        'Dunk Low Retro SP', 'Dunk Low Retro', 'Dunk Low SE', 'Dunk Low', 'Dunk High Retro', 'Dunk High',
+        'Air Force 1 Low Retro', 'Air Force 1 Low', 'Air Force 1 High', 'Air Force 1 Mid', 'Air Force 1',
+        'Air Max 1', 'Air Max 90', 'Air Max 95', 'Air Max 97', 'Air Max Plus', 'Air Max TN',
+        'Vomero 5', 'Vomero', 'P-6000', 'Blazer Mid', 'Blazer Low', 'Blazer',
+        # Adidas
+        'Samba OG', 'Samba Decon', 'Samba', 'Campus 00s', 'Campus', 'Gazelle Bold', 'Gazelle Indoor', 'Gazelle',
+        'Handball Spezial', 'Spezial', 'Forum Low', 'Forum Mid', 'Forum 84 Low', 'Forum',
+        'SL 72 OG', 'SL 72', 'Adilette 22', 'Adilette',
+        # Yeezy
+        'Yeezy Slide', 'Yeezy Boost 350 V2', 'Yeezy 350 V2', 'Yeezy 350', 'Yeezy 700 V3', 'Yeezy 700',
+        'Yeezy Foam Runner', 'Yeezy 500',
+        # New Balance
+        '550', '530', '2002R', '9060', '1906R', '990v6', '990v5', '990v4', '990v3', '990',
+        '993', '2002', '327', '574', '480',
+        # Asics
+        'Gel-1130', 'Gel-Kayano 14', 'Gel-Kayano', 'Gel-NYC', 'Gel-Nimbus 9', 'GT-2160',
+        # UGG
+        'Tasman', 'Tazz', 'Ultra Mini', 'Classic Mini', 'Classic Short',
+        # Autres
+        'Classic Clog', 'Classic Slide',  # Crocs
+        'Old Skool', 'Sk8-Hi', 'Era', 'Authentic',  # Vans
+        'Chuck Taylor', 'Chuck 70',  # Converse
+        'XT-6', 'XT-4', 'ACS Pro',  # Salomon
+    ]
+    
+    colorway = t
+    for m in models:
+        if t.startswith(m + ' '):
+            colorway = t[len(m)+1:]
+            break
+        elif t.startswith(m):
+            colorway = t[len(m):]
+            break
+    
+    colorway = colorway.strip(' -')
+    return colorway if colorway and colorway != t else ''
+
+
+def generate_color_description_ai(title, colorway, brand, model_desc):
+    """Utilise l'API Claude pour générer une description spécifique au coloris"""
+    if not colorway:
+        return ''
+    
+    try:
+        prompt = f"""Tu es un expert sneakers qui rédige des descriptions produits pour un site e-commerce français (KP SHOES).
+
+Produit : {title}
+Coloris/version : {colorway}
+Marque : {brand}
+
+Écris UNE SEULE phrase (2-3 lignes max) décrivant spécifiquement ce coloris/cette version. 
+- Décris les couleurs réelles de la paire (pas juste traduire le nom)
+- Si c'est une collaboration, mentionne-la
+- Si c'est un coloris iconique (Chicago, Bred, Panda, etc.), mentionne son histoire
+- Sois précis et naturel, pas générique
+- Ne commence PAS par "Le coloris" ou "Cette version"
+- Réponds UNIQUEMENT avec la phrase, rien d'autre."""
+
+        api_url = "https://api.anthropic.com/v1/messages"
+        headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': os.environ.get('ANTHROPIC_API_KEY', ''),
+            'anthropic-version': '2023-06-01'
+        }
+        data = {
+            'model': 'claude-sonnet-4-20250514',
+            'max_tokens': 150,
+            'messages': [{'role': 'user', 'content': prompt}]
+        }
+        
+        if not headers['x-api-key']:
+            return generate_color_sentence_fallback(title, colorway)
+        
+        req = Request(api_url, data=json.dumps(data).encode('utf-8'), headers=headers, method='POST')
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with urlopen(req, context=ctx, timeout=15) as r:
+            result = json.loads(r.read().decode('utf-8'))
+            if result.get('content') and result['content'][0].get('text'):
+                return result['content'][0]['text'].strip()
+    except Exception as e:
+        log.error(f"[AI Color] Error: {e}")
+    
+    return generate_color_sentence_fallback(title, colorway)
+
+
+def generate_color_sentence_fallback(title, colorway):
+    """Fallback sans IA pour la description coloris"""
+    if not colorway:
+        return ''
+    
+    collabs = ['Travis Scott', 'Off-White', 'Fragment', 'Union LA', 'Undefeated', 'A Ma Maniere', 
+               'J Balvin', 'PSG', 'Eminem', 'Fear of God', 'Sacai', 'CLOT', 'Stussy',
+               'Patta', 'Concepts', 'atmos', 'Supreme', 'BAPE', 'Kith', 'JJJJound']
+    
+    for collab in collabs:
+        if collab.lower() in colorway.lower():
+            return f'Fruit de la collaboration exclusive avec {collab}, cette édition se distingue par un design unique et des détails soignés qui en font une pièce très convoitée.'
+    
+    return f'Proposée dans le coloris "{colorway}", cette paire affirme son identité avec une combinaison de teintes et de matières qui lui est propre.'
 
 
 def generate_body_html(product, collections):
@@ -333,6 +507,8 @@ def generate_body_html(product, collections):
     sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
     collection = find_collection(title, collections)
     model_desc = get_model_description(title)
+    colorway = extract_colorway(title)
+    color_sentence = generate_color_description_ai(title, colorway, brand, model_desc)
     
     lines = []
     
@@ -342,17 +518,23 @@ def generate_body_html(product, collections):
     else:
         lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}.</p>')
     
-    # Paragraphe 2: Description du modèle + texte générique
-    lines.append(f'<p>{model_desc} Cette paire se distingue par ses finitions soignées et son confort au quotidien. Une pièce polyvalente qui s\'adapte à tous les styles.</p>')
+    # Paragraphe 2: Description du modèle
+    lines.append(f'<p>{model_desc}</p>')
     
-    # Paragraphe 3: Caractéristiques techniques
-    tech_lines = []
+    # Paragraphe 3: Description spécifique au coloris
+    if color_sentence:
+        lines.append(f'<p>{color_sentence}</p>')
+    
+    # Paragraphe 4: Caractéristiques techniques
+    tech_parts = []
     if sku:
-        tech_lines.append(f'<strong>Référence</strong> : {sku}')
-    tech_lines.append(f'<strong>Marque</strong> : {brand}')
-    lines.append('<p>' + '<br>'.join(tech_lines) + '</p>')
+        tech_parts.append(f'<strong>Référence&nbsp;:</strong> {sku}')
+    tech_parts.append(f'<strong>Marque&nbsp;:</strong> {brand}')
+    if colorway:
+        tech_parts.append(f'<strong>Coloris&nbsp;:</strong> {colorway}')
+    lines.append('<p>' + '<br>'.join(tech_parts) + '</p>')
     
-    # Paragraphe 4: Garanties KP SHOES
+    # Paragraphe 5: Garanties KP SHOES
     lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque paire. Toutes nos sneakers sont vérifiées par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
     
     return '\n\n'.join(lines)
@@ -388,10 +570,10 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 .st .v{font-size:24px;font-weight:bold;color:#00ff88}
 .st .l{font-size:10px;color:#666;margin-top:3px}
 .main{max-width:1400px;margin:0 auto;padding:20px}
-.toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
 .search{flex:1;min-width:200px;padding:10px 15px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:#fff}
 .filter{padding:10px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:#fff}
-.btn{padding:10px 20px;border:none;border-radius:8px;font-weight:600;cursor:pointer}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px}
 .btn-s{background:#333;color:#fff}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:15px}
 .card{background:#111;border:1px solid #222;border-radius:10px;overflow:hidden;cursor:pointer;transition:all 0.2s}
@@ -412,14 +594,27 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 @keyframes spin{to{transform:rotate(360deg)}}
 .msg{padding:12px 20px;background:#00ff8815;color:#00ff88;border-radius:8px;margin-bottom:15px;display:none;font-size:13px}
 .msg.on{display:block}
+.modal-bg{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto}
+.modal-box{max-width:650px;margin:40px auto;background:#1a1a2e;border-radius:12px;padding:30px;color:#fff}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer}
+.opt-group{margin-bottom:20px}
+.opt-label{font-size:13px;font-weight:600;color:#888;margin-bottom:10px}
+.opt-radio,.opt-check{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;padding:8px 12px;background:#111;border-radius:6px;margin-bottom:6px}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-left:10px}
+.opt-sub{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:8px;background:#0d0d14;border-radius:6px}
+.prog-bar{background:#333;border-radius:6px;overflow:hidden;height:8px}
+.prog-fill{width:0%;height:100%;background:linear-gradient(90deg,#00ff88,#00cc6a);transition:width .3s}
+.issue-row{display:flex;align-items:center;gap:10px;padding:10px;background:#111;border-radius:6px;margin-bottom:6px}
+.issue-bar{background:#333;border-radius:4px;height:6px;margin-top:4px}
 </style>
 </head>
 <body>
 <header class="hd">
 <div class="logo">KP SHOES</div>
 <div style="display:flex;gap:10px;align-items:center">
-<a href="/blog-generator" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600">✨ Générateur Blog</a>
-<span style="color:#666;font-size:12px">Gestion Shopify V8</span>
+<a href="/blog-generator" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600">&#10024; Blog</a>
+<span style="color:#666;font-size:12px">V8</span>
 </div>
 </header>
 <div class="stats">
@@ -431,70 +626,78 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <main class="main">
 <div class="msg" id="msg"></div>
 <div class="toolbar">
-<input type="text" class="search" id="q" placeholder="Rechercher...">
-<select class="filter" id="f">
-<option value="">Tous</option>
-<option value="excellent">Excellent</option>
-<option value="good">Bon</option>
-<option value="warning">Moyen</option>
-<option value="poor">Faible</option>
-</select>
-<button class="btn btn-s" onclick="reload()">Actualiser</button>
+<input type="text" class="search" id="q" placeholder="Rechercher un produit...">
+<select class="filter" id="f"><option value="">Tous</option><option value="excellent">Excellent</option><option value="good">Bon</option><option value="warning">Moyen</option><option value="poor">Faible</option></select>
+<button class="btn btn-s" onclick="reload()">&#8635; Actualiser</button>
 <button class="btn btn-s" onclick="selectAll()">Tout cocher</button>
-<button class="btn btn-o" onclick="openImageFixer()">🖼️ Fix Images<span id="fixBadge"></span></button>
+<button class="btn" style="background:#00ff88;color:#000" onclick="openCorrector()">&#128295; Corriger<span id="selBadge"></span></button>
+<button class="btn" style="background:#3b82f6;color:#fff" onclick="openAnalyzer()">&#128270; Analyser</button>
 </div>
-<div id="selectCount" style="display:none;align-items:center;gap:10px;padding:8px 15px;background:#00ff8822;border-radius:8px;margin-top:8px;font-size:13px;color:#00ff88"></div>
-<!-- Modal Fix Images -->
-<div id="imgFixModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto">
-<div style="max-width:600px;margin:40px auto;background:#1a1a2e;border-radius:12px;padding:30px;color:#fff">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-<h2 style="margin:0;font-size:20px">🖼️ Corriger les images produits</h2>
-<button onclick="closeImageFixer()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer">×</button>
+<div id="selectCount" style="display:none;align-items:center;gap:10px;padding:8px 15px;background:#00ff8822;border-radius:8px;margin-bottom:15px;font-size:13px;color:#00ff88"></div>
+
+<!-- ══════ MODAL CORRIGER ══════ -->
+<div class="modal-bg" id="correctorModal">
+<div class="modal-box">
+<div class="modal-head">
+<h2 style="margin:0;font-size:20px">&#128295; Corriger le site</h2>
+<button class="modal-close" onclick="closeCorrector()">&times;</button>
 </div>
-<p style="color:#aaa;font-size:14px;margin-bottom:15px">Renomme les fichiers et corrige le texte alternatif :</p>
-<ul style="color:#aaa;font-size:13px;margin-bottom:20px;padding-left:20px">
-<li><strong style="color:#fff">Nom fichier</strong> : handle-produit_1.jpg, handle-produit_2.jpg...</li>
-<li><strong style="color:#fff">Texte alt</strong> : Titre exact du produit</li>
-</ul>
-<div style="margin-bottom:15px">
-<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
-<input type="radio" name="imgScope" value="all" checked onchange="document.getElementById('imgSearchBox').style.display='none'"> Tous les produits
-</label>
-<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;margin-top:8px">
-<input type="radio" name="imgScope" value="selection" onchange="document.getElementById('imgSearchBox').style.display='none'"> Seulement la sélection (<span id="imgSelCount">0</span> produits cochés)
-</label>
-<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;margin-top:8px">
-<input type="radio" name="imgScope" value="selected" onchange="document.getElementById('imgSearchBox').style.display='block'"> Un produit spécifique
-</label>
+
+<div class="opt-group">
+<div class="opt-label">PORT&Eacute;E</div>
+<label class="opt-radio"><input type="radio" name="corScope" value="all" checked> Tous les produits (<span id="corTotal">0</span>)</label>
+<label class="opt-radio"><input type="radio" name="corScope" value="selection"> S&eacute;lection uniquement (<span id="corSel">0</span> coch&eacute;s)</label>
 </div>
-<div id="imgSearchBox" style="display:none;margin-bottom:15px">
-<input type="text" id="imgSearchInput" placeholder="Rechercher un produit..." oninput="filterProductsForFix()" style="width:100%;padding:10px;border:1px solid #444;border-radius:8px;background:#111;color:#fff;font-size:14px;box-sizing:border-box">
-<div id="imgProductList" style="max-height:200px;overflow-y:auto;margin-top:8px;border-radius:8px"></div>
-<input type="hidden" id="imgSelectedPid" value="">
-<div id="imgSelectedProduct" style="display:none;margin-top:8px;padding:10px;border-radius:8px;border:1px solid #00ff88;font-size:13px"></div>
+
+<div class="opt-group">
+<div class="opt-label">QUE CORRIGER ?</div>
+<label class="opt-check" style="margin-bottom:8px"><input type="checkbox" id="corAll" onchange="toggleCorAll()" style="accent-color:#00ff88;width:18px;height:18px"> <strong>Tout s&eacute;lectionner</strong></label>
+<div class="opt-grid">
+<label class="opt-sub"><input type="checkbox" class="corF" value="body_html" style="accent-color:#00ff88"> &#128221; Description</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="meta_title" style="accent-color:#00ff88"> &#127991;&#65039; Meta Title</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="meta_description" style="accent-color:#00ff88"> &#128203; Meta Description</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="images_alt" style="accent-color:#00ff88"> &#128444;&#65039; Alt Photos</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="images_filename" style="accent-color:#00ff88"> &#128193; Nom Photos</label>
 </div>
-<div id="imgFixStatus" style="display:none;margin:15px 0;padding:12px;border-radius:8px;font-size:13px"></div>
-<div id="imgFixProgress" style="display:none;margin:15px 0">
-<div style="background:#333;border-radius:6px;overflow:hidden;height:8px">
-<div id="imgFixBar" style="width:0%;height:100%;background:linear-gradient(90deg,#00ff88,#00cc6a);transition:width .3s"></div>
 </div>
-<div id="imgFixText" style="text-align:center;font-size:12px;color:#aaa;margin-top:6px">0 / 0</div>
+
+<div id="corStatus" style="display:none;margin:15px 0;padding:12px;border-radius:8px;font-size:13px"></div>
+<div id="corProg" style="display:none;margin:15px 0">
+<div class="prog-bar"><div class="prog-fill" id="corBar"></div></div>
+<div id="corTxt" style="text-align:center;font-size:12px;color:#aaa;margin-top:6px"></div>
 </div>
 <div style="display:flex;gap:10px">
-<button id="imgFixBtn" onclick="startImageFix()" style="flex:1;padding:12px;background:#00ff88;color:#000;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px">Corriger les images</button>
-<button onclick="closeImageFixer()" style="padding:12px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px">Fermer</button>
+<button id="corBtn" onclick="startCorrection()" style="flex:1;padding:14px;background:#00ff88;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">&#128640; Lancer la correction</button>
+<button onclick="closeCorrector()" style="padding:14px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer">Fermer</button>
 </div>
 </div>
 </div>
+
+<!-- ══════ MODAL ANALYSER ══════ -->
+<div class="modal-bg" id="analyzerModal">
+<div class="modal-box">
+<div class="modal-head">
+<h2 style="margin:0;font-size:20px">&#128270; Analyse du site</h2>
+<button class="modal-close" onclick="closeAnalyzer()">&times;</button>
+</div>
+<div id="azContent"></div>
+<div style="display:flex;gap:10px;margin-top:20px">
+<button id="azFixBtn" style="display:none;flex:1;padding:14px;background:#00ff88;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px" onclick="fixFromAnalysis()">&#128295; Corriger les probl&egrave;mes</button>
+<button onclick="closeAnalyzer()" style="padding:14px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer">Fermer</button>
+</div>
+</div>
+</div>
+
 <div class="grid" id="grid"><div class="loading"><div class="spinner"></div>Chargement...</div></div>
 </main>
 <script>
-var P=[],C=[],sinceId=0,loading=false,totalV=0;
+var P=[],C=[],sinceId=0,loading=false,totalV=0,selectedPids=[];
+
 function load(){
     if(loading)return;loading=true;
     document.getElementById("msg").textContent="Chargement... "+P.length+" produits";
     document.getElementById("msg").className="msg on";
-    fetch("/api/products?since_id="+sinceId+"&limit=50").then(function(r){return r.json();}).then(function(d){
+    fetch("/api/products?since_id="+sinceId+"&limit=50").then(function(r){return r.json()}).then(function(d){
         if(d.collections)C=d.collections;
         if(d.products&&d.products.length>0){
             for(var i=0;i<d.products.length;i++){
@@ -502,27 +705,30 @@ function load(){
                 var b=(p.body_html||"").toLowerCase();
                 p._lk=b.indexOf("kpshoes.fr/collections/")>=0;
                 p._ds=(p.body_html||"").length>100;
-                // Check images SEO
                 var imgOk=true;
-                var titleFn=(p.title||"").replace(/ /g,"_").replace(/[^\w\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+                var titleFn=(p.title||"").replace(/ /g,"_").replace(/[^\\w\\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
                 if(p.images&&p.images.length>0){
                     for(var j=0;j<p.images.length;j++){
                         var alt=p.images[j].alt||"";
                         var src=p.images[j].src||"";
                         var fn=src.split("/").pop().split("?")[0];
-                        if(alt!==p.title||fn.indexOf(titleFn)<0){imgOk=false;break;}
+                        if(alt!==p.title||fn.indexOf(titleFn)<0){imgOk=false;break}
                     }
-                }else{imgOk=false;}
+                }else{imgOk=false}
                 p._img=imgOk;
-                p._sc=(p._ds?25:0)+(p._lk?45:0)+(p._img?20:0)+(((p.variants||[])[0]||{}).sku?10:0);
+                var hasSku=!!((p.variants||[])[0]||{}).sku;
+                var metaEst=(p._ds&&p._lk)?35:(p._ds?15:0);
+                p._sc=metaEst+(p._ds?15:0)+(p._lk?15:0)+(p._img?20:0)+(hasSku?10:0);
+                p._sc=Math.min(p._sc,100);
                 if(p._sc>=85)p._seo="excellent";else if(p._sc>=70)p._seo="good";else if(p._sc>=50)p._seo="warning";else p._seo="poor";
                 totalV+=(p.variants||[]).length;P.push(p);
             }
             sinceId=d.products[d.products.length-1].id;updateStats();filter();loading=false;
-            if(d.products.length>=50)setTimeout(load,100);else{document.getElementById("msg").className="msg";}
-        }else{document.getElementById("msg").className="msg";loading=false;filter();}
-    }).catch(function(e){document.getElementById("msg").textContent="Erreur: "+e.message;loading=false;});
+            if(d.products.length>=50)setTimeout(load,100);else{document.getElementById("msg").className="msg"}
+        }else{document.getElementById("msg").className="msg";loading=false;filter()}
+    }).catch(function(e){document.getElementById("msg").textContent="Erreur: "+e.message;loading=false});
 }
+
 function updateStats(){
     document.getElementById("totalP").textContent=P.length;
     document.getElementById("totalV").textContent=totalV;
@@ -531,193 +737,189 @@ function updateStats(){
     avg=P.length?Math.round(avg/P.length):0;
     document.getElementById("seoAvg").textContent=avg+"%";
 }
+
 function filter(){
     var q=document.getElementById("q").value.toLowerCase();
     var f=document.getElementById("f").value;
-    var L=[];for(var i=0;i<P.length;i++){var p=P[i];if(q&&p.title.toLowerCase().indexOf(q)<0)continue;if(f&&p._seo!==f)continue;L.push(p);}
+    var L=[];for(var i=0;i<P.length;i++){var p=P[i];if(q&&p.title.toLowerCase().indexOf(q)<0)continue;if(f&&p._seo!==f)continue;L.push(p)}
     render(L);
 }
+
 function render(L){
     var el=document.getElementById("grid");
-    if(!L.length&&!loading){el.innerHTML="<div class='loading'>Aucun produit</div>";return;}
+    if(!L.length&&!loading){el.innerHTML="<div class='loading'>Aucun produit</div>";return}
     var html="";var max=Math.min(L.length,100);
     for(var i=0;i<max;i++){
         var p=L[i];var img=(p.image&&p.image.src)?p.image.src.replace(/'/g,"%27"):"";
         var sku=(p.variants&&p.variants[0])?p.variants[0].sku||"":"";
         var price=(p.variants&&p.variants[0])?p.variants[0].price:"0";
-        var checked=selectedPids.indexOf(p.id)>=0?" checked":"";
+        var chk=selectedPids.indexOf(p.id)>=0?" checked":"";
         html+="<div class='card' style='position:relative' data-id='"+p.id+"'>";
-        html+="<input type='checkbox' class='card-check'"+checked+" onclick='event.stopPropagation();toggleSelect("+p.id+")' style='position:absolute;top:8px;left:8px;width:20px;height:20px;z-index:2;cursor:pointer;accent-color:#00ff88'>";
+        html+="<input type='checkbox'"+chk+" onclick='event.stopPropagation();toggleSel("+p.id+")' style='position:absolute;top:8px;left:8px;width:20px;height:20px;z-index:2;cursor:pointer;accent-color:#00ff88'>";
         html+="<img src='"+img+"' onclick='go("+p.id+")'><div class='card-body' onclick='go("+p.id+")'>";
         html+="<div class='card-title'>"+esc(p.title)+"</div><div class='card-sku'>"+sku+"</div>";
         html+="<div class='card-meta'><span class='card-price'>"+price+" EUR</span><span class='badge "+p._seo+"'>"+p._sc+"%</span></div>";
         html+="</div></div>";
     }
-    el.innerHTML=html;
-    updateSelectCount();
+    el.innerHTML=html;updateSelCount();
 }
-var selectedPids=[];
-function toggleSelect(pid){
-    var idx=selectedPids.indexOf(pid);
-    if(idx>=0)selectedPids.splice(idx,1);else selectedPids.push(pid);
-    updateSelectCount();
-}
-function selectAll(){
-    selectedPids=[];
-    for(var i=0;i<P.length;i++)selectedPids.push(P[i].id);
-    filter();
-}
-function deselectAll(){selectedPids=[];filter();}
-function updateSelectCount(){
+
+function toggleSel(pid){var i=selectedPids.indexOf(pid);if(i>=0)selectedPids.splice(i,1);else selectedPids.push(pid);updateSelCount()}
+function selectAll(){selectedPids=[];for(var i=0;i<P.length;i++)selectedPids.push(P[i].id);filter()}
+function deselectAll(){selectedPids=[];filter()}
+function updateSelCount(){
     var el=document.getElementById("selectCount");
-    var badge=document.getElementById("fixBadge");
+    var badge=document.getElementById("selBadge");
     if(selectedPids.length>0){
         el.style.display="flex";
-        el.innerHTML="<span>"+selectedPids.length+" sélectionné"+(selectedPids.length>1?"s":"")+"</span><button onclick='deselectAll()' style='background:none;border:none;color:#ff4757;cursor:pointer;font-size:12px;text-decoration:underline'>Désélectionner</button>";
+        el.innerHTML="<span>"+selectedPids.length+" produit"+(selectedPids.length>1?"s":"")+" coch&eacute;"+(selectedPids.length>1?"s":"")+"</span><button onclick='deselectAll()' style='background:none;border:none;color:#ff4757;cursor:pointer;font-size:12px;text-decoration:underline;margin-left:10px'>D&eacute;s&eacute;lectionner</button>";
         badge.textContent=" ("+selectedPids.length+")";
-    }else{el.style.display="none";badge.textContent="";}
+    }else{el.style.display="none";badge.textContent=""}
 }
-function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
-function go(id){window.location.href="/product/"+id;}
-function reload(){P=[];C=[];sinceId=0;totalV=0;document.getElementById("grid").innerHTML="<div class='loading'><div class='spinner'></div>Chargement...</div>";load();}
+function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function go(id){window.location.href="/product/"+id}
+function reload(){P=[];C=[];sinceId=0;totalV=0;document.getElementById("grid").innerHTML="<div class='loading'><div class='spinner'></div>Chargement...</div>";load()}
 document.getElementById("q").oninput=filter;
 document.getElementById("f").onchange=filter;
 
-// ── Image Fixer (HOME) ──
-function openImageFixer(){
-    document.getElementById("imgFixModal").style.display="block";
-    document.getElementById("imgSelCount").textContent=selectedPids.length;
-    if(selectedPids.length>0){
-        document.querySelector('input[name="imgScope"][value="selection"]').checked=true;
-        document.getElementById('imgSearchBox').style.display='none';
-    }else{
-        document.querySelector('input[name="imgScope"][value="all"]').checked=true;
-        document.getElementById('imgSearchBox').style.display='none';
-    }
+/* ══════ CORRECTOR ══════ */
+function toggleCorAll(){var c=document.getElementById("corAll").checked;var f=document.querySelectorAll(".corF");for(var i=0;i<f.length;i++)f[i].checked=c}
+function openCorrector(){
+    document.getElementById("correctorModal").style.display="block";
+    document.getElementById("corSel").textContent=selectedPids.length;
+    document.getElementById("corTotal").textContent=P.length;
+    document.getElementById("corStatus").style.display="none";
+    document.getElementById("corProg").style.display="none";
+    var btn=document.getElementById("corBtn");btn.disabled=false;btn.textContent="\\uD83D\\uDE80 Lancer la correction";
+    if(selectedPids.length>0)document.querySelector('input[name="corScope"][value="selection"]').checked=true;
+    else document.querySelector('input[name="corScope"][value="all"]').checked=true;
 }
-function closeImageFixer(){document.getElementById("imgFixModal").style.display="none";}
+function closeCorrector(){document.getElementById("correctorModal").style.display="none"}
 
-function filterProductsForFix(){
-    var q=document.getElementById("imgSearchInput").value.toLowerCase();
-    var list=document.getElementById("imgProductList");
-    if(q.length<2){list.innerHTML="";return;}
-    var matches=[];
-    for(var i=0;i<P.length;i++){
-        if(P[i].title.toLowerCase().indexOf(q)>=0)matches.push(P[i]);
-        if(matches.length>=8)break;
-    }
-    var h="";
-    for(var i=0;i<matches.length;i++){
-        var img=(matches[i].images&&matches[i].images.length>0)?matches[i].images[0].src:"";
-        h+="<div class='imgfix-item' data-pid='"+matches[i].id+"' data-img='"+img.replace(/\x27/g,"%27")+"' style='display:flex;align-items:center;gap:10px;padding:8px;cursor:pointer;border-bottom:1px solid #333'>";
-        if(img)h+="<img src='"+img.replace(/\x27/g,"%27")+"' style='width:40px;height:40px;object-fit:contain;border-radius:4px'>";
-        h+="<span style='font-size:13px;color:#ddd'>"+esc(matches[i].title)+"</span></div>";
-    }
-    if(matches.length===0)h="<div style='padding:10px;color:#666;font-size:13px'>Aucun produit trouvé</div>";
-    list.innerHTML=h;
-    // Ajouter les event listeners
-    var items=list.querySelectorAll('.imgfix-item');
-    for(var j=0;j<items.length;j++){
-        items[j].addEventListener('click',function(){
-            var pid=this.getAttribute('data-pid');
-            var img=this.getAttribute('data-img');
-            var title=this.querySelector('span').textContent;
-            selectProductForFix(pid,title,img);
-        });
-    }
-}
+function startCorrection(){
+    var scope=document.querySelector('input[name="corScope"]:checked').value;
+    var fields=[];var checks=document.querySelectorAll(".corF:checked");
+    for(var i=0;i<checks.length;i++)fields.push(checks[i].value);
+    if(!fields.length){alert("Coche au moins un element.");return}
+    var pids=(scope==="selection")?selectedPids.slice():P.map(function(p){return p.id});
+    if(!pids.length){alert("Aucun produit.");return}
 
-function selectProductForFix(pid,title,img){
-    document.getElementById("imgSelectedPid").value=pid;
-    document.getElementById("imgProductList").innerHTML="";
-    document.getElementById("imgSearchInput").value="";
-    var sel=document.getElementById("imgSelectedProduct");
-    sel.style.display="flex";sel.style.alignItems="center";sel.style.gap="10px";
-    sel.innerHTML=(img?"<img src='"+img+"' style='width:40px;height:40px;object-fit:contain;border-radius:4px'>":"")+"<span>✅ "+title+"</span>";
-}
+    var seoFields=fields.filter(function(f){return f!=="images_alt"&&f!=="images_filename"});
+    var doImg=fields.indexOf("images_alt")>=0||fields.indexOf("images_filename")>=0;
 
-function startImageFix(){
-    var scope=document.querySelector('input[name="imgScope"]:checked').value;
-    var btn=document.getElementById("imgFixBtn");
-    var status=document.getElementById("imgFixStatus");
-    var progress=document.getElementById("imgFixProgress");
-    var bar=document.getElementById("imgFixBar");
-    var text=document.getElementById("imgFixText");
-    btn.disabled=true;
-    btn.innerHTML="<span class='spinner' style='width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px'></span>Correction en cours...";
+    var btn=document.getElementById("corBtn");
+    var status=document.getElementById("corStatus");
+    var bar=document.getElementById("corBar");
+    var txt=document.getElementById("corTxt");
+    btn.disabled=true;btn.textContent="Correction en cours...";
     status.style.display="block";status.style.background="#333";status.style.color="#aaa";
-    progress.style.display="block";bar.style.width="0%";
-    if(scope==="selected"){
-        var pid=document.getElementById("imgSelectedPid").value;
-        if(!pid){status.style.background="#ff475722";status.style.color="#ff4757";status.textContent="❌ Sélectionnez un produit d'abord.";btn.disabled=false;btn.innerHTML="Corriger les images";return;}
-        status.textContent="⏳ Correction du produit...";
-        fixOneProduct(pid,btn,status,bar,text);
-    }else if(scope==="selection"){
-        if(selectedPids.length===0){status.style.background="#ff475722";status.style.color="#ff4757";status.textContent="❌ Aucun produit coché.";btn.disabled=false;btn.innerHTML="Corriger les images";return;}
-        status.textContent="⏳ Correction de "+selectedPids.length+" produits...";
-        fixSelectedProducts(btn,status,bar,text);
-    }else{
-        status.textContent="⏳ Correction de tous les produits...";
-        fixAllProducts(btn,status,bar,text);
-    }
-}
+    document.getElementById("corProg").style.display="block";bar.style.width="0%";
 
-function fixOneProduct(pid,btn,status,bar,text){
-    fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:parseInt(pid)})})
-    .then(function(r){return r.json();}).then(function(d){
-        bar.style.width="100%";text.textContent="1 / 1";
-        if(d.success){status.style.background="#00ff8822";status.style.color="#00ff88";status.textContent="✅ "+d.fixed+" images corrigées sur "+d.total+" !";btn.innerHTML="✅ Terminé!";setTimeout(function(){location.reload();},2000);}
-        else{status.style.background="#ff475722";status.style.color="#ff4757";status.textContent="❌ Erreur: "+(d.error||"Inconnue");btn.disabled=false;btn.innerHTML="Corriger les images";}
-    }).catch(function(e){status.style.background="#ff475722";status.style.color="#ff4757";status.textContent="❌ Erreur: "+e.message;btn.disabled=false;btn.innerHTML="Corriger les images";});
-}
-
-function fixAllProducts(btn,status,bar,text){
-    // Utiliser tous les produits chargés dans P
-    var pids=[];
-    for(var i=0;i<P.length;i++) pids.push(P[i].id);
-    if(pids.length===0){
-        status.style.background="#ff475722";status.style.color="#ff4757";
-        status.textContent="❌ Aucun produit chargé. Attendez le chargement.";
-        btn.disabled=false;btn.innerHTML="Corriger les images";return;
-    }
-    var done=0;var totalFixed=0;var totalImgs=0;var errors=0;
+    var done=0,errs=0;
     function next(){
         if(done>=pids.length){
-            bar.style.width="100%";text.textContent=done+" / "+pids.length;
+            bar.style.width="100%";txt.textContent=done+"/"+pids.length;
             status.style.background="#00ff8822";status.style.color="#00ff88";
-            status.textContent="✅ Terminé ! "+totalFixed+" images corrigées sur "+totalImgs+" ("+done+" produits, "+errors+" erreurs)";
-            btn.innerHTML="✅ Terminé!";
-            return;
+            status.textContent="\\u2705 "+done+" produits corrig\\u00e9s"+(errs?" ("+errs+" erreurs)":"");
+            btn.textContent="\\u2705 Termin\\u00e9!";return;
         }
-        var pct=Math.round((done/pids.length)*100);
-        bar.style.width=pct+"%";
-        text.textContent=done+" / "+pids.length;
-        status.textContent="⏳ Produit "+(done+1)+" / "+pids.length+"...";
-        
-        fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})})
-        .then(function(r){return r.json();}).then(function(d){
-            if(d.success){totalFixed+=d.fixed;totalImgs+=d.total;}else{errors++;}
-            done++;next();
-        }).catch(function(){errors++;done++;next();});
+        bar.style.width=Math.round(done/pids.length*100)+"%";
+        txt.textContent=(done+1)+"/"+pids.length;
+        status.textContent="\\u23F3 Produit "+(done+1)+"/"+pids.length+"...";
+        var promises=[];
+        if(seoFields.length>0)promises.push(fetch("/api/seo/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done],fields:seoFields})}).then(function(r){return r.json()}));
+        if(doImg)promises.push(fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})}).then(function(r){return r.json()}));
+        Promise.all(promises).then(function(){done++;setTimeout(next,50)}).catch(function(){errs++;done++;setTimeout(next,50)});
     }
     next();
 }
 
-function fixSelectedProducts(btn,status,bar,text){
-    var pids=selectedPids.slice();var done=0;var totalFixed=0;var totalImgs=0;
-    function next(){
-        if(done>=pids.length){bar.style.width="100%";text.textContent=done+" / "+pids.length;status.style.background="#00ff8822";status.style.color="#00ff88";status.textContent="✅ "+totalFixed+" images corrigées sur "+totalImgs+" ("+done+" produits)";btn.innerHTML="✅ Terminé!";setTimeout(function(){location.reload();},3000);return;}
-        bar.style.width=Math.round((done/pids.length)*100)+"%";text.textContent=done+" / "+pids.length;status.textContent="⏳ Produit "+(done+1)+" / "+pids.length+"...";
-        fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})})
-        .then(function(r){return r.json();}).then(function(d){if(d.success){totalFixed+=d.fixed;totalImgs+=d.total;}done++;next();}).catch(function(){done++;next();});
-    }
-    next();
+/* ══════ ANALYZER ══════ */
+var azProblems=[];
+function openAnalyzer(){
+    document.getElementById("analyzerModal").style.display="block";
+    document.getElementById("azFixBtn").style.display="none";
+    runAnalysis();
+}
+function closeAnalyzer(){document.getElementById("analyzerModal").style.display="none"}
+
+function runAnalysis(){
+    var el=document.getElementById("azContent");
+    el.innerHTML="<div style='text-align:center;padding:30px'><div class='spinner'></div><p style='color:#888;margin-top:10px'>Analyse de "+P.length+" produits...</p></div>";
+    setTimeout(function(){
+        var issues={noDesc:[],noLink:[],badAlt:[],badFn:[],noSku:[]};
+        for(var i=0;i<P.length;i++){
+            var p=P[i];
+            if(!p._ds)issues.noDesc.push(p);
+            else if(!p._lk)issues.noLink.push(p);
+            if(!p._img&&p.images&&p.images.length>0){
+                var titleFn=(p.title||"").replace(/ /g,"_").replace(/[^\\w\\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+                var bAlt=false,bFn=false;
+                for(var j=0;j<p.images.length;j++){
+                    if((p.images[j].alt||"")!==p.title)bAlt=true;
+                    var fn=(p.images[j].src||"").split("/").pop().split("?")[0];
+                    if(fn.indexOf(titleFn)<0)bFn=true;
+                }
+                if(bAlt)issues.badAlt.push(p);
+                if(bFn)issues.badFn.push(p);
+            }
+            if(!((p.variants||[])[0]||{}).sku)issues.noSku.push(p);
+        }
+        var total=P.length,perfect=0;
+        for(var i=0;i<P.length;i++){if(P[i]._sc>=85)perfect++}
+
+        var h="<div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px'>";
+        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:26px;font-weight:bold;color:#00ff88'>"+total+"</div><div style='font-size:10px;color:#888'>Total produits</div></div>";
+        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:26px;font-weight:bold;color:#00ff88'>"+perfect+"</div><div style='font-size:10px;color:#888'>Parfaits</div></div>";
+        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:26px;font-weight:bold;color:"+(total-perfect>0?"#ff4757":"#00ff88")+"'>"+(total-perfect)+"</div><div style='font-size:10px;color:#888'>A corriger</div></div>";
+        h+="</div>";
+
+        var cats=[
+            {k:"noDesc",icon:"\\uD83D\\uDCDD",name:"Description absente ou trop courte",col:"#ff4757",fix:"body_html"},
+            {k:"noLink",icon:"\\uD83D\\uDD17",name:"Description sans lien collection",col:"#ff9500",fix:"body_html"},
+            {k:"badAlt",icon:"\\uD83D\\uDDBC\\uFE0F",name:"Texte alt photos incorrect",col:"#ff4757",fix:"images_alt"},
+            {k:"badFn",icon:"\\uD83D\\uDCC1",name:"Nom fichier photos incorrect",col:"#ff4757",fix:"images_filename"},
+            {k:"noSku",icon:"\\uD83C\\uDFF7\\uFE0F",name:"Pas de SKU (ajout manuel requis)",col:"#666",fix:null}
+        ];
+
+        azProblems=[];var hasFixable=false;
+        var hasAny=false;
+        for(var c=0;c<cats.length;c++){
+            var cat=cats[c];var count=issues[cat.k].length;
+            if(count===0)continue;
+            hasAny=true;
+            if(cat.fix)hasFixable=true;
+            var pct=Math.round(count/total*100);
+            h+="<div class='issue-row'>";
+            h+="<span style='font-size:18px'>"+cat.icon+"</span>";
+            h+="<div style='flex:1'><div style='font-size:13px;font-weight:600'>"+cat.name+"</div>";
+            h+="<div class='issue-bar'><div style='background:"+cat.col+";height:100%;border-radius:4px;width:"+pct+"%'></div></div></div>";
+            h+="<div style='font-size:16px;font-weight:bold;color:"+cat.col+"'>"+count+"</div></div>";
+            if(cat.fix){for(var k=0;k<issues[cat.k].length;k++){azProblems.push({pid:issues[cat.k][k].id,fix:cat.fix})}}
+        }
+        if(!hasAny)h+="<div style='text-align:center;padding:30px;color:#00ff88;font-size:16px'>\\u2705 Tous les produits sont parfaitement optimis\\u00e9s !</div>";
+        el.innerHTML=h;
+        if(hasFixable)document.getElementById("azFixBtn").style.display="block";
+    },200);
+}
+
+function fixFromAnalysis(){
+    closeAnalyzer();
+    var pids=[];
+    for(var i=0;i<azProblems.length;i++){if(pids.indexOf(azProblems[i].pid)<0)pids.push(azProblems[i].pid)}
+    selectedPids=pids;filter();
+    setTimeout(function(){
+        openCorrector();
+        document.getElementById("corAll").checked=true;toggleCorAll();
+        document.querySelector('input[name="corScope"][value="selection"]').checked=true;
+    },100);
 }
 
 load();
 </script>
 </body>
 </html>'''
+
 
 
 PRODUCT_HTML = '''<!DOCTYPE html>
@@ -1498,6 +1700,8 @@ def api_apply_seo():
     update_seo_field(pid, 'meta_description', generate_meta_description(p))
     time.sleep(0.3)
     update_seo_field(pid, 'body_html', generate_body_html(p, cols))
+    time.sleep(0.3)
+    fix_product_images(pid)
     return jsonify({'success': True})
 
 
@@ -1518,6 +1722,8 @@ def api_update_seo():
             update_seo_field(pid, 'meta_description', generate_meta_description(p))
         elif field == 'body_html':
             update_seo_field(pid, 'body_html', generate_body_html(p, cols))
+        elif field == 'images_seo':
+            fix_product_images(pid)
         time.sleep(0.3)
     return jsonify({'success': True, 'updated': fields})
 
