@@ -1124,8 +1124,8 @@ COLLECTION_SEO = {
         'meta_description': "Toutes les UGG Classic Mini sur KP SHOES. Chestnut, Black... La boot iconique en peau de mouton. 100% authentiques, livraison rapide en France.",
         'description': "<p>La <strong>UGG Classic Mini</strong> est la version raccourcie de l'iconique Classic Boot, avec une tige qui arrive à la cheville. Sa doublure en peau de mouton de 17mm, son upper en daim Twinface et sa semelle Treadlite légère en font la boot parfaite pour un confort quotidien.</p><p>Silhouette la plus polyvalente de la gamme UGG, la Classic Mini se porte aussi bien avec un jean qu'avec un jogging. Disponible en <strong>Chestnut</strong>, <strong>Black</strong>, <strong>Grey</strong> et d'autres coloris. Retrouvez-la sur <strong>KP SHOES</strong>, 100% authentique.</p>",
     },
-    'sorties-recentes': {
-        'meta_title': 'Sorties Récentes - Dernières Sneakers Disponibles | KP SHOES',
+    'nouveautes': {
+        'meta_title': 'Nouveautés - Dernières Sneakers Disponibles | KP SHOES',
         'meta_description': "Découvrez les dernières sorties sneakers sur KP SHOES. Nouveautés Nike, Jordan, Adidas, New Balance... 100% authentiques, livraison rapide.",
         'description': "<p>Restez à la pointe des tendances avec les <strong>dernières sorties sneakers</strong> disponibles sur KP SHOES. Chaque semaine, de nouveaux modèles <strong>Nike</strong>, <strong>Jordan</strong>, <strong>Adidas</strong>, <strong>New Balance</strong>, <strong>Asics</strong> et d'autres marques viennent enrichir notre catalogue.</p><p>Des releases les plus attendues aux drops surprise, retrouvez les nouveautés sneakers avant tout le monde. Toutes nos paires sont <strong>100% authentiques</strong> et livrées rapidement en France.</p>",
     },
