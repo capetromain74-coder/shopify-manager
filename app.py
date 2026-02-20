@@ -24,6 +24,15 @@ task_progress = {'running': False, 'current': 0, 'total': 0, 'message': ''}
 _collections_cache = None
 
 
+def title_to_filename(title):
+    """Convertit un titre produit en nom de fichier safe: 'Air Jordan 4 (2025)' -> 'Air_Jordan_4_2025'"""
+    import re
+    fn = title.replace(' ', '_')
+    fn = re.sub(r'[^\w\-]', '_', fn)
+    fn = re.sub(r'_+', '_', fn)
+    return fn.strip('_')
+
+
 def shopify_request(endpoint, method='GET', data=None):
     url = f"https://{SHOP}/admin/api/{API_VERSION}/{endpoint}"
     headers = {'X-Shopify-Access-Token': ACCESS_TOKEN, 'Content-Type': 'application/json'}
@@ -221,7 +230,7 @@ def analyze_seo(product, meta_title, meta_description):
     # Check Images : alt text + filename
     images = product.get('images', [])
     title = product.get('title', '')
-    title_for_filename = title.replace(' ', '_')
+    title_for_filename = title_to_filename(title)
     check5 = {'name': 'Images SEO', 'points': 0, 'max': 20, 'status': 'error', 'message': 'Aucune image'}
     if images:
         all_alt_ok = True
@@ -495,7 +504,7 @@ function load(){
                 p._ds=(p.body_html||"").length>100;
                 // Check images SEO
                 var imgOk=true;
-                var titleFn=(p.title||"").replace(/ /g,"_");
+                var titleFn=(p.title||"").replace(/ /g,"_").replace(/[^\w\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
                 if(p.images&&p.images.length>0){
                     for(var j=0;j<p.images.length;j++){
                         var alt=p.images[j].alt||"";
@@ -852,7 +861,7 @@ function render(){
     
     h+="<div class='section'><div class='section-title'>Images ("+p.images.length+") <button class='btn btn-o' onclick='fixImages()' style='float:right;font-size:11px;padding:5px 12px'>🖼️ Fix Images</button></div>";
     h+="<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px'>";
-    var titleFn=(p.title||"").replace(/ /g,"_");
+    var titleFn=(p.title||"").replace(/ /g,"_").replace(/[^\w\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
     for(var i=0;i<p.images.length;i++){
         var img=p.images[i];
         var src=img.src||"";
@@ -1682,7 +1691,7 @@ def api_test_rename(product_id):
     product = r['product']
     title = product['title']
     images = product.get('images', [])
-    title_for_filename = title.replace(' ', '_')
+    title_for_filename = title_to_filename(title)
     
     if not images:
         return jsonify({'error': 'Pas d images'})
@@ -1745,7 +1754,7 @@ def fix_product_images(product_id):
     if not images:
         return {'success': True, 'fixed': 0, 'total': 0, 'title': title}
     
-    title_for_filename = title.replace(' ', '_')
+    title_for_filename = title_to_filename(title)
     fixed = 0
     
     # ── 1. Alt text : batch via un seul PUT produit ──
@@ -1852,7 +1861,7 @@ def api_test_image_fix(product_id):
     title = product['title']
     handle = product['handle']
     images = product.get('images', [])
-    title_for_filename = title.replace(' ', '_')
+    title_for_filename = title_to_filename(title)
     
     # Récupérer media GIDs
     gql_query = """
