@@ -137,6 +137,7 @@ MODEL_COLLECTIONS = {
     'asics-gel-kayano': ['kayano'], 'asics-gel-nyc': ['gel-nyc', 'gel nyc'],
     'ugg-tasman': ['tasman'], 'ugg-tazz': ['tazz'], 'ugg-ultra-mini': ['ultra mini'],
     'travis-scott': ['travis scott'], 'off-white': ['off-white'], 'supreme': ['supreme'],
+    'tous-nos-vetements': ['essentials', 'hoodie', 'sweatpant', 'sweatshort', 'tee ', 't-shirt'],
 }
 
 BRAND_COLLECTIONS = {
@@ -170,10 +171,13 @@ def find_collection(title, collections):
 
 def extract_brand(title):
     t = title.lower()
+    if 'fear of god' in t or 'essentials' in t: return 'Fear of God'
     if 'jordan' in t: return 'Jordan'
     if 'yeezy' in t: return 'Yeezy'
     if 'travis scott' in t: return 'Nike x Travis Scott'
     if 'off-white' in t.replace(' ', '-'): return 'Nike x Off-White'
+    if 'dior' in t: return 'Dior'
+    if 'mschf' in t: return 'MSCHF'
     brands = [
         ('Nike', ['nike', 'dunk', 'air force', 'air max', 'nocta', 'blazer', 'vomero', 'p-6000']),
         ('Adidas', ['adidas', 'samba', 'campus', 'gazelle', 'spezial', 'forum', 'sl 72', 'adilette']),
@@ -471,7 +475,19 @@ def generate_meta_description(product):
     brand = extract_brand(title)
     colorway = extract_colorway(title)
     
-    # Déterminer si c'est une collab
+    # ── VÊTEMENTS ──
+    if is_clothing(title):
+        clothing_type = get_clothing_type(title)
+        color = extract_clothing_color(title)
+        if color:
+            desc = f"{title} sur {SITE_NAME}. {clothing_type.capitalize()} streetwear premium, coloris {color}. 100% authentique, livraison rapide en France."
+        else:
+            desc = f"{title} sur {SITE_NAME}. {clothing_type.capitalize()} streetwear premium, 100% authentique. Livraison rapide en France."
+        if len(desc) > 155:
+            desc = desc[:152].rsplit(' ', 1)[0] + '...'
+        return desc
+    
+    # ── SNEAKERS ──
     collabs = ['Travis Scott', 'Off-White', 'Fragment', 'Union LA', 'Undefeated', 'A Ma Maniere',
                'Sacai', 'CLOT', 'Stussy', 'Patta', 'Supreme', 'BAPE', 'Kith', 'Bad Bunny',
                'Pharrell', 'Drake', 'NOCTA', 'The Simpsons', 'Mercedes AMG', 'Jacquemus', 'Nigo']
@@ -531,7 +547,11 @@ def extract_colorway(title):
         # Asics
         'Gel-1130', 'Gel-Kayano 14', 'Gel-Kayano', 'Gel-NYC', 'Gel-Nimbus 9', 'GT-2160',
         # UGG
-        'Tasman', 'Tazz', 'Ultra Mini', 'Classic Mini', 'Classic Short',
+        'Tasman Slipper', 'Tasman', 'Tazz Slipper', 'Tazz Platform', 'Tazz',
+        'Ultra Mini Platform', 'Ultra Mini', 'Classic Mini II Boot', 'Classic Mini II', 'Classic Mini',
+        'Classic Short II Boot', 'Classic Short II', 'Classic Short',
+        'Disquette Slipper', 'Disquette', 'Goldenstar Clog', 'Goldenstar',
+        'Lowmel', 'Scuffette II',
         # Autres
         'SB Dunk Low', 'SB Dunk High',  # Nike SB
         'NOCTA Glide', 'NOCTA Hot Step',  # NOCTA
@@ -684,11 +704,98 @@ def generate_color_sentence_fallback(title, colorway):
     return sentence, 'edition'
 
 
+def is_clothing(title):
+    """Détecte si le produit est un vêtement (pas une sneaker)"""
+    clothing_kw = ['hoodie', 'sweatpant', 'sweatshort', 'tee ', 't-shirt', 'crewneck', 'jacket',
+                   'pant ', 'pants', 'short ', 'shorts']
+    t = title.lower()
+    return any(kw in t for kw in clothing_kw)
+
+
+def get_clothing_type(title):
+    """Retourne le type de vêtement en français"""
+    t = title.lower()
+    if 'hoodie' in t: return 'hoodie'
+    if 'sweatpant' in t: return 'jogging'
+    if 'sweatshort' in t: return 'short'
+    if 'crewneck' in t or 's/s tee' in t or 'ss tee' in t or 't-shirt' in t or 'tee ' in t: return 't-shirt'
+    if 'jacket' in t: return 'veste'
+    if 'pant' in t: return 'pantalon'
+    if 'short' in t: return 'short'
+    return 'pièce'
+
+
+def extract_clothing_color(title):
+    """Extrait la couleur d'un vêtement depuis le titre"""
+    t = title
+    # Supprimer les patterns connus pour garder la couleur à la fin
+    for remove in ['Fear Of God Fear of God Essentials ', 'Fear Of God ', '(FW24)', '(SS25)', '(FW23)']:
+        t = t.replace(remove, '')
+    # Le dernier mot/groupe est généralement la couleur
+    parts = t.strip().split()
+    # Trouver où commence la couleur (après le type de vêtement)
+    clothing_words = ['Classic', 'Fleece', 'Essential', 'Jersey', 'Crewneck', 'Core', 'Collection',
+                      'Heavy', 'S/S', 'SS', 'NBA', 'Relaxed', 'Hoodie', 'Sweatpant', 'Sweatshort',
+                      'Sweatshorts', 'Tee', 'T-Shirt']
+    color_start = 0
+    for i, p in enumerate(parts):
+        if p in clothing_words:
+            color_start = i + 1
+    color = ' '.join(parts[color_start:]) if color_start < len(parts) else ''
+    return color.strip()
+
+
 def generate_body_html(product, collections):
     title = product.get('title', '')
     brand = extract_brand(title)
     sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
     collection = find_collection(title, collections)
+    
+    # ── VÊTEMENTS ──
+    if is_clothing(title):
+        clothing_type = get_clothing_type(title)
+        color = extract_clothing_color(title)
+        
+        lines = []
+        # Paragraphe 1: Introduction
+        if collection:
+            lines.append(f'<p>Découvrez le <strong>{title}</strong> disponible sur {SITE_NAME}. Retrouvez cette pièce et bien d\'autres dans notre collection <a href="{collection["url"]}">{collection["title"]}</a>.</p>')
+        else:
+            lines.append(f'<p>Découvrez le <strong>{title}</strong> disponible sur {SITE_NAME}.</p>')
+        
+        # Paragraphe 2: Description de la marque/ligne
+        if 'essentials' in title.lower():
+            lines.append(f'<p>La ligne Essentials de Fear of God, créée par Jerry Lorenzo, propose des basiques streetwear premium au design minimaliste et intemporel. Chaque pièce se distingue par sa coupe oversize signature, ses matériaux de haute qualité et le logo Essentials discret qui est devenu un symbole du luxe décontracté.</p>')
+        else:
+            lines.append(f'<p>{get_model_description(title)}</p>')
+        
+        # Paragraphe 3: Description spécifique à la pièce
+        type_descs = {
+            'hoodie': f'Ce hoodie en molleton épais offre un confort enveloppant avec sa capuche doublée, sa poche kangourou et ses finitions côtelées aux poignets et à la taille. Une pièce essentielle de toute garde-robe streetwear.',
+            'jogging': f'Ce jogging en molleton premium allie confort et style avec sa coupe décontractée, sa taille élastiquée à cordon et ses finitions côtelées aux chevilles. Parfait pour un look streetwear complet.',
+            'short': f'Ce short en molleton combine confort et style décontracté avec sa coupe ample, sa taille élastiquée et ses finitions soignées. Idéal pour un look casual urbain.',
+            't-shirt': f'Ce t-shirt en jersey de coton premium offre une coupe ample et décontractée avec des coutures renforcées et une finition douce au toucher. Un basique streetwear élevé au rang de pièce premium.',
+            'veste': f'Cette veste allie fonctionnalité et esthétique streetwear avec ses matériaux premium et sa coupe contemporaine.',
+        }
+        desc = type_descs.get(clothing_type, f'Cette pièce incarne l\'esthétique minimaliste et premium de la collection, avec des matériaux de haute qualité et une coupe contemporaine.')
+        lines.append(f'<p>{desc}</p>')
+        
+        # Paragraphe 4: Caractéristiques
+        tech_items = []
+        if sku:
+            tech_items.append(f'<li><strong>Référence :</strong> {sku}</li>')
+        tech_items.append(f'<li><strong>Marque :</strong> Fear of God Essentials</li>')
+        tech_items.append(f'<li><strong>Type :</strong> {clothing_type.capitalize()}</li>')
+        if color:
+            tech_items.append(f'<li><strong>Coloris :</strong> {color}</li>')
+        lines.append('<ul style="list-style:none;padding-left:0;">' + ''.join(tech_items) + '</ul>')
+        
+        # Paragraphe 5: Garanties
+        lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque article. Tous nos produits sont vérifiés par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
+        
+        return '\n\n'.join(lines)
+    
+    # ── SNEAKERS (logique existante) ──
     model_desc = get_model_description(title)
     colorway = extract_colorway(title)
     
@@ -714,17 +821,16 @@ def generate_body_html(product, collections):
         lines.append(f'<p>{color_sentence}</p>')
     
     # Paragraphe 4: Caractéristiques techniques
-    tech_parts = []
+    tech_items = []
     if sku:
-        tech_parts.append(f'<strong>Référence&nbsp;:</strong> {sku}')
-    tech_parts.append(f'<strong>Marque&nbsp;:</strong> {brand}')
-    # Afficher "Coloris" seulement si c'est une vraie couleur, sinon "Édition" pour les collabs
+        tech_items.append(f'<li><strong>Référence :</strong> {sku}</li>')
+    tech_items.append(f'<li><strong>Marque :</strong> {brand}</li>')
     if colorway:
         if cw_type == 'collab':
-            tech_parts.append(f'<strong>Édition&nbsp;:</strong> {colorway}')
+            tech_items.append(f'<li><strong>Édition :</strong> {colorway}</li>')
         else:
-            tech_parts.append(f'<strong>Coloris&nbsp;:</strong> {colorway}')
-    lines.append('<p>' + '<br>'.join(tech_parts) + '</p>')
+            tech_items.append(f'<li><strong>Coloris :</strong> {colorway}</li>')
+    lines.append('<ul style="list-style:none;padding-left:0;">' + ''.join(tech_items) + '</ul>')
     
     # Paragraphe 5: Garanties KP SHOES
     lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque paire. Toutes nos sneakers sont vérifiées par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
