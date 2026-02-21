@@ -3020,7 +3020,7 @@ def api_test_rename(product_id):
     current_src = images[0].get('src', '')
     current_filename = current_src.split('/')[-1].split('?')[0] if current_src else ''
     ext = current_filename.split('.')[-1] if '.' in current_filename else 'jpg'
-    new_filename = f"{title_for_filename}_1.{ext}"
+    new_filename = f"{title_for_filename}_{product_id}_1.{ext}"
     
     # Exécuter le rename
     rename_query = """
@@ -3108,7 +3108,7 @@ def fix_product_images(product_id):
         if '.' in current_filename:
             ext = current_filename.split('.')[-1].lower()
         
-        new_filename = f"{title_for_filename}_{i+1}.{ext}"
+        new_filename = f"{title_for_filename}_{product_id}_{i+1}.{ext}"
         files_to_rename.append({"id": media_gids[i], "filename": new_filename})
     
     if files_to_rename:
@@ -3195,7 +3195,7 @@ def api_test_image_fix(product_id):
         current_src = img.get('src', '') or ''
         current_filename = current_src.split('/')[-1].split('?')[0] if current_src else ''
         ext = current_filename.split('.')[-1] if '.' in current_filename else 'jpg'
-        new_filename = f"{title_for_filename}_{i+1}.{ext}"
+        new_filename = f"{title_for_filename}_{product_id}_{i+1}.{ext}"
         
         image_details.append({
             'index': i+1,
