@@ -2253,13 +2253,18 @@ function fixImages(){
     .then(function(r){return r.json();})
     .then(function(d){
         if(d.success){
-            el.innerHTML="<div style='padding:10px;background:#00ff8822;border-radius:8px;font-size:13px;color:#00ff88'>✅ "+d.fixed+" images corrigées sur "+d.total+"</div>";
-            setTimeout(function(){location.reload();},1500);
+            var msg="&#9989; "+d.fixed+" images corrig&eacute;es sur "+d.total;
+            if(d.rename_errors){
+                msg+="<br><span style='color:#ff9500'>&#9888;&#65039; Erreur renommage: "+JSON.stringify(d.rename_errors)+"</span>";
+                if(d.attempted_filenames)msg+="<br><small style='color:#888'>Noms tent&eacute;s: "+d.attempted_filenames.join(", ")+"</small>";
+            }
+            el.innerHTML="<div style='padding:10px;background:#00ff8822;border-radius:8px;font-size:13px;color:#00ff88'>"+msg+"</div>";
+            if(!d.rename_errors)setTimeout(function(){location.reload();},1500);
         }else{
-            el.innerHTML="<div style='padding:10px;background:#ff475722;border-radius:8px;font-size:13px;color:#ff4757'>❌ Erreur: "+(d.error||"Inconnue")+"</div>";
+            el.innerHTML="<div style='padding:10px;background:#ff475722;border-radius:8px;font-size:13px;color:#ff4757'>&#10060; Erreur: "+(d.error||"Inconnue")+"</div>";
         }
     }).catch(function(e){
-        el.innerHTML="<div style='padding:10px;background:#ff475722;border-radius:8px;font-size:13px;color:#ff4757'>❌ "+e.message+"</div>";
+        el.innerHTML="<div style='padding:10px;background:#ff475722;border-radius:8px;font-size:13px;color:#ff4757'>&#10060; "+e.message+"</div>";
     });
 }
 
@@ -3117,15 +3122,22 @@ def fix_product_images(product_id):
         }
         """
         rename_result = shopify_graphql(rename_query, {"files": files_to_rename})
+        rename_errors = []
         if rename_result and not rename_result.get('errors'):
             user_errors = rename_result.get('data', {}).get('fileUpdate', {}).get('userErrors', [])
             if not user_errors:
                 fixed += len(files_to_rename)
                 log.info(f"[ImageFix] {title}: {len(files_to_rename)} images renamed in batch")
             else:
+                rename_errors = user_errors
                 log.error(f"[ImageFix] {title}: rename errors: {user_errors}")
         else:
+            rename_errors = rename_result.get('errors', []) if rename_result else [{'message': 'GraphQL call failed'}]
             log.error(f"[ImageFix] {title}: GraphQL error: {rename_result}")
+        
+        if rename_errors:
+            return {'success': True, 'fixed': fixed, 'total': len(images), 'title': title, 
+                    'rename_errors': rename_errors, 'attempted_filenames': [f['filename'] for f in files_to_rename]}
     
     time.sleep(0.2)  # Petit délai entre produits
     
