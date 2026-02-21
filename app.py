@@ -25,8 +25,12 @@ _collections_cache = None
 
 
 def title_to_filename(title):
-    """Convertit un titre produit en nom de fichier safe: 'Air Jordan 4 (2025)' -> 'Air_Jordan_4_2025'"""
-    fn = title.replace(' ', '_')
+    """Convertit un titre produit en nom de fichier safe: 'Air Jordan 4 Rétro (2025)' -> 'Air_Jordan_4_Retro_2025'"""
+    import unicodedata
+    # Enlever les accents : è→e, é→e, à→a, etc.
+    fn = unicodedata.normalize('NFD', title)
+    fn = ''.join(c for c in fn if unicodedata.category(c) != 'Mn')
+    fn = fn.replace(' ', '_')
     fn = re.sub(r'[^\w\-]', '_', fn)
     fn = re.sub(r'_+', '_', fn)
     return fn.strip('_')
@@ -81,10 +85,13 @@ def get_product_metafields(product_id):
 GOAT_SERVICE_URL = os.environ.get('GOAT_SERVICE_URL', 'https://shopify-360-viewer.onrender.com')
 
 def get_goat_images(sku):
-    """Récupère les images GOAT via l'app 360. Gère les SKU multiples (ex: 0951301/0951303)."""
+    """Récupère les images GOAT via l'app 360. Gère les SKU multiples (ex: 0951301/0951303) et nettoie les suffixes."""
     try:
         import urllib.request
         import json
+        
+        # Nettoyer le SKU : enlever suffixes comme :1 :2 etc
+        sku = re.sub(r':\d+$', '', sku.strip())
         
         # Gérer les SKU multiples séparés par /
         skus = [s.strip() for s in sku.replace('/', ' ').replace('|', ' ').split() if s.strip()]
@@ -1347,15 +1354,14 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 
 <!-- ══════ MODAL ANALYSER ══════ -->
 <div class="modal-bg" id="analyzerModal">
-<div class="modal-box">
+<div class="modal-box" style="max-width:600px">
 <div class="modal-head">
-<h2 style="margin:0;font-size:20px">&#128270; Analyse du site</h2>
+<h2 style="margin:0;font-size:20px">&#128270; Analyse SEO du site</h2>
 <button class="modal-close" onclick="closeAnalyzer()">&times;</button>
 </div>
 <div id="azContent"></div>
-<div style="display:flex;gap:10px;margin-top:20px">
-<button id="azFixBtn" style="display:none;flex:1;padding:14px;background:#00ff88;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px" onclick="fixFromAnalysis()">&#128295; Corriger les probl&egrave;mes</button>
-<button onclick="closeAnalyzer()" style="padding:14px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer">Fermer</button>
+<div style="display:flex;gap:10px;margin-top:15px">
+<button onclick="closeAnalyzer()" style="padding:12px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer;width:100%">Fermer</button>
 </div>
 </div>
 </div>
@@ -1404,7 +1410,7 @@ function load(){
                 p._lk=b.indexOf("kpshoes.fr/collections/")>=0;
                 p._ds=(p.body_html||"").length>100;
                 var imgOk=true;
-                var titleFn=(p.title||"").replace(/ /g,"_").replace(/[^\\w\\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+                var titleFn=(p.title||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ /g,"_").replace(/[^\\w\\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
                 if(p.images&&p.images.length>0){
                     for(var j=0;j<p.images.length;j++){
                         var alt=p.images[j].alt||"";
@@ -1533,9 +1539,9 @@ function startCorrection(){
 
 /* ══════ ANALYZER ══════ */
 var azProblems=[];
+var azIssues={};
 function openAnalyzer(){
     document.getElementById("analyzerModal").style.display="block";
-    document.getElementById("azFixBtn").style.display="none";
     runAnalysis();
 }
 function closeAnalyzer(){document.getElementById("analyzerModal").style.display="none"}
@@ -1544,72 +1550,131 @@ function runAnalysis(){
     var el=document.getElementById("azContent");
     el.innerHTML="<div style='text-align:center;padding:30px'><div class='spinner'></div><p style='color:#888;margin-top:10px'>Analyse de "+P.length+" produits...</p></div>";
     setTimeout(function(){
-        var issues={noDesc:[],noLink:[],badAlt:[],badFn:[],noSku:[]};
+        azIssues={noDesc:[],noLink:[],badAlt:[],badFn:[],noSku:[]};
         for(var i=0;i<P.length;i++){
             var p=P[i];
-            if(!p._ds)issues.noDesc.push(p);
-            else if(!p._lk)issues.noLink.push(p);
+            if(!p._ds)azIssues.noDesc.push(p);
+            else if(!p._lk)azIssues.noLink.push(p);
             if(!p._img&&p.images&&p.images.length>0){
-                var titleFn=(p.title||"").replace(/ /g,"_").replace(/[^\\w\\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+                var titleFn=(p.title||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ /g,"_").replace(/[^\\w\\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
                 var bAlt=false,bFn=false;
                 for(var j=0;j<p.images.length;j++){
                     if((p.images[j].alt||"")!==p.title)bAlt=true;
                     var fn=(p.images[j].src||"").split("/").pop().split("?")[0];
                     if(fn.indexOf(titleFn)<0)bFn=true;
                 }
-                if(bAlt)issues.badAlt.push(p);
-                if(bFn)issues.badFn.push(p);
+                if(bAlt)azIssues.badAlt.push(p);
+                if(bFn)azIssues.badFn.push(p);
             }
-            if(!((p.variants||[])[0]||{}).sku)issues.noSku.push(p);
+            if(!((p.variants||[])[0]||{}).sku)azIssues.noSku.push(p);
         }
         var total=P.length,perfect=0;
         for(var i=0;i<P.length;i++){if(P[i]._sc>=85)perfect++}
 
+        var totalTasks=azIssues.noDesc.length+azIssues.noLink.length+azIssues.badAlt.length+azIssues.badFn.length;
+
         var h="<div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px'>";
-        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:26px;font-weight:bold;color:#00ff88'>"+total+"</div><div style='font-size:10px;color:#888'>Total produits</div></div>";
-        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:26px;font-weight:bold;color:#00ff88'>"+perfect+"</div><div style='font-size:10px;color:#888'>Parfaits</div></div>";
-        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:26px;font-weight:bold;color:"+(total-perfect>0?"#ff4757":"#00ff88")+"'>"+(total-perfect)+"</div><div style='font-size:10px;color:#888'>A corriger</div></div>";
+        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:28px;font-weight:bold;color:#00ff88'>"+total+"</div><div style='font-size:11px;color:#888'>Total produits</div></div>";
+        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:28px;font-weight:bold;color:#00ff88'>"+perfect+"</div><div style='font-size:11px;color:#888'>SEO parfait (85%+)</div></div>";
+        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:28px;font-weight:bold;color:"+(totalTasks>0?"#ff4757":"#00ff88")+"'>"+totalTasks+"</div><div style='font-size:11px;color:#888'>Tâches à faire</div></div>";
         h+="</div>";
 
         var cats=[
-            {k:"noDesc",icon:"\\uD83D\\uDCDD",name:"Description absente ou trop courte",col:"#ff4757",fix:"body_html"},
-            {k:"noLink",icon:"\\uD83D\\uDD17",name:"Description sans lien collection",col:"#ff9500",fix:"body_html"},
-            {k:"badAlt",icon:"\\uD83D\\uDDBC\\uFE0F",name:"Texte alt photos incorrect",col:"#ff4757",fix:"images_alt"},
-            {k:"badFn",icon:"\\uD83D\\uDCC1",name:"Nom fichier photos incorrect",col:"#ff4757",fix:"images_filename"},
-            {k:"noSku",icon:"\\uD83C\\uDFF7\\uFE0F",name:"Pas de SKU (ajout manuel requis)",col:"#666",fix:null}
+            {k:"noDesc",icon:"\uD83D\uDCDD",name:"Descriptions manquantes",desc:"Bio produit absente ou trop courte",col:"#ff4757",auto:true},
+            {k:"noLink",icon:"\uD83D\uDD17",name:"Liens collection manquants",desc:"Description sans lien vers la collection",col:"#ff9500",auto:true},
+            {k:"badAlt",icon:"\uD83D\uDDBC\uFE0F",name:"Alt images incorrect",desc:"Texte alternatif des photos ne correspond pas au titre",col:"#ff4757",auto:true},
+            {k:"badFn",icon:"\uD83D\uDCC1",name:"Noms fichiers images",desc:"Nom de fichier photo non optimisé pour le SEO",col:"#ff4757",auto:true},
+            {k:"noSku",icon:"\uD83C\uDFF7\uFE0F",name:"SKU manquants",desc:"Pas de référence produit (ajout manuel requis)",col:"#666",auto:false}
         ];
 
-        azProblems=[];var hasFixable=false;
-        var hasAny=false;
         for(var c=0;c<cats.length;c++){
-            var cat=cats[c];var count=issues[cat.k].length;
-            if(count===0)continue;
-            hasAny=true;
-            if(cat.fix)hasFixable=true;
-            var pct=Math.round(count/total*100);
-            h+="<div class='issue-row'>";
-            h+="<span style='font-size:18px'>"+cat.icon+"</span>";
-            h+="<div style='flex:1'><div style='font-size:13px;font-weight:600'>"+cat.name+"</div>";
-            h+="<div class='issue-bar'><div style='background:"+cat.col+";height:100%;border-radius:4px;width:"+pct+"%'></div></div></div>";
-            h+="<div style='font-size:16px;font-weight:bold;color:"+cat.col+"'>"+count+"</div></div>";
-            if(cat.fix){for(var k=0;k<issues[cat.k].length;k++){azProblems.push({pid:issues[cat.k][k].id,fix:cat.fix})}}
+            var cat=cats[c];var count=azIssues[cat.k].length;
+            var statusCol=count===0?"#00ff88":cat.col;
+            var statusTxt=count===0?"\u2705 OK":count+" produit"+(count>1?"s":"");
+            h+="<div style='display:flex;align-items:center;gap:12px;padding:14px;background:#111;border-radius:8px;margin-bottom:8px;border-left:3px solid "+statusCol+"'>";
+            h+="<span style='font-size:22px'>"+cat.icon+"</span>";
+            h+="<div style='flex:1'><div style='font-size:14px;font-weight:600'>"+cat.name+"</div>";
+            h+="<div style='font-size:11px;color:#666;margin-top:2px'>"+cat.desc+"</div></div>";
+            h+="<div style='text-align:right'><div style='font-size:18px;font-weight:bold;color:"+statusCol+"'>"+statusTxt+"</div>";
+            if(count>0&&!cat.auto)h+="<div style='font-size:10px;color:#555'>Manuel</div>";
+            h+="</div></div>";
         }
-        if(!hasAny)h+="<div style='text-align:center;padding:30px;color:#00ff88;font-size:16px'>\\u2705 Tous les produits sont parfaitement optimis\\u00e9s !</div>";
+
+        if(totalTasks===0){
+            h+="<div style='text-align:center;padding:25px;color:#00ff88;font-size:15px;margin-top:10px'>\u2705 Tout est parfait ! Aucune correction nécessaire.</div>";
+        }
+
+        // Bouton corriger
+        h+="<div id='azActions' style='margin-top:20px;display:flex;gap:10px;align-items:center'>";
+        if(totalTasks>0){
+            h+="<button class='btn btn-p' onclick='runAutoFix()' style='flex:1;padding:14px;font-size:15px;background:linear-gradient(135deg,#00ff88,#00cc6a);color:#000;font-weight:700;border:none;border-radius:8px;cursor:pointer'>\uD83D\uDE80 Corriger "+totalTasks+" tâches automatiquement</button>";
+        }
+        h+="</div>";
+        h+="<div id='azProgress' style='display:none;margin-top:15px'>";
+        h+="<div style='display:flex;justify-content:space-between;margin-bottom:8px'><span id='azProgressTxt' style='font-size:12px;color:#888'>Préparation...</span><span id='azProgressPct' style='font-size:12px;color:#00ff88'>0%</span></div>";
+        h+="<div style='background:#222;border-radius:6px;height:8px;overflow:hidden'><div id='azBar' style='background:#00ff88;height:100%;width:0%;border-radius:6px;transition:width 0.3s'></div></div>";
+        h+="<div id='azLog' style='margin-top:12px;max-height:200px;overflow-y:auto;font-size:11px;color:#666'></div>";
+        h+="</div>";
+
         el.innerHTML=h;
-        if(hasFixable)document.getElementById("azFixBtn").style.display="block";
     },200);
 }
 
-function fixFromAnalysis(){
-    closeAnalyzer();
-    var pids=[];
-    for(var i=0;i<azProblems.length;i++){if(pids.indexOf(azProblems[i].pid)<0)pids.push(azProblems[i].pid)}
-    selectedPids=pids;filter();
-    setTimeout(function(){
-        openCorrector();
-        document.getElementById("corAll").checked=true;toggleCorAll();
-        document.querySelector('input[name="corScope"][value="selection"]').checked=true;
-    },100);
+function runAutoFix(){
+    // Construire la liste de tâches
+    var tasks=[];
+    // 1. Descriptions (body_html) - inclut noDesc + noLink
+    var descPids=[];
+    for(var i=0;i<azIssues.noDesc.length;i++){var id=azIssues.noDesc[i].id;if(descPids.indexOf(id)<0){descPids.push(id);tasks.push({pid:id,type:"seo",fields:["body_html"],label:"Bio"})}}
+    for(var i=0;i<azIssues.noLink.length;i++){var id=azIssues.noLink[i].id;if(descPids.indexOf(id)<0){descPids.push(id);tasks.push({pid:id,type:"seo",fields:["body_html"],label:"Bio"})}}
+    // 2. Images (alt + filename)
+    var imgPids=[];
+    for(var i=0;i<azIssues.badAlt.length;i++){var id=azIssues.badAlt[i].id;if(imgPids.indexOf(id)<0)imgPids.push(id)}
+    for(var i=0;i<azIssues.badFn.length;i++){var id=azIssues.badFn[i].id;if(imgPids.indexOf(id)<0)imgPids.push(id)}
+    for(var i=0;i<imgPids.length;i++){tasks.push({pid:imgPids[i],type:"images",label:"Images"})}
+
+    if(tasks.length===0)return;
+
+    var prog=document.getElementById("azProgress");
+    var bar=document.getElementById("azBar");
+    var txt=document.getElementById("azProgressTxt");
+    var pct=document.getElementById("azProgressPct");
+    var log=document.getElementById("azLog");
+    var btn=document.querySelector("#azActions button");
+    prog.style.display="block";
+    if(btn){btn.disabled=true;btn.style.opacity="0.5";btn.textContent="\u23F3 Correction en cours...";}
+
+    var done=0,ok=0,errs=0;
+    function next(){
+        if(done>=tasks.length){
+            bar.style.width="100%";pct.textContent="100%";
+            txt.innerHTML="<span style='color:#00ff88;font-weight:600'>\u2705 Terminé ! "+ok+" corrections réussies"+(errs>0?", "+errs+" erreurs":"")+"</span>";
+            if(btn){btn.textContent="\u2705 Terminé !";btn.style.background="#00ff88";}
+            log.innerHTML+="<div style='color:#00ff88;margin-top:8px;font-weight:600'>Rechargement dans 3s...</div>";
+            setTimeout(function(){try{sessionStorage.removeItem("kp_cache")}catch(e){}location.reload();},3000);
+            return;
+        }
+        var t=tasks[done];
+        var p=Math.round(done/tasks.length*100);
+        bar.style.width=p+"%";pct.textContent=p+"%";
+        txt.textContent="\u23F3 "+t.label+" — produit "+(done+1)+"/"+tasks.length;
+
+        var promise;
+        if(t.type==="seo"){
+            promise=fetch("/api/seo/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:t.pid,fields:t.fields})});
+        }else{
+            promise=fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:t.pid})});
+        }
+        promise.then(function(r){return r.json()}).then(function(d){
+            if(d.success||d.fixed>=0){ok++;log.innerHTML+="<div>\u2705 #"+t.pid+" "+t.label+" OK</div>"}
+            else{errs++;log.innerHTML+="<div style='color:#ff4757'>\u274C #"+t.pid+" "+t.label+": "+(d.error||"erreur")+"</div>"}
+            done++;log.scrollTop=log.scrollHeight;setTimeout(next,100);
+        }).catch(function(e){
+            errs++;log.innerHTML+="<div style='color:#ff4757'>\u274C #"+t.pid+" "+t.label+": "+e.message+"</div>";
+            done++;log.scrollTop=log.scrollHeight;setTimeout(next,100);
+        });
+    }
+    next();
 }
 
 if(!loadCache())load();
@@ -1987,7 +2052,7 @@ function render(){
     
     h+="<div class='section'><div class='section-title'>Images ("+p.images.length+") <button class='btn btn-o' onclick='fixImages()' style='float:right;font-size:11px;padding:5px 12px'>🖼️ Fix Images</button></div>";
     h+="<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px'>";
-    var titleFn=(p.title||"").replace(/ /g,"_").replace(/[^\w\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+    var titleFn=(p.title||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ /g,"_").replace(/[^\w\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
     for(var i=0;i<p.images.length;i++){
         var img=p.images[i];
         var src=img.src||"";
