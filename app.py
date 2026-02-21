@@ -81,40 +81,77 @@ def get_product_metafields(product_id):
 GOAT_SERVICE_URL = os.environ.get('GOAT_SERVICE_URL', 'https://shopify-360-viewer.onrender.com')
 
 def get_goat_images(sku):
-    """Récupère les images GOAT via l'app 360."""
+    """Récupère les images GOAT via l'app 360. Gère les SKU multiples (ex: 0951301/0951303)."""
     try:
         import urllib.request
         import json
         
-        url = f"{GOAT_SERVICE_URL}/api/goat/search"
-        data = json.dumps({"sku": sku}).encode('utf-8')
+        # Gérer les SKU multiples séparés par /
+        skus = [s.strip() for s in sku.replace('/', ' ').replace('|', ' ').split() if s.strip()]
+        if not skus:
+            skus = [sku]
         
-        req = urllib.request.Request(
-            url,
-            data=data,
-            headers={
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            method='POST'
-        )
+        # Si un seul SKU, recherche simple
+        if len(skus) == 1:
+            url = f"{GOAT_SERVICE_URL}/api/goat/search"
+            data = json.dumps({"sku": skus[0]}).encode('utf-8')
+            
+            req = urllib.request.Request(
+                url, data=data,
+                headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                method='POST'
+            )
+            
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            
+            with urllib.request.urlopen(req, context=ctx, timeout=60) as response:
+                result = json.loads(response.read().decode('utf-8'))
+            
+            if result.get('success') and result.get('product'):
+                product = result['product']
+                return {
+                    'name': product.get('name', ''),
+                    'sku': product.get('sku', sku),
+                    'images': product.get('images', []),
+                    'multi': False
+                }
+            return None
         
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
+        # SKU multiples : chercher chacun
+        results = []
+        for s in skus:
+            try:
+                url = f"{GOAT_SERVICE_URL}/api/goat/search"
+                data = json.dumps({"sku": s}).encode('utf-8')
+                req = urllib.request.Request(
+                    url, data=data,
+                    headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                    method='POST'
+                )
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                with urllib.request.urlopen(req, context=ctx, timeout=60) as response:
+                    result = json.loads(response.read().decode('utf-8'))
+                if result.get('success') and result.get('product'):
+                    product = result['product']
+                    results.append({
+                        'name': product.get('name', ''),
+                        'sku': s,
+                        'images': product.get('images', [])
+                    })
+                else:
+                    results.append({'name': '', 'sku': s, 'images': []})
+            except Exception as e:
+                log.error(f"[GOAT Service] Error for SKU {s}: {e}")
+                results.append({'name': '', 'sku': s, 'images': []})
         
-        with urllib.request.urlopen(req, context=ctx, timeout=60) as response:
-            result = json.loads(response.read().decode('utf-8'))
-        
-        if result.get('success') and result.get('product'):
-            product = result['product']
-            return {
-                'name': product.get('name', ''),
-                'sku': product.get('sku', sku),
-                'images': product.get('images', [])
-            }
-        
-        return None
+        return {
+            'multi': True,
+            'results': results
+        }
         
     except Exception as e:
         log.error(f"[GOAT Service] Error: {e}")
@@ -2005,6 +2042,35 @@ function openGoat(){
                 document.getElementById("goatImages").innerHTML="";
                 return;
             }
+            
+            // Multi-SKU : afficher les onglets
+            if(d.multi){
+                var results=d.results;
+                var tabsHtml="<div style='display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap'>";
+                var firstWithImages=-1;
+                for(var t=0;t<results.length;t++){
+                    var count=results[t].images?results[t].images.length:0;
+                    var label=results[t].sku+(results[t].name?" - "+results[t].name.substring(0,30):"")+" ("+count+" photos)";
+                    var disabled=count===0;
+                    tabsHtml+="<button class='goat-tab"+(firstWithImages===-1&&!disabled?" active":"")+"' onclick='switchGoatTab("+t+")' "+(disabled?"disabled style='opacity:0.4;cursor:not-allowed;padding:8px 16px;background:#222;border:1px solid #333;border-radius:6px;color:#666;font-size:12px'":"style='padding:8px 16px;background:#1a1a2e;border:1px solid #333;border-radius:6px;color:#fff;font-size:12px;cursor:pointer'")+">"+label+"</button>";
+                    if(firstWithImages===-1&&!disabled)firstWithImages=t;
+                }
+                tabsHtml+="</div>";
+                
+                // Stocker les résultats multi
+                window._goatMultiResults=results;
+                
+                document.getElementById("goatStatus").innerHTML="📦 <strong>SKU multiple détecté</strong> — Choisissez les photos à utiliser :"+tabsHtml;
+                
+                if(firstWithImages>=0){
+                    switchGoatTab(firstWithImages);
+                }else{
+                    document.getElementById("goatImages").innerHTML="<p style='color:#666;text-align:center'>Aucune image trouvée pour ces SKU</p>";
+                }
+                return;
+            }
+            
+            // Single SKU
             goatImages=d.images||[];
             document.getElementById("goatStatus").innerHTML="✅ <strong>"+d.name+"</strong> - "+goatImages.length+" photos trouvées<br><small style='color:#888'>Cliquez sur une image pour la désélectionner</small>";
             var html="";
@@ -2017,6 +2083,25 @@ function openGoat(){
             document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+e.message+"</span>";
             document.getElementById("goatImages").innerHTML="";
         });
+}
+
+function switchGoatTab(idx){
+    var results=window._goatMultiResults;
+    if(!results||!results[idx])return;
+    
+    // Update active tab
+    var tabs=document.querySelectorAll(".goat-tab");
+    for(var i=0;i<tabs.length;i++){
+        tabs[i].style.borderColor=i===idx?"#00ff88":"#333";
+        tabs[i].style.background=i===idx?"#00ff8822":"#1a1a2e";
+    }
+    
+    goatImages=results[idx].images||[];
+    var html="";
+    for(var i=0;i<goatImages.length;i++){
+        html+="<img src='"+goatImages[i]+"' class='selected' onclick='toggleGoatImg(this,"+i+")'>";
+    }
+    document.getElementById("goatImages").innerHTML=html;
 }
 
 function closeGoat(){
@@ -2670,7 +2755,7 @@ def api_progress():
 
 @app.route('/api/goat/images')
 def api_goat_images():
-    """Recherche les images GOAT pour un SKU via l'app 360"""
+    """Recherche les images GOAT pour un SKU via l'app 360. Gère les SKU multiples."""
     sku = request.args.get('sku', '').strip()
     if not sku:
         return jsonify({'error': 'SKU requis'}), 400
@@ -2682,13 +2767,25 @@ def api_goat_images():
     if not result:
         return jsonify({'error': 'Produit non trouve sur GOAT'}), 404
     
+    # Multi-SKU : retourner les résultats groupés
+    if result.get('multi'):
+        has_any = any(r.get('images') for r in result['results'])
+        if not has_any:
+            return jsonify({'error': 'Aucune image trouvee pour aucun des SKU'}), 404
+        return jsonify({
+            'multi': True,
+            'results': result['results']
+        })
+    
+    # Single SKU
     if not result.get('images'):
         return jsonify({'error': 'Aucune image trouvee'}), 404
     
     return jsonify({
         'name': result.get('name', ''),
         'sku': result.get('sku', sku),
-        'images': result.get('images', [])
+        'images': result.get('images', []),
+        'multi': False
     })
 
 
@@ -3549,101 +3646,67 @@ def build_web_info_html(research, subject):
 
 
 def generate_sizing_guide(subject, product_links, collection_link, tone, web_info_html='', research=None):
-    """Génère un guide de tailles détaillé et spécifique au modèle"""
+    """Génère un guide de tailles"""
     title = f"Comment taille la {subject} ? Guide complet des tailles 2026"
     
     meta_title = f"Comment taille la {subject} ? Guide tailles 2026 | KP SHOES"[:70]
-    meta_description = f"La {subject} taille-t-elle grand ou petit ? Tableau EU/US/UK, conseils pieds larges, comparaison avec d'autres modèles. Guide complet."[:160]
+    meta_description = f"Découvrez comment taille la {subject}. Tableau des tailles EU/US/UK, conseils pour pieds larges et comparaison avec d'autres modèles. Guide complet."[:160]
     summary = f"Vous vous demandez comment taille la {subject} ? Découvrez notre guide complet avec tableau des tailles et conseils."
     
-    model_desc = get_model_description(subject)
-    brand = extract_brand(subject)
-    
-    # Conseils de taillant spécifiques selon la marque
-    sizing_advice = "tailler normalement"
-    half_up = False
-    if 'jordan' in subject.lower() or 'nike' in subject.lower() or 'dunk' in subject.lower() or 'air force' in subject.lower() or 'air max' in subject.lower():
-        sizing_advice = "tailler normalement, fidèle à votre pointure Nike habituelle"
-        if 'air force' in subject.lower():
-            sizing_advice = "tailler légèrement grand. Beaucoup de porteurs recommandent de prendre une demi-taille en dessous de votre pointure habituelle"
-    elif 'adidas' in subject.lower() or 'samba' in subject.lower() or 'campus' in subject.lower() or 'gazelle' in subject.lower():
-        sizing_advice = "tailler légèrement petit. Si vous êtes habitué aux tailles Nike, prenez une demi-taille au-dessus"
-        half_up = True
-    elif 'new balance' in subject.lower():
-        sizing_advice = "tailler fidèle, avec un chaussant plutôt généreux qui convient bien aux pieds larges"
-    elif 'asics' in subject.lower():
-        sizing_advice = "tailler normalement, avec un chaussant légèrement plus étroit que Nike. Pieds larges : prenez une demi-taille au-dessus"
-    elif 'puma' in subject.lower():
-        sizing_advice = "tailler normalement à légèrement petit selon les modèles"
-    elif 'ugg' in subject.lower():
-        sizing_advice = "tailler grand. La plupart des porteurs recommandent de prendre une taille en dessous de votre pointure habituelle"
-    
     body = f"""
-<p>Vous venez de craquer pour la <strong>{subject}</strong> mais vous hésitez sur la taille ? C'est l'une des questions les plus fréquentes que nous recevons chez <strong>KP SHOES</strong>. Ce guide complet vous aide à choisir la bonne pointure du premier coup, pour éviter les mauvaises surprises à la réception de votre paire.</p>
+<p>Vous vous demandez <strong>comment taille la {subject}</strong> ? Ce guide complet vous aide à choisir la bonne pointure. Chez <strong>KP SHOES</strong>, nous garantissons l'authenticité de chaque paire.</p>
 
-<h2>Présentation du modèle</h2>
-<p>{model_desc}</p>
+{web_info_html}
 
 <h2>La {subject} taille-t-elle grand ou petit ?</h2>
-<p>D'après les retours de notre communauté et notre expertise, la <strong>{subject}</strong> est réputée pour <strong>{sizing_advice}</strong>.</p>
-<p>Plusieurs facteurs influencent le ressenti de taillant : la forme de votre pied (large, standard ou fin), le type de chaussettes que vous portez, et votre habitude en termes de marque. Si vous portez habituellement du Nike en 43, votre taille en {brand} peut légèrement différer.</p>
-{"<p><strong>Notre conseil :</strong> si vous êtes entre deux tailles, prenez la demi-taille au-dessus. Mieux vaut un tout petit peu d'espace que des orteils comprimés, surtout pour une sneaker que vous porterez au quotidien.</p>" if not half_up else "<p><strong>Notre conseil :</strong> prenez une demi-taille au-dessus de votre pointure Nike/Jordan habituelle. Les retours de nos clients confirment que ce modèle chausse légèrement petit.</p>"}
+<p>La {subject} est réputée pour <strong>tailler normalement</strong>. Si vous êtes entre deux tailles, nous vous conseillons de prendre la taille supérieure pour plus de confort, surtout si vous avez les pieds larges.</p>
 
 <h2>Tableau des tailles {subject}</h2>
 <table style="width:100%;border-collapse:collapse;margin:20px 0">
 <tr style="background:#f5f5f5"><th style="padding:12px;border:1px solid #ddd;text-align:center">EU</th><th style="padding:12px;border:1px solid #ddd;text-align:center">US Homme</th><th style="padding:12px;border:1px solid #ddd;text-align:center">US Femme</th><th style="padding:12px;border:1px solid #ddd;text-align:center">UK</th><th style="padding:12px;border:1px solid #ddd;text-align:center">CM</th></tr>
-<tr><td style="padding:10px;border:1px solid #ddd;text-align:center">36</td><td style="padding:10px;border:1px solid #ddd;text-align:center">4</td><td style="padding:10px;border:1px solid #ddd;text-align:center">5.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">3.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">22.5</td></tr>
-<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd;text-align:center">37.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">6.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">4.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">23.5</td></tr>
 <tr><td style="padding:10px;border:1px solid #ddd;text-align:center">38</td><td style="padding:10px;border:1px solid #ddd;text-align:center">5.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">7</td><td style="padding:10px;border:1px solid #ddd;text-align:center">5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">24</td></tr>
 <tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd;text-align:center">39</td><td style="padding:10px;border:1px solid #ddd;text-align:center">6.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">8</td><td style="padding:10px;border:1px solid #ddd;text-align:center">6</td><td style="padding:10px;border:1px solid #ddd;text-align:center">24.5</td></tr>
 <tr><td style="padding:10px;border:1px solid #ddd;text-align:center">40</td><td style="padding:10px;border:1px solid #ddd;text-align:center">7</td><td style="padding:10px;border:1px solid #ddd;text-align:center">8.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">6</td><td style="padding:10px;border:1px solid #ddd;text-align:center">25</td></tr>
 <tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd;text-align:center">41</td><td style="padding:10px;border:1px solid #ddd;text-align:center">8</td><td style="padding:10px;border:1px solid #ddd;text-align:center">9.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">7</td><td style="padding:10px;border:1px solid #ddd;text-align:center">26</td></tr>
 <tr><td style="padding:10px;border:1px solid #ddd;text-align:center">42</td><td style="padding:10px;border:1px solid #ddd;text-align:center">8.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">10</td><td style="padding:10px;border:1px solid #ddd;text-align:center">7.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">26.5</td></tr>
-<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd;text-align:center">42.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">9</td><td style="padding:10px;border:1px solid #ddd;text-align:center">10.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">8</td><td style="padding:10px;border:1px solid #ddd;text-align:center">27</td></tr>
-<tr><td style="padding:10px;border:1px solid #ddd;text-align:center">43</td><td style="padding:10px;border:1px solid #ddd;text-align:center">9.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">11</td><td style="padding:10px;border:1px solid #ddd;text-align:center">8.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">27.5</td></tr>
-<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd;text-align:center">44</td><td style="padding:10px;border:1px solid #ddd;text-align:center">10</td><td style="padding:10px;border:1px solid #ddd;text-align:center">11.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">9</td><td style="padding:10px;border:1px solid #ddd;text-align:center">28</td></tr>
-<tr><td style="padding:10px;border:1px solid #ddd;text-align:center">45</td><td style="padding:10px;border:1px solid #ddd;text-align:center">11</td><td style="padding:10px;border:1px solid #ddd;text-align:center">12.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">10</td><td style="padding:10px;border:1px solid #ddd;text-align:center">29</td></tr>
-<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd;text-align:center">46</td><td style="padding:10px;border:1px solid #ddd;text-align:center">12</td><td style="padding:10px;border:1px solid #ddd;text-align:center">13.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">11</td><td style="padding:10px;border:1px solid #ddd;text-align:center">30</td></tr>
+<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd;text-align:center">43</td><td style="padding:10px;border:1px solid #ddd;text-align:center">9.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">11</td><td style="padding:10px;border:1px solid #ddd;text-align:center">8.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">27.5</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd;text-align:center">44</td><td style="padding:10px;border:1px solid #ddd;text-align:center">10</td><td style="padding:10px;border:1px solid #ddd;text-align:center">11.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">9</td><td style="padding:10px;border:1px solid #ddd;text-align:center">28</td></tr>
+<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd;text-align:center">45</td><td style="padding:10px;border:1px solid #ddd;text-align:center">11</td><td style="padding:10px;border:1px solid #ddd;text-align:center">12.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">10</td><td style="padding:10px;border:1px solid #ddd;text-align:center">29</td></tr>
+<tr><td style="padding:10px;border:1px solid #ddd;text-align:center">46</td><td style="padding:10px;border:1px solid #ddd;text-align:center">12</td><td style="padding:10px;border:1px solid #ddd;text-align:center">13.5</td><td style="padding:10px;border:1px solid #ddd;text-align:center">11</td><td style="padding:10px;border:1px solid #ddd;text-align:center">30</td></tr>
 </table>
 
-<h2>Comment mesurer son pied correctement</h2>
-<p>Pour être certain de choisir la bonne taille, mesurez votre pied en suivant ces étapes :</p>
-<p><strong>1. Choisissez le bon moment.</strong> Mesurez vos pieds en fin de journée, quand ils sont légèrement gonflés. C'est à ce moment que votre pied est à sa taille maximale.</p>
-<p><strong>2. Posez votre pied sur une feuille.</strong> Debout, tracez le contour de votre pied avec un stylo tenu bien vertical.</p>
-<p><strong>3. Mesurez la longueur.</strong> Du talon au bout du gros orteil, en centimètres. Reportez cette mesure dans le tableau ci-dessus.</p>
-<p><strong>4. Mesurez les deux pieds.</strong> Il est fréquent d'avoir un pied légèrement plus grand que l'autre. Basez-vous toujours sur le pied le plus grand.</p>
+<h2>Conseils pour bien choisir sa taille</h2>
+<ul>
+<li><strong>Pieds larges</strong> : Prenez une demi-taille au-dessus</li>
+<li><strong>Pieds fins</strong> : Restez sur votre taille habituelle</li>
+<li><strong>Entre deux tailles</strong> : Optez pour la taille supérieure</li>
+<li><strong>Pour le style</strong> : Certains préfèrent une taille au-dessus pour un look plus loose</li>
+</ul>
 
-<h2>Conseils selon la morphologie de votre pied</h2>
-<p><strong>Pieds larges :</strong> prenez une demi-taille au-dessus de votre mesure. Les modèles {brand} en cuir ont tendance à se détendre légèrement avec le temps, mais mieux vaut être confortable dès le début.</p>
-<p><strong>Pieds fins :</strong> restez sur votre taille habituelle. Le laçage permettra d'ajuster le maintien si nécessaire.</p>
-<p><strong>Pieds sensibles :</strong> optez pour la taille supérieure et ajoutez une semelle de confort si besoin. Le confort sur la durée est essentiel.</p>
-
-<h2>Comparaison avec d'autres modèles populaires</h2>
-<p>Si vous connaissez déjà votre taille dans d'autres modèles, voici des repères pour vous aider :</p>
-<table style="width:100%;border-collapse:collapse;margin:20px 0">
-<tr style="background:#f5f5f5"><th style="padding:10px;border:1px solid #ddd">Si vous portez du...</th><th style="padding:10px;border:1px solid #ddd">Prenez en {subject}</th></tr>
-<tr><td style="padding:10px;border:1px solid #ddd">Nike Air Force 1</td><td style="padding:10px;border:1px solid #ddd;text-align:center">{"Même taille" if 'nike' in brand.lower() or 'jordan' in brand.lower() else "Demi-taille au-dessus"}</td></tr>
-<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd">Nike Dunk Low</td><td style="padding:10px;border:1px solid #ddd;text-align:center">{"Même taille" if 'nike' in brand.lower() or 'jordan' in brand.lower() else "Demi-taille au-dessus"}</td></tr>
-<tr><td style="padding:10px;border:1px solid #ddd">Adidas Samba</td><td style="padding:10px;border:1px solid #ddd;text-align:center">{"Demi-taille en dessous" if 'nike' in brand.lower() or 'jordan' in brand.lower() else "Même taille"}</td></tr>
-<tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd">New Balance 550</td><td style="padding:10px;border:1px solid #ddd;text-align:center">Même taille</td></tr>
-<tr><td style="padding:10px;border:1px solid #ddd">Converse Chuck Taylor</td><td style="padding:10px;border:1px solid #ddd;text-align:center">Une taille au-dessus</td></tr>
-</table>
+<h2>Comparaison avec d'autres modèles</h2>
+<p>Si vous connaissez votre taille dans d'autres modèles, voici quelques repères :</p>
+<ul>
+<li>Même taille que les Nike Air Force 1</li>
+<li>Même taille que les Nike Dunk Low</li>
+<li>Une demi-taille au-dessus des Adidas (Samba, Campus)</li>
+<li>Même taille que les New Balance 550</li>
+</ul>
 
 {collection_link}
 
 {product_links}
 
-<h2>FAQ — Questions fréquentes sur le taillant</h2>
+<h2>FAQ - Questions fréquentes</h2>
 <h3>La {subject} taille-t-elle grand ?</h3>
-<p>La {subject} est réputée pour {sizing_advice}. Consultez notre tableau ci-dessus pour trouver votre taille exacte.</p>
+<p>Non, la {subject} taille normalement. Prenez votre taille habituelle Nike.</p>
 
 <h3>Dois-je prendre une taille au-dessus ?</h3>
-<p>Uniquement si vous avez les pieds larges ou si vous êtes entre deux tailles. Dans le doute, la demi-taille au-dessus est toujours le choix le plus sûr.</p>
+<p>Uniquement si vous avez les pieds larges ou si vous êtes entre deux tailles.</p>
 
-<h3>Que faire si la taille ne convient pas ?</h3>
-<p>Chez KP SHOES, nous comprenons que le choix de taille peut être délicat. Contactez notre service client pour toute question avant ou après votre achat.</p>
+<h3>Comment mesurer son pied ?</h3>
+<p>Mesurez votre pied le soir (quand il est légèrement gonflé) du talon au bout du gros orteil, et reportez-vous au tableau ci-dessus.</p>
 
-<p><strong>Chez KP SHOES, toutes nos sneakers sont 100% authentiques et vérifiées par nos experts.</strong> Livraison rapide et paiement sécurisé en France.</p>
+<p><strong>Chez KP SHOES, toutes nos sneakers sont 100% authentiques et vérifiées par nos experts.</strong> Livraison rapide et paiement sécurisé.</p>
 """
     
     return {
@@ -3660,69 +3723,40 @@ def generate_sizing_guide(subject, product_links, collection_link, tone, web_inf
 
 
 def generate_release_article(subject, product_links, collection_link, tone, web_info_html='', research=None):
-    """Génère un article détaillé sur les sorties"""
+    """Génère un article sur les sorties"""
     import datetime
     month = datetime.datetime.now().strftime('%B %Y')
     
     title = f"Sorties {subject} {month} : Calendrier et dates de release"
     meta_title = f"Sorties {subject} 2026 : Dates et calendrier | KP SHOES"[:70]
-    meta_description = f"Toutes les sorties {subject} prévues en 2026. Dates de release, prix retail, conseils pour cop et où acheter authentique."[:160]
+    meta_description = f"Découvrez toutes les sorties {subject} prévues en 2026. Calendrier des releases, dates de sortie et conseils pour cop les paires limitées."[:160]
     summary = f"Toutes les sorties {subject} à ne pas manquer. Calendrier des releases, dates clés et conseils pour réussir vos achats."
     
-    model_desc = get_model_description(subject)
-    brand = extract_brand(subject)
-    
-    web_context = ""
-    if research and research.get('search_results'):
-        clean = [r for r in research['search_results'] if len(r) > 60][:4]
-        if clean:
-            web_paragraphs = []
-            for r in clean:
-                translated = translate_to_french(r)
-                if len(translated) > 60:
-                    web_paragraphs.append(translated)
-            if web_paragraphs:
-                web_context = "\n".join([f"<p>{p}</p>" for p in web_paragraphs])
-    
     body = f"""
-<p>Vous attendez la prochaine sortie <strong>{subject}</strong> ? Vous n'êtes pas seul. Ce modèle fait partie des silhouettes les plus attendues par la communauté sneakers en France et dans le monde. Dans ce guide, nous faisons le point sur les releases confirmées, les rumeurs et nos conseils pour réussir à cop votre paire.</p>
+<p>Découvrez toutes les <strong>sorties {subject}</strong> prévues pour {month}. Restez informé des dernières releases et ne manquez aucune paire sur <strong>KP SHOES</strong>.</p>
 
-<h2>Présentation du modèle</h2>
-<p>{model_desc}</p>
-<p>Chaque nouvelle release de la {subject} génère un engouement considérable. Les éditions limitées s'écoulent en quelques minutes sur les plateformes officielles, ce qui pousse de nombreux passionnés à se tourner vers des revendeurs de confiance comme KP SHOES pour obtenir leur paire.</p>
-
-{f'<h2>Les dernières informations</h2>' + web_context if web_context else ''}
+<h2>Les releases {subject} à ne pas manquer</h2>
+<p>L'année 2026 s'annonce riche en sorties pour les fans de {subject}. Voici les dates clés à retenir.</p>
 
 <h2>Comment cop les {subject} en édition limitée ?</h2>
-<p>Obtenir une paire de sneakers limitées demande de la préparation. Voici une méthode complète pour maximiser vos chances :</p>
-<p><strong>Anticipez les dates.</strong> Suivez les comptes officiels de {brand} sur les réseaux sociaux, ainsi que les médias spécialisés comme Sneakers Alert, Le Site de la Sneaker et Highsnobiety. Les dates de release sont généralement annoncées 2 à 4 semaines à l'avance.</p>
-<p><strong>Préparez vos comptes.</strong> Créez votre profil sur les apps de raffle (SNKRS, Confirmed, etc.) bien avant le jour J. Renseignez vos informations de livraison et de paiement à l'avance pour gagner de précieuses secondes le jour du drop.</p>
-<p><strong>Inscrivez-vous à plusieurs raffles.</strong> Ne misez pas tout sur une seule plateforme. Plus vous participez à des raffles différentes, plus vous augmentez vos chances de remporter une paire.</p>
-<p><strong>Soyez ponctuel.</strong> Les drops se font souvent à des heures précises (généralement 9h ou 10h en France). Connectez-vous quelques minutes avant et soyez prêt à valider rapidement.</p>
-<p><strong>Plan B : le marché de la revente.</strong> Si vous n'avez pas réussi à cop au retail, des revendeurs comme KP SHOES proposent ces modèles avec garantie d'authenticité. C'est la solution la plus sûre pour obtenir votre paire sans risquer une contrefaçon.</p>
+<ul>
+<li><strong>Suivez les comptes officiels</strong> : Nike SNKRS, Jordan, et les réseaux sociaux des marques</li>
+<li><strong>Activez les notifications</strong> : Soyez alerté dès l'annonce d'une nouvelle release</li>
+<li><strong>Préparez vos comptes</strong> : Créez vos profils sur les apps de raffle à l'avance</li>
+<li><strong>Achetez sur des sites de confiance</strong> : KP SHOES garantit l'authenticité de chaque paire</li>
+</ul>
 
 {collection_link}
 
-<h2>Prix retail et prix revente</h2>
-<p>Le prix retail des {subject} varie généralement entre 110€ et 200€ selon les modèles et les collaborations. Sur le marché secondaire, les paires les plus recherchées peuvent atteindre des prix significativement plus élevés, en particulier dans les tailles les plus courantes (40 à 44 EU).</p>
-<p>Chez KP SHOES, nous nous efforçons de proposer les prix les plus justes du marché, tout en garantissant l'authenticité à 100% de chaque paire vendue. Nos prix reflètent la cote réelle du marché et sont mis à jour régulièrement.</p>
+<h2>Les coloris les plus attendus</h2>
+<p>Parmi les sorties les plus anticipées, certains coloris font déjà parler d'eux dans la communauté sneakers. Les collaborations et les éditions limitées restent les plus recherchées.</p>
 
 {product_links}
 
-<h2>Pourquoi acheter sur KP SHOES plutôt qu'entre particuliers ?</h2>
-<p>L'achat de sneakers entre particuliers (groupes Facebook, Instagram, Vinted) comporte des risques importants. Les contrefaçons sont de plus en plus sophistiquées et difficiles à détecter pour un œil non averti. Chez KP SHOES, chaque paire est inspectée par nos experts avant expédition. Vous bénéficiez également d'un paiement sécurisé, d'une livraison suivie et d'un service client réactif.</p>
+<h2>Prix et disponibilité</h2>
+<p>Les prix retail varient généralement entre 110€ et 200€ selon les modèles. Sur le marché de la revente, certaines paires peuvent atteindre des prix bien plus élevés, notamment les collaborations.</p>
 
-<h2>FAQ — Questions fréquentes</h2>
-<h3>Quand sort la prochaine {subject} ?</h3>
-<p>Les dates de release sont annoncées par {brand} sur leurs canaux officiels. Nous mettons à jour nos collections dès qu'une nouvelle paire est disponible.</p>
-
-<h3>Comment savoir si une {subject} est authentique ?</h3>
-<p>Vérifiez la qualité des matériaux, les coutures, l'étiquette intérieure et la boîte. Le plus sûr reste d'acheter chez un revendeur certifié comme KP SHOES.</p>
-
-<h3>Les {subject} sont-elles un bon investissement ?</h3>
-<p>Certains coloris et collaborations prennent de la valeur avec le temps, mais cela dépend de la rareté, de la demande et de l'état de la paire. Chez KP SHOES, nous recommandons avant tout d'acheter une paire qui vous plaît et que vous porterez avec plaisir.</p>
-
-<p><strong>Retrouvez les dernières sorties {subject} sur KP SHOES. 100% authentiques, livrées rapidement en France.</strong></p>
+<p><strong>Sur KP SHOES, retrouvez ces modèles 100% authentiques avec livraison rapide et paiement sécurisé.</strong></p>
 """
     
     return {
@@ -3739,70 +3773,47 @@ def generate_release_article(subject, product_links, collection_link, tone, web_
 
 
 def generate_trend_article(subject, product_links, collection_link, tone, matching_products, web_info_html='', research=None):
-    """Génère un article détaillé sur les tendances"""
+    """Génère un article sur les tendances"""
     title = "Sneakers tendance 2026 : Les modèles les plus hype du moment"
     meta_title = "Sneakers tendance 2026 : Les modèles incontournables | KP SHOES"
-    meta_description = "Découvrez les sneakers les plus tendance en 2026. Running rétro, classiques indémodables et collaborations exclusives. Sélection d'experts."
-    summary = "Quelles sont les sneakers les plus tendance en 2026 ? Découvrez notre sélection des modèles incontournables."
+    meta_description = "Découvrez les sneakers les plus tendance en 2026. Running rétro, classiques indémodables et collaborations de luxe. Notre sélection des modèles hype."
+    summary = "Quelles sont les sneakers les plus tendance en 2026 ? Découvrez notre sélection des modèles incontournables : running rétro, classiques et collaborations."
     
     if subject:
         title = f"{subject} : Pourquoi c'est LA sneaker tendance de 2026"
         meta_title = f"{subject} : La sneaker tendance 2026 | KP SHOES"[:70]
-        meta_description = f"Pourquoi la {subject} domine les tendances en 2026. Design, confort, style : analyse complète par les experts KP SHOES."[:160]
+        meta_description = f"Découvrez pourquoi la {subject} est LA sneaker tendance de 2026. Style, confort et hype : tout ce qu'il faut savoir."[:160]
         summary = f"La {subject} s'impose comme l'une des sneakers les plus tendance de 2026. Découvrez pourquoi elle fait l'unanimité."
     
-    model_desc = get_model_description(subject) if subject else ""
-    
-    web_context = ""
-    if research and research.get('search_results'):
-        clean = [r for r in research['search_results'] if len(r) > 60][:3]
-        if clean:
-            web_paragraphs = [translate_to_french(r) for r in clean if len(translate_to_french(r)) > 60]
-            if web_paragraphs:
-                web_context = "\n".join([f"<p>{p}</p>" for p in web_paragraphs])
-    
-    subject_section = ""
-    if subject and model_desc:
-        subject_section = f"""
-<h2>Focus sur la {subject}</h2>
-<p>{model_desc}</p>
-<p>Ce modèle coche toutes les cases de ce que recherchent les amateurs de sneakers en 2026 : un design qui fait tourner les têtes, un confort adapté au quotidien, et une polyvalence qui permet de l'intégrer dans quasiment toutes les tenues. Que ce soit dans la rue, sur les réseaux sociaux ou dans les magazines de mode, la {subject} est omniprésente.</p>
-"""
-    
     body = f"""
-<p>Le marché de la sneaker évolue sans cesse, et <strong>2026</strong> ne fait pas exception. Entre le retour en force des silhouettes running rétro, la domination continue des classiques du streetwear et l'explosion des collaborations entre marques sportives et maisons de luxe, il n'a jamais été aussi excitant — ni aussi difficile — de suivre le rythme. Chez <strong>KP SHOES</strong>, nous décryptons pour vous les grandes tendances du moment.</p>
+<p>Quelles sont les <strong>sneakers les plus tendance en 2026</strong> ? Le marché de la sneaker continue d'évoluer.</p>
 
-{subject_section}
+{web_info_html}
 
-{f'<h2>Ce que disent les experts</h2>' + web_context if web_context else ''}
+<h2>Les tendances sneakers 2026</h2>
 
-<h2>Les grandes tendances sneakers 2026</h2>
+<h3>1. Le retour du running rétro</h3>
+<p>Les silhouettes inspirées des années 90 et 2000 continuent de dominer. Les <strong>Asics Gel-1130</strong>, <strong>New Balance 530</strong> et <strong>Nike Air Max</strong> sont partout dans les rues.</p>
 
-<h3>Le running rétro domine toujours</h3>
-<p>Depuis 2023, les silhouettes inspirées du running des années 90 et 2000 ont envahi les rues et les défilés. En 2026, cette tendance ne montre aucun signe de fatigue. L'<strong>Asics Gel-1130</strong>, la <strong>New Balance 9060</strong> et la <strong>Nike Vomero 5</strong> restent parmi les modèles les plus photographiés sur les réseaux sociaux. Leur esthétique technique, leurs lignes complexes et leur confort supérieur séduisent un public qui va bien au-delà des seuls sneakerheads.</p>
-<p>Ce qui fait la force du running rétro, c'est sa capacité à s'intégrer dans des tenues très variées. Avec un jean droit et un blazer, la Gel-1130 crée un contraste élégant. Avec un pantalon cargo et un hoodie, la 9060 s'inscrit dans un look streetwear parfait. C'est cette polyvalence qui explique la longévité de la tendance.</p>
+<h3>2. Les classiques indémodables</h3>
+<p>La <strong>Nike Dunk Low</strong>, l'<strong>Adidas Samba</strong> et la <strong>New Balance 550</strong> restent des valeurs sûres. Ces modèles polyvalents s'adaptent à tous les styles.</p>
 
-<h3>Les classiques indémodables</h3>
-<p>Certaines silhouettes traversent les décennies sans jamais perdre leur attrait. La <strong>Nike Dunk Low</strong>, l'<strong>Adidas Samba</strong>, la <strong>New Balance 550</strong> et l'<strong>Air Jordan 1</strong> continuent de dominer les ventes en France et en Europe. Ces modèles doivent leur longévité à un design épuré, des matériaux de qualité et une histoire riche qui leur confère une authenticité impossible à reproduire.</p>
-<p>L'Adidas Samba, en particulier, connaît un regain d'intérêt spectaculaire. Ce modèle né sur les terrains de football indoor dans les années 50 est devenu l'un des choix les plus populaires pour ceux qui cherchent une sneaker élégante et minimaliste, adaptée aussi bien aux sorties en ville qu'aux environnements plus habillés.</p>
-
-<h3>Les collaborations qui font l'événement</h3>
-<p>Les collaborations entre marques sportives et créateurs continuent de rythmer l'actualité sneakers. Que ce soit Nike avec Travis Scott, New Balance avec Joe Freshgoods, ou Asics avec JJJJound, ces partenariats créent des pièces uniques qui mélangent performance technique et vision artistique. Les paires issues de ces collaborations sont souvent les plus recherchées — et les plus difficiles à obtenir au prix retail.</p>
-<p>Pour ceux qui n'ont pas la chance de cop ces éditions limitées lors des drops officiels, des revendeurs de confiance comme KP SHOES représentent la meilleure alternative. Chaque paire est vérifiée et garantie authentique.</p>
+<h3>3. Les collaborations de luxe</h3>
+<p>Les partenariats entre marques de sport et maisons de luxe continuent de faire sensation. Les drops limités créent une forte demande sur le marché du resell.</p>
 
 {collection_link}
 
-<h2>Comment adopter les tendances sans se tromper</h2>
-<p><strong>Investissez dans des classiques.</strong> Les tendances passent, mais une Nike Dunk Low blanche ou une Samba noire resteront pertinentes pendant des années. C'est la base d'une collection solide.</p>
-<p><strong>Suivez votre style, pas la hype.</strong> La meilleure sneaker est celle que vous porterez réellement. Plutôt que de courir après chaque drop, choisissez des modèles qui correspondent à votre garde-robe et à votre mode de vie.</p>
-<p><strong>Privilégiez l'authenticité.</strong> Sur un marché où les contrefaçons sont de plus en plus sophistiquées, achetez toujours auprès de revendeurs certifiés. Une paire authentique dure plus longtemps, offre un meilleur confort et conserve sa valeur.</p>
-
+<h2>Notre sélection KP SHOES</h2>
 {product_links}
 
-<h2>Où acheter les sneakers tendance en France ?</h2>
-<p>KP SHOES propose une sélection pointue des modèles les plus recherchés du moment. Notre catalogue est mis à jour régulièrement avec les dernières sorties et les paires les plus demandées par notre communauté. Chaque sneaker est vérifiée par nos experts, livrée rapidement en France avec un paiement sécurisé.</p>
+<h2>Comment adopter la tendance ?</h2>
+<ul>
+<li><strong>Investissez dans des classiques</strong> : Ils ne se démodent jamais</li>
+<li><strong>Osez les couleurs</strong> : Les coloris audacieux sont très recherchés</li>
+<li><strong>Privilégiez la qualité</strong> : Une paire authentique dure plus longtemps</li>
+</ul>
 
-<p><strong>Découvrez toute notre sélection de sneakers tendance sur KP SHOES. 100% authentiques, livrées en France.</strong></p>
+<p><strong>Chez KP SHOES, retrouvez tous les modèles tendance 100% authentiques.</strong> Notre équipe vérifie chaque paire avant expédition.</p>
 """
     
     return {
@@ -3819,68 +3830,62 @@ def generate_trend_article(subject, product_links, collection_link, tone, matchi
 
 
 def generate_comparison_article(subject, product_links, collection_link, tone, web_info_html='', research=None):
-    """Génère un article comparatif détaillé"""
+    """Génère un article comparatif"""
+    # Parser le sujet pour extraire les 2 modèles
     models = subject.split(' vs ') if ' vs ' in subject else [subject, 'Nike Dunk Low']
     model1 = models[0].strip()
     model2 = models[1].strip() if len(models) > 1 else 'Nike Dunk Low'
     
     title = f"{model1} vs {model2} : Quelle sneaker choisir en 2026 ?"
     meta_title = f"{model1} vs {model2} : Comparatif 2026 | KP SHOES"[:70]
-    meta_description = f"{model1} vs {model2} : confort, style, taillant, prix. Comparatif complet pour choisir la paire qui vous correspond."[:160]
+    meta_description = f"Comparatif {model1} vs {model2}. Confort, style, prix : on vous aide à choisir la sneaker faite pour vous."[:160]
     summary = f"Vous hésitez entre {model1} et {model2} ? Notre comparatif détaillé vous aide à faire le bon choix."
     
-    desc1 = get_model_description(model1)
-    desc2 = get_model_description(model2)
-    brand1 = extract_brand(model1)
-    brand2 = extract_brand(model2)
-    
     body = f"""
-<p>Deux des silhouettes les plus populaires du moment face à face : la <strong>{model1}</strong> contre la <strong>{model2}</strong>. Si vous hésitez entre les deux, ce comparatif complet analyse chaque aspect — du design au confort, en passant par le taillant et le prix — pour vous aider à faire le choix qui correspond vraiment à votre style et à vos besoins.</p>
+<p>Vous hésitez entre la <strong>{model1}</strong> et la <strong>{model2}</strong> ? Ce comparatif détaillé vous aide à faire le bon choix selon vos besoins et votre style.</p>
 
-<h2>Présentation des deux modèles</h2>
-<h3>{model1}</h3>
-<p>{desc1}</p>
-
-<h3>{model2}</h3>
-<p>{desc2}</p>
-
-<h2>Tableau comparatif détaillé</h2>
+<h2>Tableau comparatif</h2>
 <table style="width:100%;border-collapse:collapse;margin:20px 0">
 <tr style="background:#f5f5f5"><th style="padding:12px;border:1px solid #ddd">Critère</th><th style="padding:12px;border:1px solid #ddd">{model1}</th><th style="padding:12px;border:1px solid #ddd">{model2}</th></tr>
 <tr><td style="padding:10px;border:1px solid #ddd"><strong>Confort</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td></tr>
 <tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd"><strong>Style</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐⭐</td></tr>
 <tr><td style="padding:10px;border:1px solid #ddd"><strong>Polyvalence</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐⭐</td></tr>
 <tr style="background:#f9f9f9"><td style="padding:10px;border:1px solid #ddd"><strong>Durabilité</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td><td style="padding:10px;border:1px solid #ddd;text-align:center">⭐⭐⭐⭐</td></tr>
-<tr><td style="padding:10px;border:1px solid #ddd"><strong>Marque</strong></td><td style="padding:10px;border:1px solid #ddd;text-align:center">{brand1}</td><td style="padding:10px;border:1px solid #ddd;text-align:center">{brand2}</td></tr>
 </table>
 
-<h2>Design et esthétique</h2>
-<p>Le design est souvent le premier critère de choix. La <strong>{model1}</strong> se distingue par une silhouette qui a su traverser les époques sans perdre son attrait. Chaque détail — des coutures aux matériaux en passant par les proportions — raconte une histoire et participe à l'identité visuelle forte du modèle.</p>
-<p>De son côté, la <strong>{model2}</strong> mise sur un design qui a fait ses preuves auprès de millions de porteurs dans le monde. Son esthétique, à la fois reconnaissable et suffisamment neutre pour s'adapter à de nombreux styles vestimentaires, explique son succès durable.</p>
-<p>Le choix dépend de votre style personnel : si vous cherchez une paire qui fait tourner les têtes, la {model1} a un avantage. Si vous préférez une valeur sûre qui se marie avec tout, la {model2} est un choix solide.</p>
+<h2>{model1} : Points forts et faibles</h2>
+<h3>✅ Avantages</h3>
+<ul>
+<li>Design iconique et reconnaissable</li>
+<li>Large choix de coloris</li>
+<li>Bonne qualité de fabrication</li>
+</ul>
+<h3>❌ Inconvénients</h3>
+<ul>
+<li>Prix parfois élevé sur le marché du resell</li>
+<li>Certains coloris difficiles à trouver</li>
+</ul>
 
-<h2>Confort et taillant</h2>
-<p>Les deux modèles offrent un bon niveau de confort pour un usage quotidien. La {model1} propose un chaussant qui lui est propre — nous vous recommandons de consulter notre guide des tailles spécifique pour trouver votre pointure idéale.</p>
-<p>La {model2} est généralement reconnue pour un confort fidèle à ce que propose {brand2}, avec un maintien équilibré qui convient à la plupart des morphologies de pied.</p>
-<p><strong>Notre conseil :</strong> si vous avez les pieds larges, testez les deux en commandant votre taille habituelle. Les matériaux en cuir ont tendance à se détendre légèrement avec le temps.</p>
-
-<h2>{model1} : pour qui ?</h2>
-<p>La {model1} s'adresse à ceux qui recherchent une sneaker avec du caractère et une histoire forte. Elle convient particulièrement aux amateurs de streetwear, aux collectionneurs et à ceux qui veulent se démarquer. Son design distinctif en fait un excellent choix pour ceux qui considèrent leurs sneakers comme un élément central de leur tenue.</p>
-
-<h2>{model2} : pour qui ?</h2>
-<p>La {model2} est idéale pour ceux qui cherchent une sneaker polyvalente et fiable au quotidien. Elle convient aux personnes qui veulent un modèle qui fonctionne aussi bien avec un jean qu'avec un chino, sans avoir à réfléchir à l'accord vestimentaire. C'est le choix de la sérénité.</p>
+<h2>{model2} : Points forts et faibles</h2>
+<h3>✅ Avantages</h3>
+<ul>
+<li>Silhouette polyvalente</li>
+<li>Confort au quotidien</li>
+<li>S'accorde avec de nombreuses tenues</li>
+</ul>
+<h3>❌ Inconvénients</h3>
+<ul>
+<li>Très populaire, donc moins original</li>
+</ul>
 
 {collection_link}
 
 <h2>Notre verdict</h2>
-<p>Soyons clairs : il n'y a pas de mauvais choix entre ces deux modèles. Les deux sont des silhouettes de qualité, avec une histoire riche et un design éprouvé.</p>
-<p><strong>Choisissez la {model1}</strong> si vous voulez une paire qui affirme votre style et que vous appréciez l'héritage culturel du modèle.</p>
-<p><strong>Choisissez la {model2}</strong> si vous cherchez une sneaker passe-partout, confortable et facile à porter au quotidien.</p>
-<p>Et si votre budget le permet, pourquoi ne pas prendre les deux ? Elles sont suffisamment différentes pour occuper chacune une place unique dans votre rotation.</p>
+<p>Les deux modèles sont d'excellents choix. La <strong>{model1}</strong> conviendra aux amateurs de sneakers iconiques, tandis que la <strong>{model2}</strong> sera parfaite pour un usage quotidien polyvalent.</p>
 
 {product_links}
 
-<p><strong>Retrouvez la {model1} et la {model2} sur KP SHOES. 100% authentiques, vérifiées par nos experts, livrées rapidement en France.</strong></p>
+<p><strong>Retrouvez ces deux modèles sur KP SHOES, 100% authentiques et vérifiés.</strong></p>
 """
     
     return {
@@ -3897,78 +3902,48 @@ def generate_comparison_article(subject, product_links, collection_link, tone, w
 
 
 def generate_history_article(subject, product_links, collection_link, tone, web_info_html='', research=None):
-    """Génère un article long et détaillé sur l'histoire d'un modèle"""
+    """Génère un article sur l'histoire d'un modèle avec infos web"""
     title = f"L'histoire de la {subject} : De sa création à aujourd'hui"
     meta_title = f"Histoire de la {subject} : Origines et évolution | KP SHOES"[:70]
-    meta_description = f"Découvrez l'histoire complète de la {subject}. Origines, design, matériaux et évolution culturelle. Guide complet par KP SHOES."[:160]
+    meta_description = f"Découvrez l'histoire fascinante de la {subject}. De ses origines à son statut d'icône streetwear, retour sur un modèle légendaire."[:160]
     summary = f"La {subject} est bien plus qu'une sneaker. Découvrez son histoire fascinante, de sa création à son statut d'icône culturelle."
     
-    model_desc = get_model_description(subject)
-    brand = extract_brand(subject)
-    
-    product_section = product_links if product_links else ""
-    
-    # Extraire des infos web propres (sans les coller brut)
-    web_context = ""
-    if research and research.get('search_results'):
-        clean = [r for r in research['search_results'] if len(r) > 60][:4]
-        if clean:
-            web_paragraphs = []
-            for r in clean:
-                translated = translate_to_french(r)
-                if len(translated) > 60:
-                    web_paragraphs.append(translated)
-            if web_paragraphs:
-                web_context = "\n".join([f"<p>{p}</p>" for p in web_paragraphs])
+    # Section produit
+    product_section = ""
+    if product_links:
+        product_section = product_links
     
     body = f"""
-<p>La <strong>{subject}</strong> fait partie de ces paires qui dépassent le simple statut de chaussure pour devenir un véritable objet culturel. Dans cet article, nous retraçons l'histoire complète de ce modèle : ses origines, son design, les matériaux utilisés et les raisons de son succès auprès des passionnés de sneakers.</p>
+<p>Découvrez l'histoire complète de la <strong>{subject}</strong>, une paire qui a marqué l'univers de la sneaker.</p>
 
-<h2>Les origines de la {subject}</h2>
-<p>{model_desc}</p>
-<p>Au fil des années, {brand} a su faire évoluer ce modèle tout en préservant ce qui fait son identité. Chaque nouvelle version apporte des ajustements subtils — que ce soit dans le choix des matériaux, les finitions ou les coloris — sans jamais trahir l'ADN original de la silhouette. C'est cet équilibre entre héritage et renouveau qui explique la longévité de la {subject} sur le marché.</p>
-
-{f'<h2>Ce que lon sait sur cette édition</h2>' + web_context if web_context else ''}
-
-<h2>Design et matériaux</h2>
-<p>Ce qui distingue la <strong>{subject}</strong> au premier coup d'œil, c'est la qualité de ses matériaux et l'attention portée aux détails. La combinaison des textures — cuir, nubuck, mesh ou daim selon les versions — crée un contraste visuel qui donne du caractère à chaque paire. Les coutures renforcées, les œillets métalliques et la semelle travaillée témoignent d'un savoir-faire qui ne laisse rien au hasard.</p>
-<p>Le coloris joue un rôle central dans l'attrait de chaque édition. Les tons choisis pour la {subject} s'inscrivent dans une palette pensée pour la polyvalence : suffisamment distinctive pour attirer l'œil, mais assez sobre pour s'intégrer dans une garde-robe quotidienne. C'est cette capacité à être à la fois statement et passe-partout qui séduit un public large, des collectionneurs aux amateurs de mode casual.</p>
-
-<h2>Pourquoi la {subject} est-elle si recherchée ?</h2>
-<p>Plusieurs facteurs expliquent l'engouement autour de ce modèle :</p>
-<p><strong>La rareté contrôlée.</strong> Les marques de sneakers maîtrisent l'art du drop limité. En produisant des quantités restreintes, elles créent une demande qui dépasse l'offre, ce qui alimente le marché de la revente et renforce le caractère exclusif de chaque paire. La {subject} ne fait pas exception à cette stratégie.</p>
-<p><strong>L'héritage culturel.</strong> Au-delà de la mode, cette silhouette s'est imposée dans la culture urbaine, portée par des artistes, des athlètes et des personnalités du monde entier. Chaque apparition publique renforce son statut d'icône et attire de nouveaux passionnés.</p>
-<p><strong>La qualité de fabrication.</strong> À une époque où la fast fashion domine, une paire fabriquée avec des matériaux premium et un réel souci du détail se démarque naturellement. Les acheteurs sont prêts à investir davantage pour une sneaker qui dure et qui conserve son allure au fil du temps.</p>
+{web_info_html}
 
 {collection_link}
 
-<h2>Comment reconnaître une {subject} authentique ?</h2>
-<p>Le marché de la sneaker est malheureusement touché par la contrefaçon. Voici les points à vérifier pour s'assurer de l'authenticité de votre paire :</p>
-<p><strong>La boîte et l'étiquette.</strong> Vérifiez que la référence (SKU) sur la boîte correspond à celle inscrite sur l'étiquette intérieure de chaque chaussure. Les polices, les couleurs et la qualité d'impression doivent être nettes et uniformes.</p>
-<p><strong>Les matériaux.</strong> Le cuir doit être souple et régulier, le nubuck ou le daim doit avoir un toucher velouté homogène. Les coutures doivent être droites et régulières, sans fils qui dépassent.</p>
-<p><strong>La semelle.</strong> La semelle doit présenter un motif net, sans bavures. La mousse intermédiaire doit être ferme et uniforme. Tout défaut de moulage est un signal d'alerte.</p>
-<p><strong>Le plus simple : achetez chez un revendeur de confiance.</strong> Chez KP SHOES, chaque paire passe par un processus de vérification rigoureux avant d'être expédiée. Vous recevez une sneaker 100% authentique, garantie.</p>
+{product_section}
+
+<h2>Pourquoi cette paire est-elle si recherchée ?</h2>
+<ul>
+<li><strong>Un design iconique</strong> : Un modèle qui a su traverser les époques</li>
+<li><strong>Une qualité premium</strong> : Des matériaux sélectionnés pour une durabilité optimale</li>
+<li><strong>Un héritage culturel</strong> : Une sneaker adoptée par les passionnés du monde entier</li>
+</ul>
+
+<p><strong>Retrouvez la {subject} sur KP SHOES. Chaque paire est 100% authentique et vérifiée par nos experts.</strong></p>
+"""
+    
+    # Si pas d'info web, ajouter un message honnête
+    if not web_info_html:
+        body = f"""
+<p>Nous n'avons pas trouvé suffisamment d'informations vérifiées sur la <strong>{subject}</strong> pour rédiger un article d'histoire complet et fiable.</p>
+
+<p>Chez <strong>KP SHOES</strong>, nous préférons ne pas publier d'informations incorrectes. Nous vous invitons à vérifier ce modèle directement sur le site officiel de la marque.</p>
+
+{collection_link}
 
 {product_section}
 
-<h2>Comment porter la {subject} ?</h2>
-<p>La polyvalence est l'un des atouts majeurs de cette silhouette. En version casual avec un jean slim et un t-shirt uni, elle apporte une touche streetwear sans effort. Associée à un pantalon cargo et un hoodie oversize, elle s'inscrit dans un look urbain affirmé. Certains l'adoptent même dans un registre smart casual, avec un chino et une veste légère, prouvant que cette sneaker transcende les codes vestimentaires.</p>
-<p>Le secret d'un bon outfit avec la {subject} : laisser la paire être le point focal. Optez pour des vêtements aux teintes neutres si votre coloris est audacieux, ou jouez les contrastes si vous portez une version plus sobre.</p>
-
-<h2>Entretien et conservation</h2>
-<p>Pour préserver votre paire dans le temps, quelques gestes simples suffisent. Appliquez un spray imperméabilisant avant la première utilisation. Nettoyez régulièrement avec une brosse douce et un chiffon humide. Rangez vos sneakers dans leur boîte d'origine, à l'abri de l'humidité et de la lumière directe, et utilisez des embauchoirs pour maintenir la forme. Évitez à tout prix le passage en machine, qui déforme les matériaux et fragilise les collages.</p>
-
-<h2>FAQ — Questions fréquentes sur la {subject}</h2>
-<h3>La {subject} taille-t-elle grand ou petit ?</h3>
-<p>Ce modèle taille généralement normalement. Si vous êtes entre deux pointures ou si vous avez les pieds larges, prenez la demi-taille au-dessus pour plus de confort.</p>
-
-<h3>Quel est le prix de la {subject} ?</h3>
-<p>Le prix varie selon la taille et la disponibilité. Sur KP SHOES, nous proposons cette paire au prix le plus juste du marché, avec la garantie d'authenticité en plus.</p>
-
-<h3>Où acheter la {subject} en toute confiance ?</h3>
-<p>KP SHOES est spécialisé dans la vente de sneakers 100% authentiques. Chaque paire est vérifiée par nos experts avant expédition. Livraison rapide en France et paiement sécurisé.</p>
-
-<p><strong>Retrouvez la {subject} et toute notre collection sur KP SHOES. Sneakers authentiques, vérifiées, livrées rapidement.</strong></p>
+<p><strong>Retrouvez vos sneakers sur KP SHOES - 100% authentiques et vérifiées par nos experts.</strong></p>
 """
     
     return {
@@ -4136,68 +4111,33 @@ def generate_style_article(subject, product_links, collection_link, tone, web_in
 
 
 def generate_custom_article(subject, keywords, product_links, collection_link, tone, web_info_html='', research=None):
-    """Génère un article personnalisé long et détaillé"""
+    """Génère un article personnalisé"""
     title = f"{subject} : Tout ce que vous devez savoir en 2026"
     meta_title = f"{subject} : Guide complet 2026 | KP SHOES"[:70]
-    meta_description = f"Tout savoir sur {subject}. Histoire, design, taillant, authenticité et où acheter. Guide complet par les experts KP SHOES."[:160]
+    meta_description = f"Découvrez tout ce qu'il faut savoir sur {subject}. Guide complet, conseils d'achat et sélection des meilleures paires sur KP SHOES."[:160]
     summary = f"Tout ce qu'il faut savoir sur {subject}. Guide complet et conseils d'achat par les experts KP SHOES."
     
-    model_desc = get_model_description(subject)
-    brand = extract_brand(subject)
-    
-    web_context = ""
-    if research and research.get('search_results'):
-        clean = [r for r in research['search_results'] if len(r) > 60][:4]
-        if clean:
-            web_paragraphs = [translate_to_french(r) for r in clean if len(translate_to_french(r)) > 60]
-            if web_paragraphs:
-                web_context = "\n".join([f"<p>{p}</p>" for p in web_paragraphs])
-    
     body = f"""
-<p>Vous cherchez des informations complètes sur la <strong>{subject}</strong> ? Que vous soyez un collectionneur chevronné, un amateur de streetwear ou simplement curieux, ce guide vous donne toutes les clés pour comprendre ce modèle, choisir la bonne taille et acheter en toute confiance.</p>
+<p>Découvrez tout ce qu'il faut savoir sur <strong>{subject}</strong>. Chez <strong>KP SHOES</strong>, nous vous proposons les meilleures paires 100% authentiques.</p>
 
-<h2>Présentation de la {subject}</h2>
-<p>{model_desc}</p>
-<p>Au fil des années, ce modèle s'est imposé comme une référence dans l'univers de la sneaker. Son design, ses matériaux et son héritage culturel en font une paire que l'on retrouve aussi bien dans les collections des passionnés que dans les rues des grandes villes du monde entier.</p>
+{web_info_html}
 
-{f'<h2>Actualités et informations récentes</h2>' + web_context if web_context else ''}
-
-<h2>Design et matériaux</h2>
-<p>Ce qui fait le charme de la <strong>{subject}</strong>, c'est l'équilibre entre qualité de fabrication et identité visuelle. Les matériaux — cuir, nubuck, mesh ou daim selon les éditions — sont sélectionnés pour offrir à la fois un toucher premium et une durabilité dans le temps. Les finitions, des coutures aux empiècements en passant par la semelle, témoignent d'un savoir-faire qui justifie l'engouement des passionnés.</p>
-<p>Chaque coloris raconte une histoire différente. Des versions sobres et passe-partout aux éditions audacieuses qui attirent tous les regards, le modèle se décline pour répondre à tous les goûts et tous les styles.</p>
-
-<h2>Comment bien choisir sa taille</h2>
-<p>Le taillant est l'un des premiers sujets de préoccupation lorsqu'on achète des sneakers en ligne. Pour la {subject}, la règle générale est de rester sur votre taille habituelle chez {brand}. Si vous avez les pieds larges ou si vous êtes entre deux pointures, optez pour la demi-taille au-dessus.</p>
-<p>Si vous venez d'une autre marque, gardez en tête que le chaussant peut légèrement varier. Les tailles Nike et Jordan sont généralement cohérentes entre elles. Les tailles Adidas tendent à chausser légèrement plus petit. Consultez notre guide des tailles détaillé sur le blog pour un tableau de correspondance complet.</p>
-
-<h2>Comment reconnaître une paire authentique</h2>
-<p>Le marché de la contrefaçon est un problème majeur dans l'univers de la sneaker. Les faux sont de plus en plus difficiles à distinguer des originaux, même pour des yeux avertis. Voici les points essentiels à vérifier :</p>
-<p><strong>L'étiquette intérieure.</strong> La référence (SKU) doit correspondre au modèle et au coloris. La police d'écriture doit être nette et les informations cohérentes entre les deux chaussures.</p>
-<p><strong>La qualité des matériaux.</strong> Le cuir d'une paire authentique est souple et uniforme. Les coutures sont régulières et sans surplus de fil. Le collage de la semelle est propre, sans traces de colle visibles.</p>
-<p><strong>La boîte.</strong> La boîte d'origine doit correspondre au modèle : bon coloris, bonne référence, bon code-barres. Le papier de protection et les accessoires (lacets supplémentaires, hang tag) doivent être présents.</p>
-<p><strong>Le moyen le plus sûr :</strong> achetez chez un revendeur certifié. Chez KP SHOES, chaque paire est inspectée par nos experts avant expédition. Zéro risque de contrefaçon.</p>
+<h2>Où acheter {subject} authentique ?</h2>
+<p>Pour être sûr d'obtenir une paire authentique, privilégiez les revendeurs de confiance comme <strong>KP SHOES</strong>. Nous vérifions chaque paire avant expédition.</p>
 
 {collection_link}
 
-<h2>Où acheter la {subject} authentique ?</h2>
-<p>Plusieurs options s'offrent à vous pour acheter cette paire, mais toutes ne se valent pas en termes de sécurité et de garantie :</p>
-<p><strong>Les drops officiels.</strong> Si le modèle est encore disponible au retail (via SNKRS, Confirmed, ou les boutiques physiques), c'est l'option au meilleur prix. Mais les éditions limitées partent en quelques secondes.</p>
-<p><strong>Les plateformes de revente.</strong> Des sites comme KP SHOES proposent les modèles épuisés au retail, avec une vérification d'authenticité systématique. Vous payez un premium par rapport au prix retail, mais vous avez la garantie d'une paire authentique, neuve et livrée en toute sécurité.</p>
-<p><strong>Les échanges entre particuliers.</strong> Groupes Facebook, Instagram, Vinted... C'est l'option la plus risquée. Sans expertise de vérification, vous vous exposez à recevoir une contrefaçon. Nous déconseillons cette voie pour les paires de valeur.</p>
-
 {product_links}
 
-<h2>FAQ — Questions fréquentes</h2>
-<h3>La {subject} est-elle un bon investissement ?</h3>
-<p>Certaines éditions limitées prennent de la valeur avec le temps, mais le marché de la revente est imprévisible. Notre conseil : achetez avant tout une paire qui vous plaît et que vous porterez avec plaisir.</p>
+<h2>Notre engagement qualité</h2>
+<ul>
+<li>✅ Authenticité garantie à 100%</li>
+<li>✅ Vérification par nos experts</li>
+<li>✅ Livraison rapide et sécurisée</li>
+<li>✅ Service client réactif</li>
+</ul>
 
-<h3>Comment entretenir la {subject} ?</h3>
-<p>Nettoyez régulièrement avec une brosse douce et un chiffon humide. Appliquez un spray imperméabilisant avant la première utilisation. Rangez dans la boîte d'origine, à l'abri de l'humidité et du soleil.</p>
-
-<h3>Pourquoi acheter sur KP SHOES ?</h3>
-<p>Chaque paire est vérifiée par nos experts, garantie 100% authentique. Livraison rapide en France, paiement sécurisé et service client réactif.</p>
-
-<p><strong>Retrouvez la {subject} et toute notre collection sur KP SHOES. Sneakers authentiques, vérifiées, livrées rapidement en France.</strong></p>
+<p><strong>Faites confiance à KP SHOES pour vos sneakers authentiques.</strong></p>
 """
     
     return {
