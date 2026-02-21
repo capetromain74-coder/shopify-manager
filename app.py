@@ -1365,6 +1365,22 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <script>
 var P=[],C=[],sinceId=0,loading=false,totalV=0,selectedPids=[];
 
+function saveCache(){
+    try{sessionStorage.setItem("kp_products",JSON.stringify({P:P,C:C,totalV:totalV,ts:Date.now()}))}catch(e){}
+}
+function loadCache(){
+    try{
+        var d=JSON.parse(sessionStorage.getItem("kp_products")||"null");
+        if(d&&d.P&&d.P.length>0&&(Date.now()-d.ts)<300000){
+            P=d.P;C=d.C;totalV=d.totalV;sinceId=P[P.length-1].id;
+            updateStats();filter();
+            document.getElementById("msg").className="msg";
+            return true;
+        }
+    }catch(e){}
+    return false;
+}
+
 function load(){
     if(loading)return;loading=true;
     document.getElementById("msg").textContent="Chargement... "+P.length+" produits";
@@ -1396,8 +1412,8 @@ function load(){
                 totalV+=(p.variants||[]).length;P.push(p);
             }
             sinceId=d.products[d.products.length-1].id;updateStats();filter();loading=false;
-            if(d.products.length>=50)setTimeout(load,100);else{document.getElementById("msg").className="msg"}
-        }else{document.getElementById("msg").className="msg";loading=false;filter()}
+            if(d.products.length>=50)setTimeout(load,100);else{document.getElementById("msg").className="msg";saveCache()}
+        }else{document.getElementById("msg").className="msg";loading=false;filter();saveCache()}
     }).catch(function(e){document.getElementById("msg").textContent="Erreur: "+e.message;loading=false});
 }
 
@@ -1450,7 +1466,7 @@ function updateSelCount(){
 }
 function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
 function go(id){window.location.href="/product/"+id}
-function reload(){P=[];C=[];sinceId=0;totalV=0;document.getElementById("grid").innerHTML="<div class='loading'><div class='spinner'></div>Chargement...</div>";load()}
+function reload(){P=[];C=[];sinceId=0;totalV=0;try{sessionStorage.removeItem("kp_products")}catch(e){}document.getElementById("grid").innerHTML="<div class='loading'><div class='spinner'></div>Chargement...</div>";load()}
 document.getElementById("q").oninput=filter;
 document.getElementById("f").onchange=filter;
 
@@ -1587,7 +1603,7 @@ function fixFromAnalysis(){
     },100);
 }
 
-load();
+if(!loadCache())load();
 </script>
 </body>
 </html>'''
