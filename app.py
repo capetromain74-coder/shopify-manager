@@ -1580,11 +1580,11 @@ function runAnalysis(){
         h+="</div>";
 
         var cats=[
-            {k:"noDesc",icon:"\uD83D\uDCDD",name:"Descriptions manquantes",desc:"Bio produit absente ou trop courte",col:"#ff4757",auto:true},
-            {k:"noLink",icon:"\uD83D\uDD17",name:"Liens collection manquants",desc:"Description sans lien vers la collection",col:"#ff9500",auto:true},
-            {k:"badAlt",icon:"\uD83D\uDDBC\uFE0F",name:"Alt images incorrect",desc:"Texte alternatif des photos ne correspond pas au titre",col:"#ff4757",auto:true},
-            {k:"badFn",icon:"\uD83D\uDCC1",name:"Noms fichiers images",desc:"Nom de fichier photo non optimisé pour le SEO",col:"#ff4757",auto:true},
-            {k:"noSku",icon:"\uD83C\uDFF7\uFE0F",name:"SKU manquants",desc:"Pas de référence produit (ajout manuel requis)",col:"#666",auto:false}
+            {k:"noDesc",icon:"📝",name:"Descriptions manquantes",desc:"Bio produit absente ou trop courte",col:"#ff4757",auto:true},
+            {k:"noLink",icon:"🔗",name:"Liens collection manquants",desc:"Description sans lien vers la collection",col:"#ff9500",auto:true},
+            {k:"badAlt",icon:"🖼",name:"Alt images incorrect",desc:"Texte alternatif des photos ne correspond pas au titre",col:"#ff4757",auto:true},
+            {k:"badFn",icon:"📁",name:"Noms fichiers images",desc:"Nom de fichier photo non optimise pour le SEO",col:"#ff4757",auto:true},
+            {k:"noSku",icon:"🏷",name:"SKU manquants",desc:"Pas de reference produit (ajout manuel requis)",col:"#666",auto:false}
         ];
 
         for(var c=0;c<cats.length;c++){
@@ -1607,7 +1607,7 @@ function runAnalysis(){
         // Bouton corriger
         h+="<div id='azActions' style='margin-top:20px;display:flex;gap:10px;align-items:center'>";
         if(totalTasks>0){
-            h+="<button class='btn btn-p' onclick='runAutoFix()' style='flex:1;padding:14px;font-size:15px;background:linear-gradient(135deg,#00ff88,#00cc6a);color:#000;font-weight:700;border:none;border-radius:8px;cursor:pointer'>\uD83D\uDE80 Corriger "+totalTasks+" tâches automatiquement</button>";
+            h+="<button class='btn btn-p' onclick='runAutoFix()' style='flex:1;padding:14px;font-size:15px;background:linear-gradient(135deg,#00ff88,#00cc6a);color:#000;font-weight:700;border:none;border-radius:8px;cursor:pointer'>&#128640; Corriger "+totalTasks+" t&acirc;ches automatiquement</button>";
         }
         h+="</div>";
         h+="<div id='azProgress' style='display:none;margin-top:15px'>";
