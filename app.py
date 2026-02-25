@@ -87,26 +87,65 @@ GOAT_ALGOLIA_API_KEY = 'ac96de6fef0e02bb95d433d8d5c7038a'
 GOAT_PRODUCT_API = 'https://www.goat.com/web-api/v1/product_templates'
 
 _goat_session = None
-def _get_goat_session():
-    global _goat_session
-    if _goat_session is None:
-        try:
-            from curl_cffi.requests import Session
-            _goat_session = Session(impersonate="chrome")
-            log.info("[GOAT] Using curl_cffi (Chrome TLS)")
-        except ImportError:
-            log.warning("[GOAT] curl_cffi not available, using subprocess curl")
+_goat_session_time = 0
+_goat_impersonate_idx = 0
+_GOAT_PROFILES = ["chrome", "chrome110", "chrome116", "safari", "safari_ios"]
+
+def _get_goat_session(force_new=False, rotate_profile=False):
+    """Crée/réutilise une session curl_cffi. Renouvelle toutes les 60s ou si force_new."""
+    global _goat_session, _goat_session_time, _goat_impersonate_idx
+    import time
+    now = time.time()
+    if _goat_session is not None and not force_new and not rotate_profile and (now - _goat_session_time) < 60:
+        return _goat_session
+    try:
+        from curl_cffi.requests import Session
+        if _goat_session:
+            try: _goat_session.close()
+            except: pass
+        if rotate_profile:
+            _goat_impersonate_idx = (_goat_impersonate_idx + 1) % len(_GOAT_PROFILES)
+        profile = _GOAT_PROFILES[_goat_impersonate_idx]
+        _goat_session = Session(impersonate=profile)
+        _goat_session_time = now
+        log.info(f"[GOAT] New curl_cffi session created (profile={profile})")
+    except ImportError:
+        log.warning("[GOAT] curl_cffi not available, using subprocess curl")
+        _goat_session = None
     return _goat_session
 
 def _goat_get(url):
-    sess = _get_goat_session()
-    if sess:
-        try:
-            r = sess.get(url, timeout=20)
-            if r.status_code == 200: return r.text
-            log.warning(f"[GOAT] GET {url[:60]}... -> {r.status_code}")
-        except Exception as e:
-            log.warning(f"[GOAT] curl_cffi GET failed: {e}")
+    """GET avec retry : tente plusieurs profils TLS si Cloudflare bloque."""
+    import time
+    for attempt in range(4):
+        sess = _get_goat_session(force_new=(attempt > 0), rotate_profile=(attempt > 1))
+        if sess:
+            try:
+                if attempt > 0:
+                    time.sleep(1 + attempt)  # Délai croissant entre retries
+                r = sess.get(url, timeout=20, headers={
+                    'Accept': 'application/json, text/plain, */*',
+                    'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8',
+                    'Referer': 'https://www.goat.com/',
+                })
+                if r.status_code == 200:
+                    # Vérifier que c'est du vrai JSON, pas un Cloudflare block
+                    text = r.text or ''
+                    if text.strip().startswith('{') or text.strip().startswith('['):
+                        log.info(f"[GOAT] GET OK on attempt {attempt+1}: {url[:60]}...")
+                        return text
+                    elif '1020' in text[:200]:
+                        log.warning(f"[GOAT] GET attempt {attempt+1}: Cloudflare 1020 in body")
+                        continue
+                    return text
+                log.warning(f"[GOAT] GET attempt {attempt+1} {url[:60]}... -> {r.status_code}")
+                if r.status_code in (403, 503) or '1020' in (r.text or '')[:200]:
+                    continue  # Retry with rotated profile
+                return r.text if r.text else None
+            except Exception as e:
+                log.warning(f"[GOAT] curl_cffi GET attempt {attempt+1} failed: {e}")
+                continue
+    # Fallback subprocess
     import subprocess
     try:
         result = subprocess.run(
@@ -190,15 +229,31 @@ def goat_get_product_images(slug):
         main_url = _goat_upgrade_image_url(main_url)
         images.append(main_url)
     
-    # 2. Images de galerie (multi-angles: _01, _02, etc.)
-    for pic in data.get('productTemplateExternalPictures', []):
-        url = pic.get('mainPictureUrl', '')
-        if url:
-            url = _goat_upgrade_image_url(url)
-            if url not in images:
-                images.append(url)
+    # 2. Images de galerie - chercher dans plusieurs champs possibles
+    gallery_fields = [
+        'productTemplateExternalPictures',
+        'externalPictures',
+        'galleryPictures',
+        'pictures',
+        'additionalPictures',
+        'productImages',
+    ]
+    for field in gallery_fields:
+        pics = data.get(field, [])
+        if not isinstance(pics, list): continue
+        for pic in pics:
+            if isinstance(pic, dict):
+                url = pic.get('mainPictureUrl', '') or pic.get('pictureUrl', '') or pic.get('url', '') or pic.get('originalUrl', '')
+            elif isinstance(pic, str):
+                url = pic
+            else:
+                continue
+            if url:
+                url = _goat_upgrade_image_url(url)
+                if url not in images:
+                    images.append(url)
     
-    # 3. Fallback si aucune image trouvée
+    # 3. Log
     if not images:
         log.info(f"[GOAT] No images found for {slug}")
     else:
@@ -3173,6 +3228,62 @@ def api_goat_scrape_images():
         'images': images[:20],
         'html_preview': html[:500] if len(html) < 5000 else f"...{len(html)} chars..."
     })
+
+@app.route('/api/goat/debug-api')
+def api_goat_debug_api():
+    """Debug: montre exactement ce que l'API product_templates retourne. Usage: ?sku=FD0689-001"""
+    sku = request.args.get('sku', 'FD0689-001').strip()
+    
+    # 1. Chercher le slug via Algolia
+    product = goat_search(sku)
+    if not product:
+        return jsonify({'error': 'Produit non trouvé sur Algolia', 'sku': sku}), 404
+    
+    slug = product.get('slug', '')
+    result = {
+        'sku': sku,
+        'slug': slug,
+        'algolia_main_picture': product.get('main_picture_url', ''),
+    }
+    
+    # 2. Appel API product_templates
+    raw = _goat_get(f"{GOAT_PRODUCT_API}/{slug}")
+    if not raw:
+        result['api_status'] = 'NO_RESPONSE'
+        return jsonify(result)
+    
+    result['raw_length'] = len(raw)
+    result['raw_preview'] = raw[:300]
+    
+    try:
+        data = json.loads(raw)
+        result['api_status'] = 'OK_JSON'
+        
+        # Tous les champs contenant picture/image
+        pic_fields = {}
+        for k, v in data.items():
+            kl = k.lower()
+            if any(x in kl for x in ['picture', 'image', 'photo', 'media', 'gallery']):
+                if isinstance(v, list):
+                    pic_fields[k] = f"[{len(v)} items]"
+                    if v and isinstance(v[0], dict):
+                        pic_fields[f"{k}_first"] = v[0]
+                        pic_fields[f"{k}_count"] = len(v)
+                else:
+                    pic_fields[k] = v
+        result['picture_fields'] = pic_fields
+        
+        # Images extraites par la logique actuelle
+        images = goat_get_product_images(slug)
+        result['extracted_images'] = images
+        result['extracted_count'] = len(images)
+        
+    except json.JSONDecodeError:
+        result['api_status'] = 'NOT_JSON'
+        if '1020' in raw[:200]:
+            result['api_status'] = 'CLOUDFLARE_1020'
+    
+    return jsonify(result)
 
 @app.route('/api/goat/images')
 def api_goat_images():
