@@ -3450,14 +3450,37 @@ def _resize_goat_image_to_750x500(image_url):
         src_w, src_h = src.size
         log.info(f"[GOAT Resize] Source: {src_w}x{src_h}")
         
+        # AUTO-CROP : supprimer le vide (blanc/transparent) autour de la sneaker
+        # Créer un masque : pixels non-blancs et non-transparents
+        from PIL import ImageChops
+        
+        # Mettre sur fond blanc pour détecter les bords
+        bg = Image.new('RGBA', src.size, (255, 255, 255, 255))
+        diff = ImageChops.difference(src, bg)
+        # Convertir en niveaux de gris et appliquer un seuil
+        gray = diff.convert('L')
+        # Seuil : tout pixel avec une différence > 15 est considéré comme "contenu"
+        bbox = gray.point(lambda p: 255 if p > 15 else 0).getbbox()
+        
+        if bbox:
+            # Ajouter une petite marge autour du crop (5px)
+            crop_margin = 5
+            left = max(0, bbox[0] - crop_margin)
+            top = max(0, bbox[1] - crop_margin)
+            right = min(src_w, bbox[2] + crop_margin)
+            bottom = min(src_h, bbox[3] + crop_margin)
+            src = src.crop((left, top, right, bottom))
+            log.info(f"[GOAT Resize] Auto-cropped: {src_w}x{src_h} -> {src.size[0]}x{src.size[1]}")
+            src_w, src_h = src.size
+        
         # Canvas cible: 750x500 fond blanc
         target_w, target_h = 750, 500
         canvas = Image.new('RGB', (target_w, target_h), (255, 255, 255))
         
-        # Cadrage façon GOAT : sneaker occupe ~85% de la largeur, centrée verticalement un poil bas
-        padding_h = 20   # Petit padding horizontal
-        padding_top = 15  # Petit padding en haut
-        padding_bottom = 25  # Un peu plus en bas (ombre/semelle)
+        # Cadrage façon GOAT : sneaker occupe la majeure partie du canvas
+        padding_h = 40   # Marge horizontale
+        padding_top = 30  # Marge en haut
+        padding_bottom = 35  # Un peu plus en bas
         max_w = target_w - (padding_h * 2)
         max_h = target_h - padding_top - padding_bottom
         
