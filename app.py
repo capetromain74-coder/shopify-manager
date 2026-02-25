@@ -3452,15 +3452,15 @@ def _resize_goat_image_to_750x500(image_url):
         
         # Canvas cible: 750x500 fond blanc
         target_w, target_h = 750, 500
-        target_ratio = target_w / target_h  # 1.5
         
         # Stratégie : l'image GOAT _00 est carrée (1:1) avec la sneaker centrée.
-        # On doit la transformer en 3:2 (750x500) comme les images galerie.
-        # On scale à 750px de large puis on crop verticalement en gardant le centre.
+        # Les images galerie GOAT (medium) sont 750x500 avec la sneaker qui occupe ~88% de la largeur.
+        # On reproduit ce cadrage.
         
-        # 1. Redimensionner pour que la largeur = target_w
-        scale = target_w / src_w
-        new_w = target_w
+        # 1. Redimensionner : la sneaker doit occuper ~88% de la largeur du canvas
+        sneaker_width = int(target_w * 0.88)  # ~660px
+        scale = sneaker_width / src_w
+        new_w = sneaker_width
         new_h = int(src_h * scale)
         resized = src.resize((new_w, new_h), Image.LANCZOS)
         log.info(f"[GOAT Resize] Scaled to: {new_w}x{new_h}")
@@ -3468,17 +3468,21 @@ def _resize_goat_image_to_750x500(image_url):
         # 2. Créer le canvas blanc 750x500
         canvas = Image.new('RGB', (target_w, target_h), (255, 255, 255))
         
+        # 3. Centrer horizontalement
+        x = (target_w - new_w) // 2
+        
+        # 4. Position verticale : sneaker positionnée bas comme les images galerie GOAT
+        #    Plus de blanc au-dessus, semelle proche du bord inférieur
         if new_h <= target_h:
-            # Image plus petite que le canvas → centrer verticalement
-            y = (target_h - new_h) // 2
-            canvas.paste(resized, (0, y), resized if resized.mode == 'RGBA' else None)
+            # Image rentre dans le canvas → positionner en bas (60% de l'espace vide au-dessus)
+            space = target_h - new_h
+            y = int(space * 0.60)  # 60% du vide au-dessus, 40% en dessous
+            canvas.paste(resized, (x, y), resized if resized.mode == 'RGBA' else None)
         else:
-            # Image plus haute que le canvas → crop vertical centré
-            # Décaler légèrement vers le bas car les sneakers sont souvent en bas de l'image
-            crop_top = (new_h - target_h) // 2 + int((new_h - target_h) * 0.1)  # 10% plus bas
-            crop_top = min(crop_top, new_h - target_h)  # Ne pas dépasser
+            # Image trop haute → crop en gardant plus du bas (semelle visible)
+            crop_top = int((new_h - target_h) * 0.40)  # Couper 40% du haut excédentaire
             cropped = resized.crop((0, crop_top, new_w, crop_top + target_h))
-            canvas.paste(cropped, (0, 0), cropped if cropped.mode == 'RGBA' else None)
+            canvas.paste(cropped, (x, 0), cropped if cropped.mode == 'RGBA' else None)
             log.info(f"[GOAT Resize] Vertical crop: top={crop_top}, height={target_h}")
         
         # Convertir en base64 PNG
