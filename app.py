@@ -167,107 +167,48 @@ def goat_search(sku):
     }
 
 def goat_get_product_images(slug):
-    """Récupère TOUTES les images d'un produit via web-api + détection des angles par pattern URL."""
+    """Récupère TOUTES les images d'un produit via web-api. Gère les produits à 1 seule image."""
     raw = _goat_get(f"{GOAT_PRODUCT_API}/{slug}")
     if not raw: return []
     try: data = json.loads(raw)
-    except: return []
-    
+    except:
+        log.warning(f"[GOAT] API response not JSON for {slug} (likely Cloudflare 1020)")
+        return []
     images = []
-    
-    # Log les clés pour debug
-    log.info(f"[GOAT] API keys for {slug}: {list(data.keys())}")
-    
-    # 1. Images de galerie (productTemplateExternalPictures)
+    # 1. Images de galerie (multi-angles)
     for pic in data.get('productTemplateExternalPictures', []):
-        for key in ['mainPictureUrl', 'pictureUrl', 'originalPictureUrl', 'gridPictureUrl']:
-            url = pic.get(key, '')
-            if url and url not in images:
-                images.append(url)
-                break
-    
-    # 2. Autres champs possibles
-    for field_name in ['innerPictures', 'externalPictures', 'pictures', 'productImages', 'galleryPictures']:
-        for pic in data.get(field_name, []):
-            if isinstance(pic, str):
-                if pic and pic not in images: images.append(pic)
-            elif isinstance(pic, dict):
-                for key in ['mainPictureUrl', 'pictureUrl', 'originalPictureUrl', 'gridPictureUrl', 'url', 'src']:
-                    url = pic.get(key, '')
-                    if url and url not in images:
-                        images.append(url)
-                        break
-    
-    # 3. Image principale en fallback
+        url = pic.get('mainPictureUrl', '')
+        if url and url not in images: images.append(url)
+    # 2. Fallback : image principale (produits avec 1 seule photo, ex: Salomon XT-6)
     if not images:
-        for key in ['pictureUrl', 'mainPictureUrl', 'originalPictureUrl', 'gridPictureUrl']:
-            url = data.get(key, '')
-            if url:
-                images.append(url)
-                break
-    
-    # 4. ★ DÉTECTION DES ANGLES SUPPLÉMENTAIRES PAR PATTERN URL ★
-    # Les images GOAT suivent le pattern: .../{ID}_00.png.png, _01.png.png, _02.png.png, etc.
-    # Si on n'a qu'une seule image, on teste les autres angles
-    if len(images) >= 1:
-        base_url = images[0]  # URL principale (normalement _00)
-        extra = _discover_goat_image_angles(base_url)
-        for url in extra:
-            if url not in images:
-                images.append(url)
-    
-    log.info(f"[GOAT] Found {len(images)} total images for {slug}")
+        picture_url = data.get('pictureUrl', '')
+        if picture_url:
+            images.append(picture_url)
+            log.info(f"[GOAT] Single image product, using pictureUrl")
+    log.info(f"[GOAT] Found {len(images)} images for {slug}")
     return images
 
 
 def _discover_goat_image_angles(base_url):
-    """Découvre les images d'angles supplémentaires en testant les URLs numérotées.
-    Pattern GOAT: https://image.goat.com/.../XXXXXX_00.png.png -> _01, _02, _03, etc.
-    Le product template ID est numérique, suivi de _00 pour l'angle principal.
+    """Découvre les images d'angles supplémentaires en testant les URLs numérotées sur le CDN GOAT.
+    Pattern: https://image.goat.com/.../1118288_00.png.png -> _01, _02, _03, etc.
     """
-    import re as _re
     extra_images = []
     
-    # Pattern 1: URL se terminant par {digits}_00.ext (pattern standard GOAT)
-    # Ex: .../910973_00.png.png -> essayer 910973_01, 910973_02, etc.
-    match = _re.search(r'(/\d+_)(\d{2})(\.png\.png|\.jpg\.jpg|\.png|\.jpg|\.jpeg|\.webp)(\?.*)?$', base_url)
-    
+    # Détecter le pattern /{digits}_00.ext dans l'URL
+    match = re.search(r'(/\d+_)(\d{2})(\.png\.png|\.jpg\.jpg|\.png|\.jpg|\.jpeg|\.webp)(\?.*)?$', base_url)
     if not match:
-        # Pattern 2: Certains produits ont le SKU dans le nom : .../FD0689_001_00.png.png
-        match = _re.search(r'(_)(\d{2})(\.png\.png|\.jpg\.jpg|\.png|\.jpg|\.jpeg|\.webp)(\?.*)?$', base_url)
-        # Vérifier que les 2 derniers digits sont bien un numéro d'angle (00-09)
-        if match and int(match.group(2)) > 9:
-            match = None  # Pas un angle, c'est probablement une partie du SKU
-    
-    if not match:
-        log.info(f"[GOAT] No angle pattern in URL, trying to append angles: ...{base_url[-50:]}")
-        # Pattern 3: L'URL n'a pas de numéro d'angle, essayer d'insérer _01, _02 avant .ext
-        # Ex: .../CT8012_017.png.png -> essayer CT8012_017_01.png.png (peu probable mais on teste)
-        ext_match = _re.search(r'(\.png\.png|\.jpg\.jpg|\.png|\.jpg|\.jpeg|\.webp)(\?.*)?$', base_url)
-        if ext_match:
-            base = base_url[:ext_match.start()]
-            ext = ext_match.group(1)
-            query = ext_match.group(2) or ''
-            for i in range(1, 9):
-                test_url = f"{base}_{i:02d}{ext}{query}"
-                if _goat_url_exists(test_url):
-                    extra_images.append(test_url)
-                    log.info(f"[GOAT] ✓ Found appended angle _{i:02d}")
-                elif i > 2 and not extra_images:
-                    break  # Pas la peine de continuer
-                elif extra_images and i > (max(int(_re.search(r'_(\d{2})', url).group(1)) for url in extra_images) + 2):
-                    break
+        log.info(f"[GOAT] No angle pattern in URL: ...{base_url[-60:]}")
         return extra_images
     
-    # Extraction du pattern trouvé
-    prefix = base_url[:match.start() + len(match.group(1))]
-    current_angle = int(match.group(2))
-    ext = match.group(3)
+    prefix = base_url[:match.start() + len(match.group(1))]  # Tout jusqu'à "1118288_"
+    current_angle = int(match.group(2))  # 00
+    ext = match.group(3)  # .png.png
     query = match.group(4) or ''
     
-    log.info(f"[GOAT] Angle pattern detected: current={current_angle:02d}, ext={ext}, url=...{base_url[-60:]}")
+    log.info(f"[GOAT] Angle pattern found: current=_{current_angle:02d}, testing others...")
     
-    # Tester les angles 00 à 08
+    # Tester les angles 00 à 08 (GOAT a rarement plus de 8 vues)
     consecutive_misses = 0
     for i in range(0, 9):
         if i == current_angle:
@@ -282,16 +223,15 @@ def _discover_goat_image_angles(base_url):
             log.info(f"[GOAT] ✓ Found angle _{i:02d}")
         else:
             consecutive_misses += 1
-            # Si on a déjà passé l'angle 00 et 2 ratés d'affilée, on arrête
             if consecutive_misses >= 2 and i > current_angle:
-                break
+                break  # 2 ratés d'affilée après l'angle courant = on arrête
     
     log.info(f"[GOAT] Discovered {len(extra_images)} additional angles")
     return extra_images
 
 
 def _goat_url_exists(url):
-    """Vérifie si une URL d'image GOAT existe (HEAD request rapide)."""
+    """Vérifie si une URL d'image GOAT existe via HEAD request."""
     sess = _get_goat_session()
     if sess:
         try:
@@ -308,14 +248,16 @@ def _goat_url_exists(url):
              "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"],
             capture_output=True, text=True, timeout=12)
         if result.returncode == 0:
-            code = result.stdout.strip()
-            return code == '200'
+            return result.stdout.strip() == '200'
     except:
         pass
     return False
 
+
 def get_goat_images(sku):
-    """Récupère les images GOAT pour un SKU. Gère les SKU multiples (ex: 0951301/0951303)."""
+    """Récupère les images GOAT pour un SKU. Gère les SKU multiples (ex: 0951301/0951303).
+    Stratégie: Algolia pour trouver le produit + découverte d'angles sur le CDN.
+    """
     try:
         sku = re.sub(r':\d+$', '', sku.strip())
         skus = [s.strip() for s in sku.replace('/', ' ').replace('|', ' ').split() if s.strip()]
@@ -324,9 +266,23 @@ def get_goat_images(sku):
         if len(skus) == 1:
             product = goat_search(skus[0])
             if not product or not product.get('slug'): return None
+            
+            # 1. Essayer l'API produit (peut être bloquée par Cloudflare)
             images = goat_get_product_images(product['slug'])
-            if not images and product.get('main_picture_url'):
-                images = [product['main_picture_url']]
+            
+            # 2. Si l'API échoue/retourne peu, utiliser l'image Algolia + découverte d'angles
+            if len(images) <= 1:
+                main_url = images[0] if images else product.get('main_picture_url', '')
+                if main_url:
+                    if not images:
+                        images = [main_url]
+                    # Découvrir les angles supplémentaires sur le CDN
+                    extra = _discover_goat_image_angles(main_url)
+                    for url in extra:
+                        if url not in images:
+                            images.append(url)
+                    log.info(f"[GOAT] Total after angle discovery: {len(images)} images")
+            
             if not images: return None
             return {'name': product.get('name', ''), 'sku': product.get('sku', sku), 'images': images, 'multi': False}
         
@@ -336,8 +292,16 @@ def get_goat_images(sku):
                 product = goat_search(s)
                 if product and product.get('slug'):
                     images = goat_get_product_images(product['slug'])
-                    if not images and product.get('main_picture_url'):
-                        images = [product['main_picture_url']]
+                    # Même logique de fallback + angle discovery
+                    if len(images) <= 1:
+                        main_url = images[0] if images else product.get('main_picture_url', '')
+                        if main_url:
+                            if not images:
+                                images = [main_url]
+                            extra = _discover_goat_image_angles(main_url)
+                            for url in extra:
+                                if url not in images:
+                                    images.append(url)
                     results.append({'name': product.get('name', ''), 'sku': s, 'images': images})
                 else:
                     results.append({'name': '', 'sku': s, 'images': []})
@@ -3071,89 +3035,6 @@ def api_goat_images():
         'images': result.get('images', []),
         'multi': False
     })
-
-
-@app.route('/api/goat/debug')
-def api_goat_debug():
-    """Debug: voir la réponse brute de l'API GOAT pour un SKU ou slug."""
-    sku = request.args.get('sku', '').strip()
-    slug = request.args.get('slug', '').strip()
-    
-    result = {'sku': sku, 'slug': slug}
-    
-    # Si on a un SKU, chercher le slug via Algolia
-    if sku and not slug:
-        product = goat_search(sku)
-        if product:
-            result['algolia'] = product
-            slug = product.get('slug', '')
-        else:
-            result['algolia'] = None
-            return jsonify(result)
-    
-    if not slug:
-        return jsonify({'error': 'Fournir sku= ou slug='}), 400
-    
-    result['slug'] = slug
-    
-    # Récupérer la réponse brute de l'API product_templates
-    raw = _goat_get(f"{GOAT_PRODUCT_API}/{slug}")
-    if not raw:
-        result['api_error'] = 'Pas de réponse de GOAT'
-        return jsonify(result)
-    
-    try:
-        data = json.loads(raw)
-    except:
-        result['api_error'] = 'JSON invalide'
-        result['raw_response'] = raw[:2000]
-        return jsonify(result)
-    
-    # Résumé de la structure
-    result['api_keys'] = list(data.keys())
-    result['api_keys_types'] = {k: type(v).__name__ + (f'[{len(v)}]' if isinstance(v, (list, dict)) else '') for k, v in data.items()}
-    
-    # Extraire toutes les clés qui contiennent "picture" ou "image"
-    image_fields = {}
-    for k, v in data.items():
-        kl = k.lower()
-        if 'picture' in kl or 'image' in kl or 'photo' in kl or 'gallery' in kl:
-            if isinstance(v, str):
-                image_fields[k] = v
-            elif isinstance(v, list):
-                image_fields[k] = v[:5]  # Limiter à 5 pour la lisibilité
-            elif isinstance(v, dict):
-                image_fields[k] = v
-    result['image_fields'] = image_fields
-    
-    # Résultat de notre extraction (avec découverte d'angles)
-    images = goat_get_product_images(slug)
-    result['extracted_images'] = images
-    result['extracted_count'] = len(images)
-    
-    # Test de pattern URL
-    main_url = None
-    for key in ['pictureUrl', 'mainPictureUrl', 'originalPictureUrl', 'gridPictureUrl']:
-        url = data.get(key, '')
-        if url:
-            main_url = url
-            break
-    if not main_url and images:
-        main_url = images[0]
-    
-    if main_url:
-        import re as _re
-        match = _re.search(r'(_\d{2})(\.png\.png|\.jpg\.jpg|\.png|\.jpg|\.jpeg|\.webp)(\?.*)?$', main_url)
-        result['url_pattern_detected'] = bool(match)
-        result['main_url'] = main_url
-        if match:
-            result['url_pattern'] = {
-                'suffix': match.group(1),
-                'extension': match.group(2),
-                'prefix_end': main_url[max(0,match.start()-30):match.start()]
-            }
-    
-    return jsonify(result)
 
 
 @app.route('/api/goat/apply', methods=['POST'])
