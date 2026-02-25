@@ -231,26 +231,38 @@ def _discover_goat_image_angles(base_url):
 
 
 def _goat_url_exists(url):
-    """Vérifie si une URL d'image GOAT existe via HEAD request."""
-    sess = _get_goat_session()
-    if sess:
-        try:
-            r = sess.head(url, timeout=8)
-            return r.status_code == 200
-        except:
-            pass
-    # Fallback subprocess curl
+    """Vérifie si une URL d'image GOAT existe via GET request (HEAD souvent bloqué par CDN)."""
     import subprocess
+    # Méthode 1: GET request avec range header (télécharge seulement 1 byte)
     try:
         result = subprocess.run(
             ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "-m", "8",
-             "--head", url,
-             "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"],
+             "-r", "0-0", url,
+             "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+             "-H", "Accept: image/webp,image/apng,image/*,*/*;q=0.8",
+             "-H", "Referer: https://www.goat.com/"],
             capture_output=True, text=True, timeout=12)
         if result.returncode == 0:
-            return result.stdout.strip() == '200'
-    except:
-        pass
+            code = result.stdout.strip()
+            log.debug(f"[GOAT] URL check {url[-40:]}: HTTP {code}")
+            return code in ('200', '206')  # 206 = Partial Content (range request OK)
+    except Exception as e:
+        log.debug(f"[GOAT] curl range failed: {e}")
+    
+    # Méthode 2: GET simple avec curl_cffi session
+    sess = _get_goat_session()
+    if sess:
+        try:
+            r = sess.get(url, timeout=8, headers={
+                'Range': 'bytes=0-0',
+                'Referer': 'https://www.goat.com/',
+                'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8'
+            })
+            log.debug(f"[GOAT] Session check {url[-40:]}: HTTP {r.status_code}")
+            return r.status_code in (200, 206)
+        except Exception as e:
+            log.debug(f"[GOAT] Session check failed: {e}")
+    
     return False
 
 
@@ -3000,6 +3012,63 @@ def api_progress():
 # ══════════════════════════════════════════════════════════════
 # GOAT API ROUTES
 # ══════════════════════════════════════════════════════════════
+
+@app.route('/api/goat/test-cdn')
+def api_goat_test_cdn():
+    """Test si les URLs du CDN GOAT sont accessibles. Usage: ?url=https://image.goat.com/.../1118288_01.png.png"""
+    import subprocess
+    url = request.args.get('url', '').strip()
+    if not url:
+        # Test par défaut avec une URL connue
+        url = "https://image.goat.com/attachments/product_template_pictures/images/084/275/684/original/1118288_01.png.png"
+    
+    results = {}
+    
+    # Test 1: curl GET avec range
+    try:
+        r = subprocess.run(
+            ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "-m", "8",
+             "-r", "0-0", url,
+             "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+             "-H", "Accept: image/webp,image/apng,image/*,*/*;q=0.8",
+             "-H", "Referer: https://www.goat.com/"],
+            capture_output=True, text=True, timeout=12)
+        results['curl_range'] = {'code': r.stdout.strip(), 'ok': r.stdout.strip() in ('200', '206')}
+    except Exception as e:
+        results['curl_range'] = {'error': str(e)}
+    
+    # Test 2: curl HEAD
+    try:
+        r = subprocess.run(
+            ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "-m", "8",
+             "--head", url,
+             "-H", "User-Agent: Mozilla/5.0"],
+            capture_output=True, text=True, timeout=12)
+        results['curl_head'] = {'code': r.stdout.strip(), 'ok': r.stdout.strip() == '200'}
+    except Exception as e:
+        results['curl_head'] = {'error': str(e)}
+    
+    # Test 3: curl_cffi session
+    sess = _get_goat_session()
+    if sess:
+        try:
+            r = sess.get(url, timeout=8, headers={'Range': 'bytes=0-0', 'Accept': 'image/*'})
+            results['session_range'] = {'code': r.status_code, 'ok': r.status_code in (200, 206)}
+        except Exception as e:
+            results['session_range'] = {'error': str(e)}
+    else:
+        results['session_range'] = {'error': 'No session available'}
+    
+    # Tester aussi _00 et _01 
+    base = "https://image.goat.com/attachments/product_template_pictures/images/084/275/684/original/1118288"
+    angle_tests = {}
+    for i in range(4):
+        test_url = f"{base}_{i:02d}.png.png"
+        exists = _goat_url_exists(test_url)
+        angle_tests[f"_{i:02d}"] = exists
+    results['angle_tests'] = angle_tests
+    
+    return jsonify({'url_tested': url, 'results': results})
 
 @app.route('/api/goat/images')
 def api_goat_images():
