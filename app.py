@@ -3457,9 +3457,10 @@ def _resize_goat_image_to_750x500(image_url):
         # Les images galerie GOAT (medium) sont 750x500 avec la sneaker qui occupe ~88% de la largeur.
         # On reproduit ce cadrage.
         
-        # 1. Redimensionner : largeur = canvas (comme avant, pas de marge latérale)
-        scale = target_w / src_w
-        new_w = target_w
+        # 1. Redimensionner : largeur = 95% du canvas (légère marge latérale)
+        sneaker_width = int(target_w * 0.95)
+        scale = sneaker_width / src_w
+        new_w = sneaker_width
         new_h = int(src_h * scale)
         resized = src.resize((new_w, new_h), Image.LANCZOS)
         log.info(f"[GOAT Resize] Scaled to: {new_w}x{new_h}")
@@ -3468,7 +3469,7 @@ def _resize_goat_image_to_750x500(image_url):
         canvas = Image.new('RGB', (target_w, target_h), (255, 255, 255))
         
         # 3. Centrer horizontalement
-        x = 0
+        x = (target_w - new_w) // 2
         
         # 4. Position verticale : sneaker positionnée bas comme les images galerie GOAT
         #    Plus de blanc au-dessus, semelle proche du bord inférieur
