@@ -205,14 +205,6 @@ def goat_search(sku):
         'main_picture_url': best.get('original_picture_url', '') or best.get('main_picture_url', ''),
     }
 
-def _goat_upgrade_image_url(url):
-    """Upgrade une URL d'image GOAT de medium/small vers original quality, en gardant l'extension d'origine."""
-    if not url: return url
-    # medium -> original, small -> original (garder l'extension telle quelle)
-    url = re.sub(r'/medium/', '/original/', url)
-    url = re.sub(r'/small/', '/original/', url)
-    return url
-
 def goat_get_product_images(slug):
     """Récupère TOUTES les images d'un produit via web-api. Gère les produits à 1 seule image."""
     raw = _goat_get(f"{GOAT_PRODUCT_API}/{slug}")
@@ -222,7 +214,7 @@ def goat_get_product_images(slug):
         log.warning(f"[GOAT] API response not JSON for {slug} (likely Cloudflare 1020)")
         return []
     
-    # 1. Collecter les images galerie (multi-angles: _01, _02, etc.)
+    # 1. Collecter les images galerie (multi-angles: _01, _02, etc.) — qualité classique telle quelle
     gallery_images = []
     gallery_fields = [
         'productTemplateExternalPictures',
@@ -237,26 +229,25 @@ def goat_get_product_images(slug):
         if not isinstance(pics, list): continue
         for pic in pics:
             if isinstance(pic, dict):
-                url = pic.get('mainPictureUrl', '') or pic.get('pictureUrl', '') or pic.get('url', '') or pic.get('originalUrl', '')
+                # IMPORTANT: mainPictureUrl = qualité classique (medium), les autres champs = original (trop gros)
+                url = pic.get('mainPictureUrl', '')
             elif isinstance(pic, str):
                 url = pic
             else:
                 continue
-            if url:
-                url = _goat_upgrade_image_url(url)
-                if url not in gallery_images:
-                    gallery_images.append(url)
+            if url and url not in gallery_images:
+                gallery_images.append(url)
     
     # 2. Si la galerie a des images → utiliser UNIQUEMENT la galerie (pas la _00)
     if gallery_images:
         log.info(f"[GOAT] Found {len(gallery_images)} gallery images for {slug} (skipping main _00)")
         return gallery_images
     
-    # 3. Sinon fallback sur l'image principale seule
-    main_url = data.get('pictureUrl', '') or data.get('mainPictureUrl', '') or data.get('originalPictureUrl', '')
+    # 3. Sinon fallback sur l'image principale seule (sera redimensionnée à l'apply)
+    # Préférer mainPictureUrl (750px, classique) plutôt que pictureUrl (1000px, optimale)
+    main_url = data.get('mainPictureUrl', '') or data.get('pictureUrl', '') or data.get('originalPictureUrl', '')
     if main_url:
-        main_url = _goat_upgrade_image_url(main_url)
-        log.info(f"[GOAT] Single image product for {slug}, will need resize")
+        log.info(f"[GOAT] Single image product for {slug}, will need resize. URL: {main_url[:80]}...")
         return [main_url]
     
     log.info(f"[GOAT] No images found for {slug}")
@@ -3231,6 +3222,35 @@ def api_goat_scrape_images():
         'html_preview': html[:500] if len(html) < 5000 else f"...{len(html)} chars..."
     })
 
+@app.route('/api/goat/test-resize')
+def api_goat_test_resize():
+    """Test le resize d'une image GOAT en 750x500. Usage: ?url=... ou par défaut test avec HQ8708"""
+    url = request.args.get('url', '').strip()
+    if not url:
+        url = "https://image.goat.com/1000/attachments/product_template_pictures/images/088/220/352/original/1122212_00.png.png"
+    
+    # Vérifier que Pillow est installé
+    try:
+        from PIL import Image
+        pillow_ok = True
+        pillow_version = Image.__version__ if hasattr(Image, '__version__') else 'unknown'
+    except ImportError:
+        pillow_ok = False
+        pillow_version = 'NOT INSTALLED'
+    
+    result = {
+        'pillow_installed': pillow_ok,
+        'pillow_version': pillow_version,
+        'url': url,
+    }
+    
+    if pillow_ok:
+        b64 = _resize_goat_image_to_750x500(url)
+        result['resize_success'] = b64 is not None
+        result['base64_length'] = len(b64) if b64 else 0
+    
+    return jsonify(result)
+
 @app.route('/api/goat/debug-api')
 def api_goat_debug_api():
     """Debug: montre exactement ce que l'API product_templates retourne. Usage: ?sku=FD0689-001"""
@@ -3347,7 +3367,9 @@ def api_goat_apply():
             time.sleep(0.3)
         
         # Si une seule image (produit sans galerie), la redimensionner en 750x500
-        needs_resize = len(images) == 1 and '_00.' in images[0]
+        # Détection: 1 seule image ET c'est une image GOAT (pas une galerie multi-angles)
+        needs_resize = len(images) == 1 and 'image.goat.com' in images[0]
+        log.info(f"[GOAT Apply] {len(images)} images, needs_resize={needs_resize}, first_url={images[0][:80]}...")
         
         # Add new images
         added = 0
@@ -3388,27 +3410,40 @@ def _resize_goat_image_to_750x500(image_url):
         from PIL import Image
         from io import BytesIO
         import base64
-        
+        log.info(f"[GOAT Resize] Starting resize for: {image_url[:80]}...")
+    except ImportError:
+        log.error("[GOAT Resize] Pillow (PIL) not installed! Add 'Pillow>=10.0' to requirements.txt")
+        return None
+    
+    try:
         # Télécharger l'image
+        img_data = None
         sess = _get_goat_session()
         if sess:
             try:
                 r = sess.get(image_url, timeout=15)
+                log.info(f"[GOAT Resize] Download status: {r.status_code}, size: {len(r.content)} bytes")
                 if r.status_code == 200:
                     img_data = r.content
-                else:
-                    return None
-            except:
-                return None
-        else:
+            except Exception as e:
+                log.warning(f"[GOAT Resize] Session download failed: {e}")
+        
+        if not img_data:
             import subprocess
             result = subprocess.run(
                 ["curl", "-s", "-m", "15", "-L", image_url,
-                 "-H", "User-Agent: Mozilla/5.0"],
+                 "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"],
                 capture_output=True, timeout=20)
-            if result.returncode != 0 or not result.stdout:
+            if result.returncode == 0 and result.stdout:
+                img_data = result.stdout
+                log.info(f"[GOAT Resize] curl download: {len(img_data)} bytes")
+            else:
+                log.error(f"[GOAT Resize] curl download failed: rc={result.returncode}")
                 return None
-            img_data = result.stdout
+        
+        if not img_data or len(img_data) < 1000:
+            log.error(f"[GOAT Resize] Image data too small: {len(img_data) if img_data else 0} bytes")
+            return None
         
         # Ouvrir l'image source
         src = Image.open(BytesIO(img_data)).convert('RGBA')
