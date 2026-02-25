@@ -167,13 +167,11 @@ def goat_search(sku):
     }
 
 def _goat_upgrade_image_url(url):
-    """Upgrade une URL d'image GOAT de medium/small vers original quality."""
+    """Upgrade une URL d'image GOAT de medium/small vers original quality, en gardant l'extension d'origine."""
     if not url: return url
-    # medium -> original, small -> original
+    # medium -> original, small -> original (garder l'extension telle quelle)
     url = re.sub(r'/medium/', '/original/', url)
     url = re.sub(r'/small/', '/original/', url)
-    # .jpg.jpeg -> .png.png (original format)
-    url = re.sub(r'\.jpg\.jpeg$', '.png.png', url)
     return url
 
 def goat_get_product_images(slug):
