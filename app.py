@@ -3019,47 +3019,20 @@ def api_goat_test_cdn():
     import subprocess
     url = request.args.get('url', '').strip()
     if not url:
-        # Test par défaut avec une URL connue
         url = "https://image.goat.com/attachments/product_template_pictures/images/084/275/684/original/1118288_01.png.png"
     
     results = {}
-    
-    # Test 1: curl GET avec range
     try:
         r = subprocess.run(
             ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "-m", "8",
              "-r", "0-0", url,
              "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-             "-H", "Accept: image/webp,image/apng,image/*,*/*;q=0.8",
              "-H", "Referer: https://www.goat.com/"],
             capture_output=True, text=True, timeout=12)
         results['curl_range'] = {'code': r.stdout.strip(), 'ok': r.stdout.strip() in ('200', '206')}
     except Exception as e:
         results['curl_range'] = {'error': str(e)}
     
-    # Test 2: curl HEAD
-    try:
-        r = subprocess.run(
-            ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "-m", "8",
-             "--head", url,
-             "-H", "User-Agent: Mozilla/5.0"],
-            capture_output=True, text=True, timeout=12)
-        results['curl_head'] = {'code': r.stdout.strip(), 'ok': r.stdout.strip() == '200'}
-    except Exception as e:
-        results['curl_head'] = {'error': str(e)}
-    
-    # Test 3: curl_cffi session
-    sess = _get_goat_session()
-    if sess:
-        try:
-            r = sess.get(url, timeout=8, headers={'Range': 'bytes=0-0', 'Accept': 'image/*'})
-            results['session_range'] = {'code': r.status_code, 'ok': r.status_code in (200, 206)}
-        except Exception as e:
-            results['session_range'] = {'error': str(e)}
-    else:
-        results['session_range'] = {'error': 'No session available'}
-    
-    # Tester aussi _00 et _01 
     base = "https://image.goat.com/attachments/product_template_pictures/images/084/275/684/original/1118288"
     angle_tests = {}
     for i in range(4):
@@ -3069,6 +3042,120 @@ def api_goat_test_cdn():
     results['angle_tests'] = angle_tests
     
     return jsonify({'url_tested': url, 'results': results})
+
+@app.route('/api/goat/debug-algolia')
+def api_goat_debug_algolia():
+    """Dump TOUTES les données Algolia pour un SKU. Usage: ?sku=FD0689-001"""
+    sku = request.args.get('sku', 'FD0689-001').strip()
+    url = f"{GOAT_ALGOLIA_URL}?x-algolia-application-id={GOAT_ALGOLIA_APP_ID}&x-algolia-api-key={GOAT_ALGOLIA_API_KEY}"
+    payload = {"requests": [{"indexName": "product_variants_v2", "params": f"distinct=true&maxValuesPerFacet=1&page=0&query={sku}"}]}
+    raw = _goat_post(url, payload)
+    if not raw: return jsonify({'error': 'Algolia request failed'}), 500
+    try: data = json.loads(raw)
+    except: return jsonify({'error': 'Invalid JSON', 'raw': raw[:500]}), 500
+    hits = data.get('results', [{}])[0].get('hits', [])
+    if not hits: return jsonify({'error': 'No hits', 'sku': sku}), 404
+    
+    # Trouver le bon hit
+    sku_clean = sku.replace('-', ' ').replace('  ', ' ').upper()
+    best = None
+    for h in hits:
+        h_sku = (h.get('sku', '') or '').upper()
+        if h_sku == sku_clean or h_sku == sku.upper():
+            best = h; break
+    if not best: best = hits[0]
+    
+    # Extraire tous les champs contenant 'picture', 'image', 'photo', 'url'
+    image_fields = {}
+    all_keys = sorted(best.keys())
+    for k in all_keys:
+        kl = k.lower()
+        if any(x in kl for x in ['picture', 'image', 'photo', 'url', 'media', 'gallery', 'asset']):
+            image_fields[k] = best[k]
+    
+    return jsonify({
+        'sku': sku,
+        'hit_sku': best.get('sku'),
+        'slug': best.get('slug'),
+        'all_keys': all_keys,
+        'image_fields': image_fields,
+        'total_hits': len(hits)
+    })
+
+@app.route('/api/goat/scrape-images')
+def api_goat_scrape_images():
+    """Scrape la page produit GOAT pour extraire les images depuis __NEXT_DATA__. Usage: ?slug=dunk-low-..."""
+    slug = request.args.get('slug', '').strip()
+    sku = request.args.get('sku', '').strip()
+    
+    # Si SKU fourni, chercher le slug via Algolia
+    if not slug and sku:
+        product = goat_search(sku)
+        if product: slug = product.get('slug', '')
+    
+    if not slug:
+        return jsonify({'error': 'slug ou sku requis'}), 400
+    
+    page_url = f"https://www.goat.com/sneakers/{slug}"
+    import subprocess
+    
+    # Tenter de récupérer la page HTML
+    try:
+        result = subprocess.run(
+            ["curl", "-s", "-m", "15", "-L", page_url,
+             "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+             "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+             "-H", "Accept-Language: en-US,en;q=0.5"],
+            capture_output=True, text=True, timeout=20)
+        html = result.stdout
+    except Exception as e:
+        return jsonify({'error': f'curl failed: {e}'}), 500
+    
+    if not html or len(html) < 100:
+        return jsonify({'error': 'Empty response', 'page_url': page_url}), 500
+    
+    if '1020' in html and len(html) < 5000:
+        return jsonify({'error': 'Cloudflare 1020 blocked', 'page_url': page_url}), 403
+    
+    # Chercher __NEXT_DATA__
+    images = []
+    next_data = None
+    match = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.DOTALL)
+    if match:
+        try:
+            next_data = json.loads(match.group(1))
+            # Parcourir récursivement pour trouver les URLs d'images
+            def find_images(obj, depth=0):
+                if depth > 10: return
+                if isinstance(obj, str):
+                    if 'image.goat.com' in obj and obj not in images:
+                        images.append(obj)
+                elif isinstance(obj, dict):
+                    for v in obj.values():
+                        find_images(v, depth+1)
+                elif isinstance(obj, list):
+                    for item in obj:
+                        find_images(item, depth+1)
+            find_images(next_data)
+        except json.JSONDecodeError:
+            pass
+    
+    # Fallback: regex sur tout le HTML
+    if not images:
+        raw_urls = re.findall(r'https://image\.goat\.com/[^\s"\'<>]+\.(?:png|jpg|jpeg|webp)(?:\.png|\.jpg)?', html)
+        for u in raw_urls:
+            if u not in images:
+                images.append(u)
+    
+    return jsonify({
+        'slug': slug,
+        'page_url': page_url,
+        'html_length': len(html),
+        'has_next_data': next_data is not None,
+        'images_found': len(images),
+        'images': images[:20],
+        'html_preview': html[:500] if len(html) < 5000 else f"...{len(html)} chars..."
+    })
 
 @app.route('/api/goat/images')
 def api_goat_images():
