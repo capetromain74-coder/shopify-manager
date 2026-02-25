@@ -78,90 +78,147 @@ def get_product_metafields(product_id):
 
 
 # ══════════════════════════════════════════════════════════════
-# GOAT IMAGES via App 360 (microservice)
+# GOAT IMAGES - Intégration directe (Algolia search + web-api)
 # ══════════════════════════════════════════════════════════════
 
-# URL de l'app 360 qui récupère les photos GOAT
-GOAT_SERVICE_URL = os.environ.get('GOAT_SERVICE_URL', 'https://shopify-360-viewer.onrender.com')
+GOAT_ALGOLIA_URL = 'https://2fwotdvm2o-dsn.algolia.net/1/indexes/*/queries'
+GOAT_ALGOLIA_APP_ID = '2FWOTDVM2O'
+GOAT_ALGOLIA_API_KEY = 'ac96de6fef0e02bb95d433d8d5c7038a'
+GOAT_PRODUCT_API = 'https://www.goat.com/web-api/v1/product_templates'
+
+_goat_session = None
+def _get_goat_session():
+    global _goat_session
+    if _goat_session is None:
+        try:
+            from curl_cffi.requests import Session
+            _goat_session = Session(impersonate="chrome")
+            log.info("[GOAT] Using curl_cffi (Chrome TLS)")
+        except ImportError:
+            log.warning("[GOAT] curl_cffi not available, using subprocess curl")
+    return _goat_session
+
+def _goat_get(url):
+    sess = _get_goat_session()
+    if sess:
+        try:
+            r = sess.get(url, timeout=20)
+            if r.status_code == 200: return r.text
+            log.warning(f"[GOAT] GET {url[:60]}... -> {r.status_code}")
+        except Exception as e:
+            log.warning(f"[GOAT] curl_cffi GET failed: {e}")
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["curl", "-s", "-m", "20", url,
+             "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"],
+            capture_output=True, text=True, timeout=25)
+        if result.returncode == 0 and result.stdout: return result.stdout
+    except Exception as e:
+        log.warning(f"[GOAT] subprocess curl failed: {e}")
+    return None
+
+def _goat_post(url, json_data):
+    sess = _get_goat_session()
+    if sess:
+        try:
+            r = sess.post(url, json=json_data, timeout=20)
+            if r.status_code == 200: return r.text
+            log.warning(f"[GOAT] POST {url[:60]}... -> {r.status_code}")
+        except Exception as e:
+            log.warning(f"[GOAT] curl_cffi POST failed: {e}")
+    import subprocess
+    try:
+        body = json.dumps(json_data)
+        result = subprocess.run(
+            ["curl", "-s", "-m", "20", url, "-X", "POST",
+             "-H", "Content-Type: application/json",
+             "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+             "-d", body],
+            capture_output=True, text=True, timeout=25)
+        if result.returncode == 0 and result.stdout: return result.stdout
+    except Exception as e:
+        log.warning(f"[GOAT] subprocess curl POST failed: {e}")
+    return None
+
+def goat_search(sku):
+    """Recherche un produit GOAT via Algolia. Retourne slug + image principale."""
+    url = f"{GOAT_ALGOLIA_URL}?x-algolia-application-id={GOAT_ALGOLIA_APP_ID}&x-algolia-api-key={GOAT_ALGOLIA_API_KEY}"
+    payload = {"requests": [{"indexName": "product_variants_v2", "params": f"distinct=true&maxValuesPerFacet=1&page=0&query={sku}"}]}
+    raw = _goat_post(url, payload)
+    if not raw: return None
+    try: data = json.loads(raw)
+    except: return None
+    hits = data.get('results', [{}])[0].get('hits', [])
+    if not hits: return None
+    sku_clean = sku.replace('-', ' ').replace('  ', ' ').upper()
+    best = None
+    for h in hits:
+        h_sku = (h.get('sku', '') or '').upper()
+        if h_sku == sku_clean or h_sku == sku.upper():
+            best = h; break
+    if not best: best = hits[0]
+    return {
+        'name': best.get('name', ''),
+        'sku': best.get('sku', sku),
+        'slug': best.get('slug', ''),
+        'brand': best.get('brand_name', ''),
+        'main_picture_url': best.get('original_picture_url', '') or best.get('main_picture_url', ''),
+    }
+
+def goat_get_product_images(slug):
+    """Récupère TOUTES les images d'un produit via web-api. Gère les produits à 1 seule image."""
+    raw = _goat_get(f"{GOAT_PRODUCT_API}/{slug}")
+    if not raw: return []
+    try: data = json.loads(raw)
+    except: return []
+    images = []
+    # 1. Images de galerie (multi-angles)
+    for pic in data.get('productTemplateExternalPictures', []):
+        url = pic.get('mainPictureUrl', '')
+        if url and url not in images: images.append(url)
+    # 2. Fallback : image principale (produits avec 1 seule photo, ex: Salomon XT-6)
+    if not images:
+        picture_url = data.get('pictureUrl', '')
+        if picture_url:
+            images.append(picture_url)
+            log.info(f"[GOAT] Single image product, using pictureUrl")
+    log.info(f"[GOAT] Found {len(images)} images for {slug}")
+    return images
 
 def get_goat_images(sku):
-    """Récupère les images GOAT via l'app 360. Gère les SKU multiples (ex: 0951301/0951303) et nettoie les suffixes."""
+    """Récupère les images GOAT pour un SKU. Gère les SKU multiples (ex: 0951301/0951303)."""
     try:
-        import urllib.request
-        import json
-        
-        # Nettoyer le SKU : enlever suffixes comme :1 :2 etc
         sku = re.sub(r':\d+$', '', sku.strip())
-        
-        # Gérer les SKU multiples séparés par /
         skus = [s.strip() for s in sku.replace('/', ' ').replace('|', ' ').split() if s.strip()]
-        if not skus:
-            skus = [sku]
+        if not skus: skus = [sku]
         
-        # Si un seul SKU, recherche simple
         if len(skus) == 1:
-            url = f"{GOAT_SERVICE_URL}/api/goat/search"
-            data = json.dumps({"sku": skus[0]}).encode('utf-8')
-            
-            req = urllib.request.Request(
-                url, data=data,
-                headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
-                method='POST'
-            )
-            
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-            
-            with urllib.request.urlopen(req, context=ctx, timeout=60) as response:
-                result = json.loads(response.read().decode('utf-8'))
-            
-            if result.get('success') and result.get('product'):
-                product = result['product']
-                return {
-                    'name': product.get('name', ''),
-                    'sku': product.get('sku', sku),
-                    'images': product.get('images', []),
-                    'multi': False
-                }
-            return None
+            product = goat_search(skus[0])
+            if not product or not product.get('slug'): return None
+            images = goat_get_product_images(product['slug'])
+            if not images and product.get('main_picture_url'):
+                images = [product['main_picture_url']]
+            if not images: return None
+            return {'name': product.get('name', ''), 'sku': product.get('sku', sku), 'images': images, 'multi': False}
         
-        # SKU multiples : chercher chacun
         results = []
         for s in skus:
             try:
-                url = f"{GOAT_SERVICE_URL}/api/goat/search"
-                data = json.dumps({"sku": s}).encode('utf-8')
-                req = urllib.request.Request(
-                    url, data=data,
-                    headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
-                    method='POST'
-                )
-                ctx = ssl.create_default_context()
-                ctx.check_hostname = False
-                ctx.verify_mode = ssl.CERT_NONE
-                with urllib.request.urlopen(req, context=ctx, timeout=60) as response:
-                    result = json.loads(response.read().decode('utf-8'))
-                if result.get('success') and result.get('product'):
-                    product = result['product']
-                    results.append({
-                        'name': product.get('name', ''),
-                        'sku': s,
-                        'images': product.get('images', [])
-                    })
+                product = goat_search(s)
+                if product and product.get('slug'):
+                    images = goat_get_product_images(product['slug'])
+                    if not images and product.get('main_picture_url'):
+                        images = [product['main_picture_url']]
+                    results.append({'name': product.get('name', ''), 'sku': s, 'images': images})
                 else:
                     results.append({'name': '', 'sku': s, 'images': []})
             except Exception as e:
-                log.error(f"[GOAT Service] Error for SKU {s}: {e}")
+                log.error(f"[GOAT] Error for SKU {s}: {e}")
                 results.append({'name': '', 'sku': s, 'images': []})
-        
-        return {
-            'multi': True,
-            'results': results
-        }
-        
+        return {'multi': True, 'results': results}
     except Exception as e:
-        log.error(f"[GOAT Service] Error: {e}")
+        log.error(f"[GOAT] Error: {e}")
         return None
 
 
@@ -1401,7 +1458,7 @@ function load(){
     if(loading)return;loading=true;
     document.getElementById("msg").textContent="Chargement... "+P.length+" produits";
     document.getElementById("msg").className="msg on";
-    fetch("/api/products?since_id="+sinceId+"&limit=50").then(function(r){return r.json()}).then(function(d){
+    fetch("/api/products?since_id="+sinceId+"&limit=250").then(function(r){return r.json()}).then(function(d){
         if(d.collections)C=d.collections;
         if(d.products&&d.products.length>0){
             for(var i=0;i<d.products.length;i++){
@@ -1428,7 +1485,7 @@ function load(){
                 totalV+=(p.variants||[]).length;P.push(p);
             }
             sinceId=d.products[d.products.length-1].id;updateStats();filter();loading=false;
-            if(d.products.length>=50)setTimeout(load,100);else{document.getElementById("msg").className="msg";saveCache()}
+            if(d.products.length>=250)setTimeout(load,100);else{document.getElementById("msg").className="msg";saveCache()}
         }else{document.getElementById("msg").className="msg";loading=false;filter();saveCache()}
     }).catch(function(e){document.getElementById("msg").textContent="Erreur: "+e.message;loading=false});
 }
@@ -2711,10 +2768,14 @@ def product_detail(product_id):
 @app.route('/api/products')
 def api_products():
     since_id = request.args.get('since_id', '0')
-    limit = request.args.get('limit', '50')
-    r = shopify_request(f'products.json?limit={limit}&since_id={since_id}')
+    limit = request.args.get('limit', '250')
+    # Utiliser fields pour ne récupérer que le nécessaire (réduit la taille de la réponse de ~80%)
+    fields = 'id,title,handle,vendor,product_type,tags,images,variants,body_html'
+    r = shopify_request(f'products.json?limit={limit}&since_id={since_id}&fields={fields}')
     products = r.get('products', []) if r else []
-    return jsonify({'products': products, 'collections': get_collections()})
+    # N'envoyer les collections qu'au premier appel
+    cols = get_collections() if since_id == '0' else []
+    return jsonify({'products': products, 'collections': cols})
 
 
 @app.route('/api/product/<int:product_id>')
