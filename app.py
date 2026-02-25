@@ -3457,10 +3457,9 @@ def _resize_goat_image_to_750x500(image_url):
         # Les images galerie GOAT (medium) sont 750x500 avec la sneaker qui occupe ~88% de la largeur.
         # On reproduit ce cadrage.
         
-        # 1. Redimensionner : la sneaker doit occuper ~88% de la largeur du canvas
-        sneaker_width = int(target_w * 0.88)  # ~660px
-        scale = sneaker_width / src_w
-        new_w = sneaker_width
+        # 1. Redimensionner : largeur = canvas (comme avant, pas de marge latérale)
+        scale = target_w / src_w
+        new_w = target_w
         new_h = int(src_h * scale)
         resized = src.resize((new_w, new_h), Image.LANCZOS)
         log.info(f"[GOAT Resize] Scaled to: {new_w}x{new_h}")
@@ -3469,18 +3468,16 @@ def _resize_goat_image_to_750x500(image_url):
         canvas = Image.new('RGB', (target_w, target_h), (255, 255, 255))
         
         # 3. Centrer horizontalement
-        x = (target_w - new_w) // 2
+        x = 0
         
         # 4. Position verticale : sneaker positionnée bas comme les images galerie GOAT
         #    Plus de blanc au-dessus, semelle proche du bord inférieur
         if new_h <= target_h:
-            # Image rentre dans le canvas → positionner en bas (60% de l'espace vide au-dessus)
             space = target_h - new_h
-            y = int(space * 0.60)  # 60% du vide au-dessus, 40% en dessous
+            y = int(space * 0.70)  # 70% du vide au-dessus, 30% en dessous
             canvas.paste(resized, (x, y), resized if resized.mode == 'RGBA' else None)
         else:
-            # Image trop haute → crop en gardant plus du bas (semelle visible)
-            crop_top = int((new_h - target_h) * 0.40)  # Couper 40% du haut excédentaire
+            crop_top = int((new_h - target_h) * 0.35)  # Couper 35% du haut excédentaire
             cropped = resized.crop((0, crop_top, new_w, crop_top + target_h))
             canvas.paste(cropped, (x, 0), cropped if cropped.mode == 'RGBA' else None)
             log.info(f"[GOAT Resize] Vertical crop: top={crop_top}, height={target_h}")
