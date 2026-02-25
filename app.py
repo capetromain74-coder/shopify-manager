@@ -166,6 +166,16 @@ def goat_search(sku):
         'main_picture_url': best.get('original_picture_url', '') or best.get('main_picture_url', ''),
     }
 
+def _goat_upgrade_image_url(url):
+    """Upgrade une URL d'image GOAT de medium/small vers original quality."""
+    if not url: return url
+    # medium -> original, small -> original
+    url = re.sub(r'/medium/', '/original/', url)
+    url = re.sub(r'/small/', '/original/', url)
+    # .jpg.jpeg -> .png.png (original format)
+    url = re.sub(r'\.jpg\.jpeg$', '.png.png', url)
+    return url
+
 def goat_get_product_images(slug):
     """Récupère TOUTES les images d'un produit via web-api. Gère les produits à 1 seule image."""
     raw = _goat_get(f"{GOAT_PRODUCT_API}/{slug}")
@@ -175,17 +185,26 @@ def goat_get_product_images(slug):
         log.warning(f"[GOAT] API response not JSON for {slug} (likely Cloudflare 1020)")
         return []
     images = []
-    # 1. Images de galerie (multi-angles)
+    
+    # 1. Image principale (_00) en premier
+    main_url = data.get('pictureUrl', '') or data.get('mainPictureUrl', '') or data.get('originalPictureUrl', '')
+    if main_url:
+        main_url = _goat_upgrade_image_url(main_url)
+        images.append(main_url)
+    
+    # 2. Images de galerie (multi-angles: _01, _02, etc.)
     for pic in data.get('productTemplateExternalPictures', []):
         url = pic.get('mainPictureUrl', '')
-        if url and url not in images: images.append(url)
-    # 2. Fallback : image principale (produits avec 1 seule photo, ex: Salomon XT-6)
+        if url:
+            url = _goat_upgrade_image_url(url)
+            if url not in images:
+                images.append(url)
+    
+    # 3. Fallback si aucune image trouvée
     if not images:
-        picture_url = data.get('pictureUrl', '')
-        if picture_url:
-            images.append(picture_url)
-            log.info(f"[GOAT] Single image product, using pictureUrl")
-    log.info(f"[GOAT] Found {len(images)} images for {slug}")
+        log.info(f"[GOAT] No images found for {slug}")
+    else:
+        log.info(f"[GOAT] Found {len(images)} images for {slug}")
     return images
 
 
