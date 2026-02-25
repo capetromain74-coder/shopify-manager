@@ -1536,9 +1536,45 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <button class="btn btn-s" onclick="reload()">&#8635; Actualiser</button>
 <button class="btn btn-s" onclick="selectAll()">Tout cocher</button>
 <button class="btn" style="background:#00ff88;color:#000" onclick="openCorrector()">&#128295; Corriger<span id="selBadge"></span></button>
+<button class="btn" style="background:#9b59b6;color:#fff" onclick="openBulkGoat()">&#128247; Photos GOAT<span id="goatBadge"></span></button>
 <button class="btn" style="background:#3b82f6;color:#fff" onclick="openAnalyzer()">&#128270; Analyser</button>
 </div>
 <div id="selectCount" style="display:none;align-items:center;gap:10px;padding:8px 15px;background:#00ff8822;border-radius:8px;margin-bottom:15px;font-size:13px;color:#00ff88"></div>
+
+<!-- ══════ MODAL PHOTOS GOAT BULK ══════ -->
+<div class="modal-bg" id="bulkGoatModal">
+<div class="modal-box" style="max-width:600px">
+<div class="modal-head">
+<h2 style="margin:0;font-size:20px">&#128247; Remplacer les photos GOAT</h2>
+<button class="modal-close" onclick="closeBulkGoat()">&times;</button>
+</div>
+
+<div class="opt-group">
+<div class="opt-label">PORT&Eacute;E</div>
+<label class="opt-radio"><input type="radio" name="goatScope" value="selection" checked> S&eacute;lection uniquement (<span id="goatSel">0</span> coch&eacute;s)</label>
+<label class="opt-radio"><input type="radio" name="goatScope" value="all"> Tous les produits (<span id="goatTotal">0</span>)</label>
+</div>
+
+<div style="padding:15px 20px;font-size:13px;color:#aaa;line-height:1.6">
+<p style="margin:0 0 10px">Pour chaque produit, le bot va :</p>
+<p style="margin:0 0 5px">1. R&eacute;cup&eacute;rer le SKU du produit</p>
+<p style="margin:0 0 5px">2. Chercher les images sur GOAT</p>
+<p style="margin:0 0 5px">3. Remplacer toutes les photos par celles de GOAT</p>
+<p style="margin:10px 0 0;color:#ff9f43">&#9888; Les produits sans SKU seront ignor&eacute;s</p>
+</div>
+
+<div id="bulkGoatStatus" style="display:none;padding:10px 20px">
+<div class="prog-bar"><div class="prog-fill" id="bulkGoatBar"></div></div>
+<div id="bulkGoatTxt" style="text-align:center;font-size:12px;color:#aaa;margin-top:8px"></div>
+<div id="bulkGoatLog" style="max-height:200px;overflow-y:auto;margin-top:10px;font-size:11px;color:#888;font-family:monospace"></div>
+</div>
+
+<div style="padding:15px 20px;display:flex;gap:10px">
+<button class="btn btn-p" id="bulkGoatBtn" onclick="startBulkGoat()" style="flex:1;padding:14px;font-size:15px;background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff;font-weight:700;border:none;border-radius:8px;cursor:pointer">&#128247; Lancer le remplacement</button>
+<button class="btn" onclick="closeBulkGoat()" style="padding:14px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer">Annuler</button>
+</div>
+</div>
+</div>
 
 <!-- ══════ MODAL CORRIGER ══════ -->
 <div class="modal-bg" id="correctorModal">
@@ -1699,17 +1735,127 @@ function deselectAll(){selectedPids=[];filter()}
 function updateSelCount(){
     var el=document.getElementById("selectCount");
     var badge=document.getElementById("selBadge");
+    var goatBadge=document.getElementById("goatBadge");
     if(selectedPids.length>0){
         el.style.display="flex";
         el.innerHTML="<span>"+selectedPids.length+" produit"+(selectedPids.length>1?"s":"")+" coch&eacute;"+(selectedPids.length>1?"s":"")+"</span><button onclick='deselectAll()' style='background:none;border:none;color:#ff4757;cursor:pointer;font-size:12px;text-decoration:underline;margin-left:10px'>D&eacute;s&eacute;lectionner</button>";
         badge.textContent=" ("+selectedPids.length+")";
-    }else{el.style.display="none";badge.textContent=""}
+        if(goatBadge)goatBadge.textContent=" ("+selectedPids.length+")";
+    }else{el.style.display="none";badge.textContent="";if(goatBadge)goatBadge.textContent=""}
 }
 function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
 function go(id){window.location.href="/product/"+id}
 function reload(){P=[];C=[];sinceId=0;totalV=0;try{sessionStorage.removeItem("kp_cache")}catch(e){}document.getElementById("grid").innerHTML="<div class='loading'><div class='spinner'></div>Chargement...</div>";load()}
 document.getElementById("q").oninput=filter;
 document.getElementById("f").onchange=filter;
+
+/* ══════ BULK GOAT PHOTOS ══════ */
+function openBulkGoat(){
+    document.getElementById("bulkGoatModal").style.display="block";
+    document.getElementById("goatSel").textContent=selectedPids.length;
+    document.getElementById("goatTotal").textContent=P.length;
+    document.getElementById("bulkGoatStatus").style.display="none";
+    var btn=document.getElementById("bulkGoatBtn");btn.disabled=false;
+    btn.innerHTML="&#128247; Lancer le remplacement";
+    btn.style.background="linear-gradient(135deg,#9b59b6,#8e44ad)";
+    if(selectedPids.length>0)document.querySelector('input[name="goatScope"][value="selection"]').checked=true;
+    else document.querySelector('input[name="goatScope"][value="all"]').checked=true;
+}
+function closeBulkGoat(){document.getElementById("bulkGoatModal").style.display="none"}
+
+function startBulkGoat(){
+    var scope=document.querySelector('input[name="goatScope"]:checked').value;
+    var pids=(scope==="selection")?selectedPids.slice():P.map(function(p){return p.id});
+    if(!pids.length){toast("Aucun produit selectionne","error");return}
+    
+    // Construire la liste des produits avec SKU
+    var products=[];
+    for(var i=0;i<pids.length;i++){
+        for(var j=0;j<P.length;j++){
+            if(P[j].id===pids[i]){
+                var sku=(P[j].variants&&P[j].variants[0])?P[j].variants[0].sku||"":"";
+                if(sku)products.push({id:P[j].id,title:P[j].title,sku:sku});
+                break;
+            }
+        }
+    }
+    if(!products.length){toast("Aucun produit avec un SKU","error");return}
+    
+    var btn=document.getElementById("bulkGoatBtn");
+    btn.disabled=true;btn.innerHTML="<span class='spinner' style='width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px'></span>En cours...";
+    document.getElementById("bulkGoatStatus").style.display="block";
+    document.getElementById("bulkGoatLog").innerHTML="";
+    
+    var done=0,ok=0,fail=0,skipped=0;
+    var total=products.length;
+    
+    function updateProgress(){
+        document.getElementById("bulkGoatBar").style.width=Math.round(done/total*100)+"%";
+        document.getElementById("bulkGoatTxt").textContent=done+"/"+total+" — "+ok+" ✅ "+fail+" ❌ "+(skipped?" "+skipped+" ⏭":"");
+    }
+    
+    function addLog(msg,color){
+        var log=document.getElementById("bulkGoatLog");
+        log.innerHTML+="<div style='color:"+(color||"#888")+"'>"+msg+"</div>";
+        log.scrollTop=log.scrollHeight;
+    }
+    
+    function processNext(idx){
+        if(idx>=products.length){
+            btn.innerHTML="✅ Termin&eacute;!";btn.style.background="#00ff88";btn.style.color="#000";
+            addLog("\\n🏁 Termin\\u00e9 : "+ok+" succ\\u00e8s, "+fail+" erreurs, "+skipped+" ignor\\u00e9s","#00ff88");
+            return;
+        }
+        var p=products[idx];
+        addLog("📷 "+p.title+" ("+p.sku+")...");
+        updateProgress();
+        
+        // Étape 1 : récupérer les images GOAT
+        fetch("/api/goat/images?sku="+encodeURIComponent(p.sku))
+        .then(function(r){return r.json()})
+        .then(function(d){
+            if(d.error||!d.images||!d.images.length){
+                addLog("  ⏭ Pas d'images GOAT trouv\\u00e9es","#ff9f43");
+                skipped++;done++;updateProgress();
+                setTimeout(function(){processNext(idx+1)},300);
+                return;
+            }
+            addLog("  "+d.images.length+" images trouv\\u00e9es, remplacement...");
+            
+            // Étape 2 : appliquer les images
+            fetch("/api/goat/apply",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({product_id:p.id,images:d.images})
+            })
+            .then(function(r){return r.json()})
+            .then(function(r){
+                if(r.success){
+                    addLog("  ✅ "+r.added+" photos remplac\\u00e9es","#00ff88");
+                    ok++;
+                }else{
+                    addLog("  ❌ "+r.error,"#ff4757");
+                    fail++;
+                }
+                done++;updateProgress();
+                setTimeout(function(){processNext(idx+1)},500);
+            })
+            .catch(function(e){
+                addLog("  ❌ "+e.message,"#ff4757");
+                fail++;done++;updateProgress();
+                setTimeout(function(){processNext(idx+1)},500);
+            });
+        })
+        .catch(function(e){
+            addLog("  ❌ "+e.message,"#ff4757");
+            fail++;done++;updateProgress();
+            setTimeout(function(){processNext(idx+1)},500);
+        });
+    }
+    
+    addLog("🚀 D\\u00e9marrage : "+products.length+" produits avec SKU sur "+pids.length+" s\\u00e9lectionn\\u00e9s","#9b59b6");
+    processNext(0);
+}
 
 /* ══════ CORRECTOR ══════ */
 function toggleCorAll(){var c=document.getElementById("corAll").checked;var f=document.querySelectorAll(".corF");for(var i=0;i<f.length;i++)f[i].checked=c}
