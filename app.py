@@ -167,24 +167,95 @@ def goat_search(sku):
     }
 
 def goat_get_product_images(slug):
-    """Récupère TOUTES les images d'un produit via web-api. Gère les produits à 1 seule image."""
+    """Récupère TOUTES les images d'un produit via web-api. Cherche dans tous les champs possibles."""
     raw = _goat_get(f"{GOAT_PRODUCT_API}/{slug}")
     if not raw: return []
     try: data = json.loads(raw)
     except: return []
+    
     images = []
-    # 1. Images de galerie (multi-angles)
+    
+    # Log toutes les clés de la réponse pour debug
+    log.info(f"[GOAT] API response keys for {slug}: {list(data.keys())}")
+    
+    # 1. Images de galerie (productTemplateExternalPictures) - champ historique
     for pic in data.get('productTemplateExternalPictures', []):
-        url = pic.get('mainPictureUrl', '')
-        if url and url not in images: images.append(url)
-    # 2. Fallback : image principale (produits avec 1 seule photo, ex: Salomon XT-6)
+        for key in ['mainPictureUrl', 'pictureUrl', 'originalPictureUrl', 'gridPictureUrl']:
+            url = pic.get(key, '')
+            if url and url not in images:
+                images.append(url)
+                break  # Prendre la meilleure URL de chaque picture object
+    
+    # 2. Chercher dans inner/external pictures (variantes du nom de clé)
+    for field_name in ['innerPictures', 'externalPictures', 'pictures', 'productImages', 'galleryPictures']:
+        for pic in data.get(field_name, []):
+            if isinstance(pic, str):
+                if pic and pic not in images: images.append(pic)
+            elif isinstance(pic, dict):
+                for key in ['mainPictureUrl', 'pictureUrl', 'originalPictureUrl', 'gridPictureUrl', 'url', 'src']:
+                    url = pic.get(key, '')
+                    if url and url not in images:
+                        images.append(url)
+                        break
+    
+    # 3. Chercher dans les variants/sizes qui peuvent avoir leurs propres images
+    for variant in data.get('productTemplateVariants', data.get('variants', [])):
+        if isinstance(variant, dict):
+            for key in ['mainPictureUrl', 'pictureUrl', 'originalPictureUrl']:
+                url = variant.get(key, '')
+                if url and url not in images:
+                    images.append(url)
+                    break
+    
+    # 4. Scan récursif : chercher TOUTES les URLs d'images dans la réponse complète
+    if len(images) <= 1:
+        log.info(f"[GOAT] Only {len(images)} images found via standard fields, scanning full response...")
+        all_urls = _extract_all_image_urls(data)
+        for url in all_urls:
+            if url not in images:
+                images.append(url)
+    
+    # 5. Fallback : image principale seule
     if not images:
-        picture_url = data.get('pictureUrl', '')
-        if picture_url:
-            images.append(picture_url)
-            log.info(f"[GOAT] Single image product, using pictureUrl")
+        for key in ['pictureUrl', 'mainPictureUrl', 'originalPictureUrl', 'gridPictureUrl']:
+            url = data.get(key, '')
+            if url:
+                images.append(url)
+                log.info(f"[GOAT] Single image product, using {key}")
+                break
+    
     log.info(f"[GOAT] Found {len(images)} images for {slug}")
     return images
+
+
+def _extract_all_image_urls(data, depth=0):
+    """Extrait récursivement toutes les URLs d'images GOAT d'un objet JSON."""
+    urls = []
+    if depth > 5: return urls  # Limiter la profondeur
+    
+    if isinstance(data, str):
+        # Vérifier si c'est une URL d'image GOAT (incluant les CDNs)
+        if data.startswith('http') and \
+           ('goat.com' in data or 'goatapp.com' in data or 'editorial.goat' in data or 'image.goat' in data) and \
+           any(ext in data.lower() for ext in ['.png', '.jpg', '.jpeg', '.webp']):
+            urls.append(data)
+        # Aussi détecter les URLs d'images génériques avec des patterns GOAT
+        elif data.startswith('http') and '/product_template' in data and \
+             any(ext in data.lower() for ext in ['.png', '.jpg', '.jpeg', '.webp']):
+            urls.append(data)
+    elif isinstance(data, dict):
+        for key, val in data.items():
+            # Ignorer les champs qui ne sont clairement pas des images
+            if key in ('id', 'slug', 'sku', 'name', 'brand', 'description', 'handle', 
+                       'createdAt', 'updatedAt', 'releaseDate', 'color', 'designer',
+                       'category', 'sizeRange', 'retailPrice', 'estimatedMarketValue'):
+                continue
+            urls.extend(_extract_all_image_urls(val, depth + 1))
+    elif isinstance(data, list):
+        for item in data:
+            urls.extend(_extract_all_image_urls(item, depth + 1))
+    
+    return urls
 
 def get_goat_images(sku):
     """Récupère les images GOAT pour un SKU. Gère les SKU multiples (ex: 0951301/0951303)."""
@@ -2943,6 +3014,67 @@ def api_goat_images():
         'images': result.get('images', []),
         'multi': False
     })
+
+
+@app.route('/api/goat/debug')
+def api_goat_debug():
+    """Debug: voir la réponse brute de l'API GOAT pour un SKU ou slug."""
+    sku = request.args.get('sku', '').strip()
+    slug = request.args.get('slug', '').strip()
+    
+    result = {'sku': sku, 'slug': slug}
+    
+    # Si on a un SKU, chercher le slug via Algolia
+    if sku and not slug:
+        product = goat_search(sku)
+        if product:
+            result['algolia'] = product
+            slug = product.get('slug', '')
+        else:
+            result['algolia'] = None
+            return jsonify(result)
+    
+    if not slug:
+        return jsonify({'error': 'Fournir sku= ou slug='}), 400
+    
+    result['slug'] = slug
+    
+    # Récupérer la réponse brute de l'API product_templates
+    raw = _goat_get(f"{GOAT_PRODUCT_API}/{slug}")
+    if not raw:
+        result['api_error'] = 'Pas de réponse de GOAT'
+        return jsonify(result)
+    
+    try:
+        data = json.loads(raw)
+    except:
+        result['api_error'] = 'JSON invalide'
+        result['raw_response'] = raw[:2000]
+        return jsonify(result)
+    
+    # Résumé de la structure
+    result['api_keys'] = list(data.keys())
+    result['api_keys_types'] = {k: type(v).__name__ + (f'[{len(v)}]' if isinstance(v, (list, dict)) else '') for k, v in data.items()}
+    
+    # Extraire toutes les clés qui contiennent "picture" ou "image"
+    image_fields = {}
+    for k, v in data.items():
+        kl = k.lower()
+        if 'picture' in kl or 'image' in kl or 'photo' in kl or 'gallery' in kl:
+            if isinstance(v, str):
+                image_fields[k] = v
+            elif isinstance(v, list):
+                image_fields[k] = v[:5]  # Limiter à 5 pour la lisibilité
+            elif isinstance(v, dict):
+                image_fields[k] = v
+    result['image_fields'] = image_fields
+    
+    # Résultat de notre extraction
+    images = goat_get_product_images(slug)
+    result['extracted_images'] = images
+    result['extracted_count'] = len(images)
+    
+    return jsonify(result)
 
 
 @app.route('/api/goat/apply', methods=['POST'])
