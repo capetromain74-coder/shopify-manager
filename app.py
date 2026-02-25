@@ -221,15 +221,9 @@ def goat_get_product_images(slug):
     except:
         log.warning(f"[GOAT] API response not JSON for {slug} (likely Cloudflare 1020)")
         return []
-    images = []
     
-    # 1. Image principale (_00) en premier
-    main_url = data.get('pictureUrl', '') or data.get('mainPictureUrl', '') or data.get('originalPictureUrl', '')
-    if main_url:
-        main_url = _goat_upgrade_image_url(main_url)
-        images.append(main_url)
-    
-    # 2. Images de galerie - chercher dans plusieurs champs possibles
+    # 1. Collecter les images galerie (multi-angles: _01, _02, etc.)
+    gallery_images = []
     gallery_fields = [
         'productTemplateExternalPictures',
         'externalPictures',
@@ -250,15 +244,23 @@ def goat_get_product_images(slug):
                 continue
             if url:
                 url = _goat_upgrade_image_url(url)
-                if url not in images:
-                    images.append(url)
+                if url not in gallery_images:
+                    gallery_images.append(url)
     
-    # 3. Log
-    if not images:
-        log.info(f"[GOAT] No images found for {slug}")
-    else:
-        log.info(f"[GOAT] Found {len(images)} images for {slug}")
-    return images
+    # 2. Si la galerie a des images → utiliser UNIQUEMENT la galerie (pas la _00)
+    if gallery_images:
+        log.info(f"[GOAT] Found {len(gallery_images)} gallery images for {slug} (skipping main _00)")
+        return gallery_images
+    
+    # 3. Sinon fallback sur l'image principale seule
+    main_url = data.get('pictureUrl', '') or data.get('mainPictureUrl', '') or data.get('originalPictureUrl', '')
+    if main_url:
+        main_url = _goat_upgrade_image_url(main_url)
+        log.info(f"[GOAT] Single image product for {slug}, will need resize")
+        return [main_url]
+    
+    log.info(f"[GOAT] No images found for {slug}")
+    return []
 
 
 def _discover_goat_image_angles(base_url):
@@ -3344,23 +3346,110 @@ def api_goat_apply():
             shopify_request(f'products/{product_id}/images/{img["id"]}.json', 'DELETE')
             time.sleep(0.3)
         
+        # Si une seule image (produit sans galerie), la redimensionner en 750x500
+        needs_resize = len(images) == 1 and '_00.' in images[0]
+        
         # Add new images
         added = 0
         for i, img_url in enumerate(images):
-            result = shopify_request(f'products/{product_id}/images.json', 'POST', {
-                'image': {'src': img_url, 'position': i + 1}
-            })
+            if needs_resize:
+                # Télécharger et redimensionner en 750x500 fond blanc
+                b64 = _resize_goat_image_to_750x500(img_url)
+                if b64:
+                    result = shopify_request(f'products/{product_id}/images.json', 'POST', {
+                        'image': {'attachment': b64, 'position': i + 1, 'filename': f'goat_{product_id}_{i+1}.png'}
+                    })
+                else:
+                    # Fallback: envoyer l'URL telle quelle
+                    result = shopify_request(f'products/{product_id}/images.json', 'POST', {
+                        'image': {'src': img_url, 'position': i + 1}
+                    })
+            else:
+                result = shopify_request(f'products/{product_id}/images.json', 'POST', {
+                    'image': {'src': img_url, 'position': i + 1}
+                })
             if result:
                 added += 1
             time.sleep(0.3)
         
-        log.info(f"[GOAT Apply] Added {added} images to product {product_id}")
+        log.info(f"[GOAT Apply] Added {added} images to product {product_id} (resized={needs_resize})")
         
-        return jsonify({'success': True, 'added': added})
+        return jsonify({'success': True, 'added': added, 'resized': needs_resize})
         
     except Exception as e:
         log.error(f"[GOAT Apply] Error: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+def _resize_goat_image_to_750x500(image_url):
+    """Télécharge une image GOAT et la place centrée sur un canvas 750x500 fond blanc.
+    Retourne le base64 PNG pour envoi à Shopify, ou None en cas d'erreur."""
+    try:
+        from PIL import Image
+        from io import BytesIO
+        import base64
+        
+        # Télécharger l'image
+        sess = _get_goat_session()
+        if sess:
+            try:
+                r = sess.get(image_url, timeout=15)
+                if r.status_code == 200:
+                    img_data = r.content
+                else:
+                    return None
+            except:
+                return None
+        else:
+            import subprocess
+            result = subprocess.run(
+                ["curl", "-s", "-m", "15", "-L", image_url,
+                 "-H", "User-Agent: Mozilla/5.0"],
+                capture_output=True, timeout=20)
+            if result.returncode != 0 or not result.stdout:
+                return None
+            img_data = result.stdout
+        
+        # Ouvrir l'image source
+        src = Image.open(BytesIO(img_data)).convert('RGBA')
+        src_w, src_h = src.size
+        log.info(f"[GOAT Resize] Source: {src_w}x{src_h}")
+        
+        # Canvas cible: 750x500 fond blanc
+        target_w, target_h = 750, 500
+        canvas = Image.new('RGB', (target_w, target_h), (255, 255, 255))
+        
+        # Calculer la taille de la sneaker pour qu'elle rentre avec un peu de padding
+        padding = 30  # Pixels de marge autour
+        max_w = target_w - (padding * 2)
+        max_h = target_h - (padding * 2)
+        
+        # Ratio proportionnel (sans déformer)
+        ratio = min(max_w / src_w, max_h / src_h)
+        new_w = int(src_w * ratio)
+        new_h = int(src_h * ratio)
+        
+        # Redimensionner la sneaker
+        resized = src.resize((new_w, new_h), Image.LANCZOS)
+        
+        # Centrer sur le canvas
+        x = (target_w - new_w) // 2
+        y = (target_h - new_h) // 2
+        
+        # Coller avec gestion de la transparence
+        canvas.paste(resized, (x, y), resized if resized.mode == 'RGBA' else None)
+        
+        # Convertir en base64 PNG
+        buffer = BytesIO()
+        canvas.save(buffer, format='PNG', quality=95)
+        b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        log.info(f"[GOAT Resize] Resized {src_w}x{src_h} -> {new_w}x{new_h} on 750x500 canvas")
+        return b64
+        
+    except Exception as e:
+        log.error(f"[GOAT Resize] Error: {e}")
+        return None
 
 
 # ══════════════════════════════════════════════════════════════
