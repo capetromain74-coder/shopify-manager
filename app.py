@@ -3454,10 +3454,12 @@ def _resize_goat_image_to_750x500(image_url):
         target_w, target_h = 750, 500
         canvas = Image.new('RGB', (target_w, target_h), (255, 255, 255))
         
-        # Calculer la taille de la sneaker pour qu'elle rentre avec un peu de padding
-        padding = 30  # Pixels de marge autour
-        max_w = target_w - (padding * 2)
-        max_h = target_h - (padding * 2)
+        # Cadrage façon GOAT : sneaker occupe ~85% de la largeur, centrée verticalement un poil bas
+        padding_h = 20   # Petit padding horizontal
+        padding_top = 15  # Petit padding en haut
+        padding_bottom = 25  # Un peu plus en bas (ombre/semelle)
+        max_w = target_w - (padding_h * 2)
+        max_h = target_h - padding_top - padding_bottom
         
         # Ratio proportionnel (sans déformer)
         ratio = min(max_w / src_w, max_h / src_h)
@@ -3467,9 +3469,9 @@ def _resize_goat_image_to_750x500(image_url):
         # Redimensionner la sneaker
         resized = src.resize((new_w, new_h), Image.LANCZOS)
         
-        # Centrer sur le canvas
+        # Centrer horizontalement, positionner verticalement avec le padding
         x = (target_w - new_w) // 2
-        y = (target_h - new_h) // 2
+        y = padding_top + (max_h - new_h) // 2
         
         # Coller avec gestion de la transparence
         canvas.paste(resized, (x, y), resized if resized.mode == 'RGBA' else None)
