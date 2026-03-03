@@ -12,6 +12,7 @@ from config import SITE_NAME, SITE_DOMAIN
 from data.descriptions import MODEL_DESCRIPTIONS, ICONIC_COLORWAYS, COLOR_KEYWORDS
 from data.mappings import MODEL_COLLECTIONS, BRAND_COLLECTIONS, EXCLUDED
 from services.shopify import shopify_request
+from services.goat_client import search as goat_search, get_product_details as goat_get_details
 
 log = logging.getLogger('kpshoes.seo')
 
@@ -627,6 +628,178 @@ def extract_clothing_color(title):
     return color.strip()
 
 
+# ══════════════════════════════════════════════════════════════
+# DESCRIPTION BASEE SUR LES DONNEES GOAT (matières, couleurs, story)
+# ══════════════════════════════════════════════════════════════
+
+_MATERIAL_FR = {
+    'leather': 'cuir', 'full-grain leather': 'cuir pleine fleur', 'tumbled leather': 'cuir grainé',
+    'patent leather': 'cuir verni', 'cracked leather': 'cuir craquelé',
+    'suede': 'daim', 'nubuck': 'nubuck', 'mesh': 'mesh', 'canvas': 'toile',
+    'synthetic': 'synthétique', 'nylon': 'nylon', 'rubber': 'caoutchouc',
+    'foam': 'mousse', 'textile': 'textile', 'felt': 'feutre', 'denim': 'denim',
+    'fur': 'fourrure', 'faux fur': 'fausse fourrure', 'hairy suede': 'daim poilu',
+    'pony hair': 'poil de poney', 'corduroy': 'velours côtelé', 'satin': 'satin',
+    'woven': 'tissé', 'knit': 'maille tricotée', 'flyknit': 'Flyknit',
+    'primeknit': 'Primeknit', 'gore-tex': 'Gore-Tex', 'ripstop': 'ripstop',
+}
+
+_COLOR_FR = {
+    'white': 'blanc', 'black': 'noir', 'red': 'rouge', 'blue': 'bleu',
+    'green': 'vert', 'grey': 'gris', 'gray': 'gris', 'brown': 'marron',
+    'cream': 'crème', 'beige': 'beige', 'pink': 'rose', 'orange': 'orange',
+    'yellow': 'jaune', 'purple': 'violet', 'gold': 'doré', 'silver': 'argenté',
+    'sail': 'écru', 'bone': 'ivoire', 'gum': 'gomme', 'tan': 'havane',
+    'navy': 'bleu marine', 'olive': 'olive', 'burgundy': 'bordeaux',
+    'off-white': 'blanc cassé', 'off white': 'blanc cassé', 'light blue': 'bleu ciel',
+    'dark grey': 'gris foncé', 'light grey': 'gris clair', 'dark brown': 'marron foncé',
+    'university blue': 'bleu UNC', 'royal blue': 'bleu royal', 'wolf grey': 'gris loup',
+    'cool grey': 'gris frais', 'pure platinum': 'platine', 'phantom': 'phantom',
+    'mushroom': 'champignon', 'sand': 'sable', 'chalk': 'craie', 'smoke': 'fumée',
+    'infrared': 'infrarouge', 'volt': 'volt', 'mint': 'menthe', 'coral': 'corail',
+    'cobalt': 'cobalt', 'teal': 'sarcelle', 'khaki': 'kaki', 'natural': 'naturel',
+}
+
+
+def _translate_colors(color_str):
+    """Traduit une chaîne de couleurs GOAT en français."""
+    if not color_str:
+        return ''
+    parts = [c.strip() for c in color_str.replace('/', ',').replace('-', ' ').split(',') if c.strip()]
+    translated = []
+    for p in parts:
+        p_lower = p.strip().lower()
+        found = False
+        # Essayer les clés multi-mots d'abord (ex: "off white", "light blue")
+        for en, fr in sorted(_COLOR_FR.items(), key=lambda x: -len(x[0])):
+            if en in p_lower:
+                translated.append(fr)
+                found = True
+                break
+        if not found and p.strip():
+            translated.append(p.strip())  # Garder tel quel si pas de traduction
+    return ', '.join(translated) if translated else ''
+
+
+def _translate_materials(material_str):
+    """Traduit une chaîne de matières GOAT en français."""
+    if not material_str:
+        return ''
+    m_lower = material_str.lower()
+    found_materials = []
+    # Chercher les matières connues (multi-mots d'abord)
+    for en, fr in sorted(_MATERIAL_FR.items(), key=lambda x: -len(x[0])):
+        if en in m_lower:
+            if fr not in found_materials:
+                found_materials.append(fr)
+    return ' et '.join(found_materials[:3]) if found_materials else ''
+
+
+def _fetch_goat_details(sku):
+    """Cherche un produit sur GOAT par SKU et retourne ses détails texte."""
+    try:
+        product = goat_search(sku)
+        if product and product.get('slug'):
+            details = goat_get_details(product['slug'])
+            if details:
+                log.info(f"[SEO] Got GOAT details for SKU {sku}")
+                return details
+    except Exception as e:
+        log.warning(f"[SEO] GOAT details fetch failed for {sku}: {e}")
+    return None
+
+
+def build_goat_description(goat_details, title, colorway):
+    """Construit une description produit spécifique à partir des données GOAT.
+    Retourne (description_str, type_str) ou (None, None) si données insuffisantes."""
+    if not goat_details:
+        return None, None
+
+    color_raw = goat_details.get('color', '')
+    materials = goat_details.get('upper_material', '')
+    midsole = goat_details.get('midsole', '')
+    story = goat_details.get('story', '')
+    details = goat_details.get('details', '')
+    nickname = goat_details.get('nickname', '')
+
+    # ── Option 1 : GOAT a une story textuelle — l'utiliser directement ──
+    if story and len(story) > 60:
+        # Nettoyer et tronquer si trop long
+        story_clean = story.strip()
+        if len(story_clean) > 400:
+            # Couper à la dernière phrase complète avant 400 chars
+            cut = story_clean[:400].rfind('.')
+            if cut > 200:
+                story_clean = story_clean[:cut + 1]
+            else:
+                story_clean = story_clean[:400] + '...'
+        return story_clean, 'goat_story'
+
+    # ── Option 2 : Construire à partir des matières + couleurs ──
+    colors_fr = _translate_colors(color_raw)
+    materials_fr = _translate_materials(materials)
+    midsole_fr = _translate_materials(midsole) if midsole else ''
+
+    parts = []
+
+    # Phrase principale sur les matières et couleurs
+    if materials_fr and colors_fr:
+        parts.append(f'Habillée d\'une tige en {materials_fr} dans les tons {colors_fr}')
+    elif materials_fr:
+        parts.append(f'Dotée d\'une tige en {materials_fr}')
+    elif colors_fr:
+        parts.append(f'Proposée dans les tons {colors_fr}')
+
+    # Semelle
+    if midsole_fr:
+        parts.append(f'une semelle en {midsole_fr}')
+    elif midsole and 'gum' in midsole.lower():
+        parts.append('une semelle en gomme')
+    elif midsole and 'air' in midsole.lower():
+        parts.append('une semelle Air pour un amorti optimal')
+
+    # Détails supplémentaires
+    if details and len(details) > 30:
+        # Extraire des infos utiles des détails GOAT
+        d_lower = details.lower()
+        extras = []
+        if 'gum' in d_lower and 'gomme' not in ' '.join(parts):
+            extras.append('une outsole en gomme')
+        if 'reflective' in d_lower:
+            extras.append('des éléments réfléchissants')
+        if 'embroidered' in d_lower or 'embroidery' in d_lower:
+            extras.append('des broderies sur les empiècements')
+        if 'perforated' in d_lower or 'perforation' in d_lower:
+            extras.append('des perforations sur la tige')
+        if 'translucent' in d_lower:
+            extras.append('des éléments translucides')
+        if 'aged' in d_lower or 'vintage' in d_lower or 'yellowed' in d_lower:
+            extras.append('un traitement vieilli vintage')
+        if 'woven' in d_lower:
+            extras.append('un tissage travaillé')
+        if 'print' in d_lower or 'printed' in d_lower:
+            extras.append('des motifs imprimés')
+        if 'animal' in d_lower or 'cow' in d_lower or 'leopard' in d_lower or 'snake' in d_lower or 'pony' in d_lower:
+            extras.append('un imprimé animal')
+        if extras:
+            parts.extend(extras[:2])
+
+    if not parts:
+        return None, None
+
+    # Assembler la phrase
+    if len(parts) == 1:
+        sentence = parts[0] + ', cette paire affirme un style distinctif.'
+    else:
+        sentence = parts[0] + ', cette édition arbore ' + ', '.join(parts[1:]) + '.'
+
+    # Première lettre en majuscule
+    sentence = sentence[0].upper() + sentence[1:]
+
+    log.info(f"[SEO] Built GOAT description: {sentence[:80]}...")
+    return sentence, 'goat_details'
+
+
 def generate_body_html(product, collections):
     title = product.get('title', '')
     brand = extract_brand(title)
@@ -677,16 +850,28 @@ def generate_body_html(product, collections):
         
         return ''.join(lines)
     
-    # ── SNEAKERS (logique existante) ──
+    # ── SNEAKERS ──
     model_desc = get_model_description(title)
     colorway = extract_colorway(title)
-    
-    # Obtenir la phrase + le type (color, collab, edition)
-    if colorway:
+
+    # ── Essayer GOAT en priorité pour une description spécifique ──
+    goat_details = None
+    goat_sentence = None
+    cw_type = 'color'
+    if sku:
+        goat_details = _fetch_goat_details(sku)
+        if goat_details:
+            goat_sentence, goat_type = build_goat_description(goat_details, title, colorway)
+            if goat_sentence:
+                cw_type = goat_type
+                log.info(f"[SEO] Using GOAT description for {title}")
+
+    # Fallback : description IA ou générique si GOAT n'a rien donné
+    color_sentence = goat_sentence
+    if not color_sentence and colorway:
         color_sentence, cw_type = generate_color_description_ai(title, colorway, brand, model_desc)
-    else:
+    elif not color_sentence:
         color_sentence, cw_type = '', 'color'
-    
     lines = []
     
     # Paragraphe 1: Introduction avec lien collection
@@ -712,6 +897,16 @@ def generate_body_html(product, collections):
             tech_items.append(f'<li><strong>Édition :</strong> {colorway}</li>')
         else:
             tech_items.append(f'<li><strong>Coloris :</strong> {colorway}</li>')
+    # Ajouter matière et couleur GOAT si disponibles
+    if goat_details:
+        if goat_details.get('upper_material'):
+            mat_fr = _translate_materials(goat_details['upper_material'])
+            if mat_fr:
+                tech_items.append(f'<li><strong>Matière :</strong> {mat_fr.capitalize()}</li>')
+        if goat_details.get('color'):
+            col_fr = _translate_colors(goat_details['color'])
+            if col_fr:
+                tech_items.append(f'<li><strong>Couleurs :</strong> {col_fr.capitalize()}</li>')
     lines.append('<ul style="list-style:none;padding-left:0;">' + ''.join(tech_items) + '</ul>')
     
     # Paragraphe 5: Garanties KP SHOES
@@ -728,6 +923,3 @@ def update_seo_field(pid, field, value):
     elif field == 'meta_description':
         shopify_request(f'products/{pid}/metafields.json', 'POST', {'metafield': {'namespace': 'global', 'key': 'description_tag', 'value': value, 'type': 'single_line_text_field'}})
     return True
-
-
-
