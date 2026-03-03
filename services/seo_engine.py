@@ -601,7 +601,7 @@ def generate_story_ai(title, brand, colorway, model_desc, goat_data=None):
             'anthropic-version': '2023-06-01'
         }
         body = {
-            'model': 'claude-sonnet-4-20250514',
+            'model': 'claude-haiku-4-5-20251001',
             'max_tokens': 300,
             'messages': [{'role': 'user', 'content': prompt}]
         }
@@ -614,13 +614,21 @@ def generate_story_ai(title, brand, colorway, model_desc, goat_data=None):
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
-        with urlopen(req, context=ctx, timeout=20) as r:
-            result = _json.loads(r.read().decode('utf-8'))
-            if result.get('content') and result['content'][0].get('text'):
-                story = result['content'][0]['text'].strip()
-                if len(story) > 50:
-                    log.info(f"[AI Story] Generated story for {title}")
-                    return story
+        try:
+            with urlopen(req, context=ctx, timeout=20) as r:
+                result = _json.loads(r.read().decode('utf-8'))
+                if result.get('content') and result['content'][0].get('text'):
+                    story = result['content'][0]['text'].strip()
+                    if len(story) > 50:
+                        log.info(f"[AI Story] Generated story for {title}")
+                        return story
+        except Exception as http_err:
+            # Lire le body d'erreur pour debug
+            if hasattr(http_err, 'read'):
+                err_body = http_err.read().decode('utf-8', 'replace')
+                log.error(f"[AI Story] HTTP Error: {http_err} - Body: {err_body[:500]}")
+            else:
+                log.error(f"[AI Story] Error: {http_err}")
     except Exception as e:
         log.error(f"[AI Story] Error: {e}")
     return None
@@ -653,7 +661,7 @@ Marque : {brand}
             'anthropic-version': '2023-06-01'
         }
         data = {
-            'model': 'claude-sonnet-4-20250514',
+            'model': 'claude-haiku-4-5-20251001',
             'max_tokens': 150,
             'messages': [{'role': 'user', 'content': prompt}]
         }
