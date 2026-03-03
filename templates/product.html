@@ -187,7 +187,7 @@ function regenSelected(){
     toast("Mise a jour...","success");
     fetch("/api/seo/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid,fields:selectedFields})})
         .then(function(r){return r.json();}).then(function(d){
-            if(d.success){toast("Mis a jour!","success");setTimeout(function(){location.reload();},1500);}
+            if(d.success){toast("Mis a jour: "+d.updated.join(", "),"success");setTimeout(function(){location.reload();},2000);}
             else{toast("Erreur","error");}
         }).catch(function(){toast("Erreur","error");});
 }
@@ -196,7 +196,11 @@ function regenAll(){
     toast("Regeneration...","success");
     fetch("/api/seo/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid})})
         .then(function(r){return r.json();}).then(function(d){
-            if(d.success){toast("SEO mis a jour!","success");setTimeout(function(){location.reload();},1500);}
+            if(d.success){
+                var src=d.source==="goat"?"GOAT":"generique";
+                toast("SEO mis a jour! (source: "+src+")","success");
+                setTimeout(function(){location.reload();},2000);
+            }
             else{toast("Erreur","error");}
         }).catch(function(){toast("Erreur","error");});
 }
