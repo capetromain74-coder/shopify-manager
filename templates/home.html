@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KP SHOES - Gestion</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
+.hd{background:#111;padding:15px 20px;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:20px;font-weight:bold;color:#00ff88}
+.stats{display:flex;gap:15px;padding:15px 20px;background:#0d0d14;flex-wrap:wrap}
+.st{background:#1a1a2e;padding:12px 20px;border-radius:8px;text-align:center}
+.st .v{font-size:24px;font-weight:bold;color:#00ff88}
+.st .l{font-size:10px;color:#666;margin-top:3px}
+.main{max-width:1400px;margin:0 auto;padding:20px}
+.toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.search{flex:1;min-width:200px;padding:10px 15px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:#fff}
+.filter{padding:10px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:#fff}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px}
+.btn-s{background:#333;color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:15px}
+.card{background:#111;border:1px solid #222;border-radius:10px;overflow:hidden;cursor:pointer;transition:all 0.2s}
+.card:hover{border-color:#00ff88}
+.card img{width:100%;height:180px;object-fit:cover;background:#1a1a2e}
+.card-body{padding:12px}
+.card-title{font-size:12px;font-weight:600;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-sku{font-size:10px;color:#666;margin-bottom:8px}
+.card-meta{display:flex;justify-content:space-between;align-items:center}
+.card-price{font-size:14px;font-weight:bold;color:#00ff88}
+.badge{padding:3px 8px;border-radius:10px;font-size:9px;font-weight:600}
+.badge.excellent{background:#00ff8833;color:#00ff88}
+.badge.good{background:#00cc6a33;color:#00cc6a}
+.badge.warning{background:#ffa50033;color:#ffa500}
+.badge.poor{background:#ff475733;color:#ff4757}
+.loading{text-align:center;padding:60px;color:#666}
+.spinner{width:35px;height:35px;border:3px solid #222;border-top-color:#00ff88;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 15px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.msg{padding:12px 20px;background:#00ff8815;color:#00ff88;border-radius:8px;margin-bottom:15px;display:none;font-size:13px}
+.msg.on{display:block}
+.modal-bg{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto}
+.modal-box{max-width:650px;margin:40px auto;background:#1a1a2e;border-radius:12px;padding:30px;color:#fff}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer}
+.opt-group{margin-bottom:20px}
+.opt-label{font-size:13px;font-weight:600;color:#888;margin-bottom:10px}
+.opt-radio,.opt-check{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;padding:8px 12px;background:#111;border-radius:6px;margin-bottom:6px}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-left:10px}
+.opt-sub{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:8px;background:#0d0d14;border-radius:6px}
+.prog-bar{background:#333;border-radius:6px;overflow:hidden;height:8px}
+.prog-fill{width:0%;height:100%;background:linear-gradient(90deg,#00ff88,#00cc6a);transition:width .3s}
+.issue-row{display:flex;align-items:center;gap:10px;padding:10px;background:#111;border-radius:6px;margin-bottom:6px}
+.issue-bar{background:#333;border-radius:4px;height:6px;margin-top:4px}
+</style>
+</head>
+<body>
+<header class="hd">
+<div class="logo">KP SHOES</div>
+<div style="display:flex;gap:10px;align-items:center">
+<a href="/blog-generator" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600">&#10024; Blog</a>
+<span style="color:#666;font-size:12px">V8</span>
+</div>
+</header>
+<div class="stats">
+<div class="st"><div class="v" id="totalP">-</div><div class="l">PRODUITS</div></div>
+<div class="st"><div class="v" id="totalV">-</div><div class="l">VARIANTES</div></div>
+<div class="st"><div class="v" id="seoAvg">-</div><div class="l">SEO MOY.</div></div>
+<div class="st" style="cursor:pointer" onclick="window.location='/collections'"><div class="v" id="totalC">-</div><div class="l">COLLECTIONS &#8594;</div></div>
+</div>
+<main class="main">
+<div class="msg" id="msg"></div>
+<div class="toolbar">
+<input type="text" class="search" id="q" placeholder="Rechercher un produit...">
+<select class="filter" id="f"><option value="">Tous</option><option value="excellent">Excellent</option><option value="good">Bon</option><option value="warning">Moyen</option><option value="poor">Faible</option></select>
+<button class="btn btn-s" onclick="reload()">&#8635; Actualiser</button>
+<button class="btn btn-s" onclick="selectAll()">Tout cocher</button>
+<button class="btn" style="background:#00ff88;color:#000" onclick="openCorrector()">&#128295; Corriger<span id="selBadge"></span></button>
+<button class="btn" style="background:#9b59b6;color:#fff" onclick="openBulkGoat()">&#128247; Photos GOAT<span id="goatBadge"></span></button>
+<button class="btn" style="background:#3b82f6;color:#fff" onclick="openAnalyzer()">&#128270; Analyser</button>
+</div>
+<div id="selectCount" style="display:none;align-items:center;gap:10px;padding:8px 15px;background:#00ff8822;border-radius:8px;margin-bottom:15px;font-size:13px;color:#00ff88"></div>
+
+<!-- ══════ MODAL PHOTOS GOAT BULK ══════ -->
+<div class="modal-bg" id="bulkGoatModal">
+<div class="modal-box" style="max-width:600px">
+<div class="modal-head">
+<h2 style="margin:0;font-size:20px">&#128247; Remplacer les photos GOAT</h2>
+<button class="modal-close" onclick="closeBulkGoat()">&times;</button>
+</div>
+
+<div class="opt-group">
+<div class="opt-label">PORT&Eacute;E</div>
+<label class="opt-radio"><input type="radio" name="goatScope" value="selection" checked> S&eacute;lection uniquement (<span id="goatSel">0</span> coch&eacute;s)</label>
+<label class="opt-radio"><input type="radio" name="goatScope" value="all"> Tous les produits (<span id="goatTotal">0</span>)</label>
+</div>
+
+<div style="padding:15px 20px;font-size:13px;color:#aaa;line-height:1.6">
+<p style="margin:0 0 10px">Pour chaque produit, le bot va :</p>
+<p style="margin:0 0 5px">1. R&eacute;cup&eacute;rer le SKU du produit</p>
+<p style="margin:0 0 5px">2. Chercher les images sur GOAT</p>
+<p style="margin:0 0 5px">3. Remplacer toutes les photos par celles de GOAT</p>
+<p style="margin:10px 0 0;color:#ff9f43">&#9888; Les produits sans SKU seront ignor&eacute;s</p>
+</div>
+
+<div id="bulkGoatStatus" style="display:none;padding:10px 20px">
+<div class="prog-bar"><div class="prog-fill" id="bulkGoatBar"></div></div>
+<div id="bulkGoatTxt" style="text-align:center;font-size:12px;color:#aaa;margin-top:8px"></div>
+<div id="bulkGoatLog" style="max-height:200px;overflow-y:auto;margin-top:10px;font-size:11px;color:#888;font-family:monospace"></div>
+</div>
+
+<div style="padding:15px 20px;display:flex;gap:10px">
+<button class="btn btn-p" id="bulkGoatBtn" onclick="startBulkGoat()" style="flex:1;padding:14px;font-size:15px;background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff;font-weight:700;border:none;border-radius:8px;cursor:pointer">&#128247; Lancer le remplacement</button>
+<button class="btn" onclick="closeBulkGoat()" style="padding:14px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer">Annuler</button>
+</div>
+</div>
+</div>
+
+<!-- ══════ MODAL CORRIGER ══════ -->
+<div class="modal-bg" id="correctorModal">
+<div class="modal-box">
+<div class="modal-head">
+<h2 style="margin:0;font-size:20px">&#128295; Corriger le site</h2>
+<button class="modal-close" onclick="closeCorrector()">&times;</button>
+</div>
+
+<div class="opt-group">
+<div class="opt-label">PORT&Eacute;E</div>
+<label class="opt-radio"><input type="radio" name="corScope" value="all" checked> Tous les produits (<span id="corTotal">0</span>)</label>
+<label class="opt-radio"><input type="radio" name="corScope" value="selection"> S&eacute;lection uniquement (<span id="corSel">0</span> coch&eacute;s)</label>
+</div>
+
+<div class="opt-group">
+<div class="opt-label">QUE CORRIGER ?</div>
+<label class="opt-check" style="margin-bottom:8px"><input type="checkbox" id="corAll" onchange="toggleCorAll()" style="accent-color:#00ff88;width:18px;height:18px"> <strong>Tout s&eacute;lectionner</strong></label>
+<div class="opt-grid">
+<label class="opt-sub"><input type="checkbox" class="corF" value="body_html" style="accent-color:#00ff88"> &#128221; Description</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="meta_title" style="accent-color:#00ff88"> &#127991;&#65039; Meta Title</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="meta_description" style="accent-color:#00ff88"> &#128203; Meta Description</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="images_alt" style="accent-color:#00ff88"> &#128444;&#65039; Alt Photos</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="images_filename" style="accent-color:#00ff88"> &#128193; Nom Photos</label>
+</div>
+</div>
+
+<div id="corStatus" style="display:none;margin:15px 0;padding:12px;border-radius:8px;font-size:13px"></div>
+<div id="corProg" style="display:none;margin:15px 0">
+<div class="prog-bar"><div class="prog-fill" id="corBar"></div></div>
+<div id="corTxt" style="text-align:center;font-size:12px;color:#aaa;margin-top:6px"></div>
+</div>
+<div style="display:flex;gap:10px">
+<button id="corBtn" onclick="startCorrection()" style="flex:1;padding:14px;background:#00ff88;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">&#128640; Lancer la correction</button>
+<button onclick="closeCorrector()" style="padding:14px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer">Fermer</button>
+</div>
+</div>
+</div>
+
+<!-- ══════ MODAL ANALYSER ══════ -->
+<div class="modal-bg" id="analyzerModal">
+<div class="modal-box" style="max-width:600px">
+<div class="modal-head">
+<h2 style="margin:0;font-size:20px">&#128270; Analyse SEO du site</h2>
+<button class="modal-close" onclick="closeAnalyzer()">&times;</button>
+</div>
+<div id="azContent"></div>
+<div style="display:flex;gap:10px;margin-top:15px">
+<button onclick="closeAnalyzer()" style="padding:12px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer;width:100%">Fermer</button>
+</div>
+</div>
+</div>
+
+<div class="grid" id="grid"><div class="loading"><div class="spinner"></div>Chargement...</div></div>
+</main>
+<script>
+var P=[],C=[],sinceId=0,loading=false,totalV=0,selectedPids=[];
+
+function saveCache(){
+    try{
+        var lite=[];
+        for(var i=0;i<P.length;i++){
+            var p=P[i];
+            lite.push({id:p.id,title:p.title,handle:p.handle,vendor:p.vendor,product_type:p.product_type,
+                images:p.images?[{src:(p.images[0]||{}).src||"",alt:(p.images[0]||{}).alt||""}]:[],
+                variants:p.variants?[{sku:(p.variants[0]||{}).sku||"",price:(p.variants[0]||{}).price||""}]:[],
+                _lk:p._lk,_ds:p._ds,_img:p._img,_sc:p._sc,_seo:p._seo,tags:p.tags||""});
+        }
+        sessionStorage.setItem("kp_cache",JSON.stringify({P:lite,C:C,totalV:totalV,ts:Date.now()}));
+    }catch(e){try{sessionStorage.removeItem("kp_cache")}catch(e2){}}
+}
+function loadCache(){
+    try{
+        var d=JSON.parse(sessionStorage.getItem("kp_cache")||"null");
+        if(d&&d.P&&d.P.length>500&&(Date.now()-d.ts)<300000){
+            P=d.P;C=d.C;totalV=d.totalV;sinceId=P[P.length-1].id;
+            updateStats();filter();
+            document.getElementById("msg").className="msg";
+            return true;
+        }
+    }catch(e){}
+    return false;
+}
+
+function load(){
+    if(loading)return;loading=true;
+    document.getElementById("msg").textContent="Chargement... "+P.length+" produits";
+    document.getElementById("msg").className="msg on";
+    fetch("/api/products?since_id="+sinceId+"&limit=250").then(function(r){return r.json()}).then(function(d){
+        if(d.collections)C=d.collections;
+        if(d.products&&d.products.length>0){
+            for(var i=0;i<d.products.length;i++){
+                var p=d.products[i];
+                var b=(p.body_html||"").toLowerCase();
+                p._lk=b.indexOf("kpshoes.fr/collections/")>=0;
+                p._ds=(p.body_html||"").length>100;
+                var imgOk=true;
+                var titleFn=(p.title||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ /g,"_").replace(/[^\\w\\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+                if(p.images&&p.images.length>0){
+                    for(var j=0;j<p.images.length;j++){
+                        var alt=p.images[j].alt||"";
+                        var src=p.images[j].src||"";
+                        var fn=src.split("/").pop().split("?")[0];
+                        if(alt!==p.title||fn.indexOf(titleFn)<0){imgOk=false;break}
+                    }
+                }else{imgOk=false}
+                p._img=imgOk;
+                var hasSku=!!((p.variants||[])[0]||{}).sku;
+                var metaEst=(p._ds&&p._lk)?35:(p._ds?15:0);
+                p._sc=metaEst+(p._ds?15:0)+(p._lk?15:0)+(p._img?20:0)+(hasSku?10:0);
+                p._sc=Math.min(p._sc,100);
+                if(p._sc>=85)p._seo="excellent";else if(p._sc>=70)p._seo="good";else if(p._sc>=50)p._seo="warning";else p._seo="poor";
+                totalV+=(p.variants||[]).length;P.push(p);
+            }
+            sinceId=d.products[d.products.length-1].id;updateStats();filter();loading=false;
+            if(d.products.length>=250)setTimeout(load,100);else{document.getElementById("msg").className="msg";saveCache()}
+        }else{document.getElementById("msg").className="msg";loading=false;filter();saveCache()}
+    }).catch(function(e){document.getElementById("msg").textContent="Erreur: "+e.message;loading=false});
+}
+
+function updateStats(){
+    document.getElementById("totalP").textContent=P.length;
+    document.getElementById("totalV").textContent=totalV;
+    document.getElementById("totalC").textContent=C.length;
+    var avg=0;for(var i=0;i<P.length;i++)avg+=P[i]._sc;
+    avg=P.length?Math.round(avg/P.length):0;
+    document.getElementById("seoAvg").textContent=avg+"%";
+}
+
+function filter(){
+    var q=document.getElementById("q").value.toLowerCase();
+    var f=document.getElementById("f").value;
+    var L=[];for(var i=0;i<P.length;i++){var p=P[i];if(q&&p.title.toLowerCase().indexOf(q)<0)continue;if(f&&p._seo!==f)continue;L.push(p)}
+    render(L);
+}
+
+function render(L){
+    var el=document.getElementById("grid");
+    if(!L.length&&!loading){el.innerHTML="<div class='loading'>Aucun produit</div>";return}
+    var html="";var max=Math.min(L.length,100);
+    for(var i=0;i<max;i++){
+        var p=L[i];var img=(p.image&&p.image.src)?p.image.src.replace(/'/g,"%27"):((p.images&&p.images[0]&&p.images[0].src)?p.images[0].src.replace(/'/g,"%27"):"");        var sku=(p.variants&&p.variants[0])?p.variants[0].sku||"":"";
+        var price=(p.variants&&p.variants[0])?p.variants[0].price:"0";
+        var chk=selectedPids.indexOf(p.id)>=0?" checked":"";
+        html+="<div class='card' style='position:relative' data-id='"+p.id+"'>";
+        html+="<input type='checkbox'"+chk+" onclick='event.stopPropagation();toggleSel("+p.id+")' style='position:absolute;top:8px;left:8px;width:20px;height:20px;z-index:2;cursor:pointer;accent-color:#00ff88'>";
+        html+="<img src='"+img+"' onclick='go("+p.id+")'><div class='card-body' onclick='go("+p.id+")'>";
+        html+="<div class='card-title'>"+esc(p.title)+"</div><div class='card-sku'>"+sku+"</div>";
+        html+="<div class='card-meta'><span class='card-price'>"+price+" EUR</span><span class='badge "+p._seo+"'>"+p._sc+"%</span></div>";
+        html+="</div></div>";
+    }
+    el.innerHTML=html;updateSelCount();
+}
+
+function toggleSel(pid){var i=selectedPids.indexOf(pid);if(i>=0)selectedPids.splice(i,1);else selectedPids.push(pid);updateSelCount()}
+function selectAll(){selectedPids=[];for(var i=0;i<P.length;i++)selectedPids.push(P[i].id);filter()}
+function deselectAll(){selectedPids=[];filter()}
+function updateSelCount(){
+    var el=document.getElementById("selectCount");
+    var badge=document.getElementById("selBadge");
+    var goatBadge=document.getElementById("goatBadge");
+    if(selectedPids.length>0){
+        el.style.display="flex";
+        el.innerHTML="<span>"+selectedPids.length+" produit"+(selectedPids.length>1?"s":"")+" coch&eacute;"+(selectedPids.length>1?"s":"")+"</span><button onclick='deselectAll()' style='background:none;border:none;color:#ff4757;cursor:pointer;font-size:12px;text-decoration:underline;margin-left:10px'>D&eacute;s&eacute;lectionner</button>";
+        badge.textContent=" ("+selectedPids.length+")";
+        if(goatBadge)goatBadge.textContent=" ("+selectedPids.length+")";
+    }else{el.style.display="none";badge.textContent="";if(goatBadge)goatBadge.textContent=""}
+}
+function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function go(id){window.location.href="/product/"+id}
+function reload(){P=[];C=[];sinceId=0;totalV=0;try{sessionStorage.removeItem("kp_cache")}catch(e){}document.getElementById("grid").innerHTML="<div class='loading'><div class='spinner'></div>Chargement...</div>";load()}
+document.getElementById("q").oninput=filter;
+document.getElementById("f").onchange=filter;
+
+/* ══════ BULK GOAT PHOTOS ══════ */
+function openBulkGoat(){
+    document.getElementById("bulkGoatModal").style.display="block";
+    document.getElementById("goatSel").textContent=selectedPids.length;
+    document.getElementById("goatTotal").textContent=P.length;
+    document.getElementById("bulkGoatStatus").style.display="none";
+    var btn=document.getElementById("bulkGoatBtn");btn.disabled=false;
+    btn.innerHTML="&#128247; Lancer le remplacement";
+    btn.style.background="linear-gradient(135deg,#9b59b6,#8e44ad)";
+    if(selectedPids.length>0)document.querySelector('input[name="goatScope"][value="selection"]').checked=true;
+    else document.querySelector('input[name="goatScope"][value="all"]').checked=true;
+}
+function closeBulkGoat(){document.getElementById("bulkGoatModal").style.display="none"}
+
+function startBulkGoat(){
+    var scope=document.querySelector('input[name="goatScope"]:checked').value;
+    var pids=(scope==="selection")?selectedPids.slice():P.map(function(p){return p.id});
+    if(!pids.length){toast("Aucun produit selectionne","error");return}
+    
+    // Construire la liste des produits avec SKU
+    var products=[];
+    for(var i=0;i<pids.length;i++){
+        for(var j=0;j<P.length;j++){
+            if(P[j].id===pids[i]){
+                var sku=(P[j].variants&&P[j].variants[0])?P[j].variants[0].sku||"":"";
+                if(sku)products.push({id:P[j].id,title:P[j].title,sku:sku});
+                break;
+            }
+        }
+    }
+    if(!products.length){toast("Aucun produit avec un SKU","error");return}
+    
+    var btn=document.getElementById("bulkGoatBtn");
+    btn.disabled=true;btn.innerHTML="<span class='spinner' style='width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px'></span>En cours...";
+    document.getElementById("bulkGoatStatus").style.display="block";
+    document.getElementById("bulkGoatLog").innerHTML="";
+    
+    var done=0,ok=0,fail=0,skipped=0;
+    var total=products.length;
+    
+    function updateProgress(){
+        document.getElementById("bulkGoatBar").style.width=Math.round(done/total*100)+"%";
+        document.getElementById("bulkGoatTxt").textContent=done+"/"+total+" — "+ok+" ✅ "+fail+" ❌ "+(skipped?" "+skipped+" ⏭":"");
+    }
+    
+    function addLog(msg,color){
+        var log=document.getElementById("bulkGoatLog");
+        log.innerHTML+="<div style='color:"+(color||"#888")+"'>"+msg+"</div>";
+        log.scrollTop=log.scrollHeight;
+    }
+    
+    function processNext(idx){
+        if(idx>=products.length){
+            btn.innerHTML="✅ Termin&eacute;!";btn.style.background="#00ff88";btn.style.color="#000";
+            addLog("\\n🏁 Termin\\u00e9 : "+ok+" succ\\u00e8s, "+fail+" erreurs, "+skipped+" ignor\\u00e9s","#00ff88");
+            return;
+        }
+        var p=products[idx];
+        addLog("📷 "+p.title+" ("+p.sku+")...");
+        updateProgress();
+        
+        // Étape 1 : récupérer les images GOAT
+        fetch("/api/goat/images?sku="+encodeURIComponent(p.sku))
+        .then(function(r){return r.json()})
+        .then(function(d){
+            if(d.error||!d.images||!d.images.length){
+                addLog("  ⏭ Pas d'images GOAT trouv\\u00e9es","#ff9f43");
+                skipped++;done++;updateProgress();
+                setTimeout(function(){processNext(idx+1)},300);
+                return;
+            }
+            addLog("  "+d.images.length+" images trouv\\u00e9es, remplacement...");
+            
+            // Étape 2 : appliquer les images
+            fetch("/api/goat/apply",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({product_id:p.id,images:d.images})
+            })
+            .then(function(r){return r.json()})
+            .then(function(r){
+                if(r.success){
+                    addLog("  ✅ "+r.added+" photos remplac\\u00e9es","#00ff88");
+                    ok++;
+                }else{
+                    addLog("  ❌ "+r.error,"#ff4757");
+                    fail++;
+                }
+                done++;updateProgress();
+                setTimeout(function(){processNext(idx+1)},500);
+            })
+            .catch(function(e){
+                addLog("  ❌ "+e.message,"#ff4757");
+                fail++;done++;updateProgress();
+                setTimeout(function(){processNext(idx+1)},500);
+            });
+        })
+        .catch(function(e){
+            addLog("  ❌ "+e.message,"#ff4757");
+            fail++;done++;updateProgress();
+            setTimeout(function(){processNext(idx+1)},500);
+        });
+    }
+    
+    addLog("🚀 D\\u00e9marrage : "+products.length+" produits avec SKU sur "+pids.length+" s\\u00e9lectionn\\u00e9s","#9b59b6");
+    processNext(0);
+}
+
+/* ══════ CORRECTOR ══════ */
+function toggleCorAll(){var c=document.getElementById("corAll").checked;var f=document.querySelectorAll(".corF");for(var i=0;i<f.length;i++)f[i].checked=c}
+function openCorrector(){
+    document.getElementById("correctorModal").style.display="block";
+    document.getElementById("corSel").textContent=selectedPids.length;
+    document.getElementById("corTotal").textContent=P.length;
+    document.getElementById("corStatus").style.display="none";
+    document.getElementById("corProg").style.display="none";
+    var btn=document.getElementById("corBtn");btn.disabled=false;btn.textContent="\\uD83D\\uDE80 Lancer la correction";
+    if(selectedPids.length>0)document.querySelector('input[name="corScope"][value="selection"]').checked=true;
+    else document.querySelector('input[name="corScope"][value="all"]').checked=true;
+}
+function closeCorrector(){document.getElementById("correctorModal").style.display="none"}
+
+function startCorrection(){
+    var scope=document.querySelector('input[name="corScope"]:checked').value;
+    var fields=[];var checks=document.querySelectorAll(".corF:checked");
+    for(var i=0;i<checks.length;i++)fields.push(checks[i].value);
+    if(!fields.length){alert("Coche au moins un element.");return}
+    var pids=(scope==="selection")?selectedPids.slice():P.map(function(p){return p.id});
+    if(!pids.length){alert("Aucun produit.");return}
+
+    var seoFields=fields.filter(function(f){return f!=="images_alt"&&f!=="images_filename"});
+    var doImg=fields.indexOf("images_alt")>=0||fields.indexOf("images_filename")>=0;
+
+    var btn=document.getElementById("corBtn");
+    var status=document.getElementById("corStatus");
+    var bar=document.getElementById("corBar");
+    var txt=document.getElementById("corTxt");
+    btn.disabled=true;btn.textContent="Correction en cours...";
+    status.style.display="block";status.style.background="#333";status.style.color="#aaa";
+    document.getElementById("corProg").style.display="block";bar.style.width="0%";
+
+    var done=0,errs=0;
+    function next(){
+        if(done>=pids.length){
+            bar.style.width="100%";txt.textContent=done+"/"+pids.length;
+            status.style.background="#00ff8822";status.style.color="#00ff88";
+            status.textContent="\\u2705 "+done+" produits corrig\\u00e9s"+(errs?" ("+errs+" erreurs)":"");
+            btn.textContent="\\u2705 Termin\\u00e9!";return;
+        }
+        bar.style.width=Math.round(done/pids.length*100)+"%";
+        txt.textContent=(done+1)+"/"+pids.length;
+        status.textContent="\\u23F3 Produit "+(done+1)+"/"+pids.length+"...";
+        var promises=[];
+        if(seoFields.length>0)promises.push(fetch("/api/seo/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done],fields:seoFields})}).then(function(r){return r.json()}));
+        if(doImg)promises.push(fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})}).then(function(r){return r.json()}));
+        Promise.all(promises).then(function(){done++;setTimeout(next,50)}).catch(function(){errs++;done++;setTimeout(next,50)});
+    }
+    next();
+}
+
+/* ══════ ANALYZER ══════ */
+var azProblems=[];
+var azIssues={};
+function openAnalyzer(){
+    document.getElementById("analyzerModal").style.display="block";
+    runAnalysis();
+}
+function closeAnalyzer(){document.getElementById("analyzerModal").style.display="none"}
+
+function runAnalysis(){
+    var el=document.getElementById("azContent");
+    el.innerHTML="<div style='text-align:center;padding:30px'><div class='spinner'></div><p style='color:#888;margin-top:10px'>Analyse de "+P.length+" produits...</p></div>";
+    setTimeout(function(){
+        azIssues={noDesc:[],noLink:[],badAlt:[],badFn:[],noSku:[]};
+        for(var i=0;i<P.length;i++){
+            var p=P[i];
+            if(!p._ds)azIssues.noDesc.push(p);
+            else if(!p._lk)azIssues.noLink.push(p);
+            if(!p._img&&p.images&&p.images.length>0){
+                var titleFn=(p.title||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ /g,"_").replace(/[^\\w\\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+                var bAlt=false,bFn=false;
+                for(var j=0;j<p.images.length;j++){
+                    if((p.images[j].alt||"")!==p.title)bAlt=true;
+                    var fn=(p.images[j].src||"").split("/").pop().split("?")[0];
+                    if(fn.indexOf(titleFn)<0)bFn=true;
+                }
+                if(bAlt)azIssues.badAlt.push(p);
+                if(bFn)azIssues.badFn.push(p);
+            }
+            if(!((p.variants||[])[0]||{}).sku)azIssues.noSku.push(p);
+        }
+        var total=P.length,perfect=0;
+        for(var i=0;i<P.length;i++){if(P[i]._sc>=85)perfect++}
+
+        var totalTasks=azIssues.noDesc.length+azIssues.noLink.length+azIssues.badAlt.length+azIssues.badFn.length;
+
+        var h="<div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px'>";
+        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:28px;font-weight:bold;color:#00ff88'>"+total+"</div><div style='font-size:11px;color:#888'>Total produits</div></div>";
+        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:28px;font-weight:bold;color:#00ff88'>"+perfect+"</div><div style='font-size:11px;color:#888'>SEO parfait (85%+)</div></div>";
+        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:28px;font-weight:bold;color:"+(totalTasks>0?"#ff4757":"#00ff88")+"'>"+totalTasks+"</div><div style='font-size:11px;color:#888'>Tâches à faire</div></div>";
+        h+="</div>";
+
+        var cats=[
+            {k:"noDesc",icon:"📝",name:"Descriptions manquantes",desc:"Bio produit absente ou trop courte",col:"#ff4757",auto:true},
+            {k:"noLink",icon:"🔗",name:"Liens collection manquants",desc:"Description sans lien vers la collection",col:"#ff9500",auto:true},
+            {k:"badAlt",icon:"🖼",name:"Alt images incorrect",desc:"Texte alternatif des photos ne correspond pas au titre",col:"#ff4757",auto:true},
+            {k:"badFn",icon:"📁",name:"Noms fichiers images",desc:"Nom de fichier photo non optimise pour le SEO",col:"#ff4757",auto:true},
+            {k:"noSku",icon:"🏷",name:"SKU manquants",desc:"Pas de reference produit (ajout manuel requis)",col:"#666",auto:false}
+        ];
+
+        for(var c=0;c<cats.length;c++){
+            var cat=cats[c];var count=azIssues[cat.k].length;
+            var statusCol=count===0?"#00ff88":cat.col;
+            var statusTxt=count===0?"\u2705 OK":count+" produit"+(count>1?"s":"");
+            h+="<div style='display:flex;align-items:center;gap:12px;padding:14px;background:#111;border-radius:8px;margin-bottom:8px;border-left:3px solid "+statusCol+"'>";
+            h+="<span style='font-size:22px'>"+cat.icon+"</span>";
+            h+="<div style='flex:1'><div style='font-size:14px;font-weight:600'>"+cat.name+"</div>";
+            h+="<div style='font-size:11px;color:#666;margin-top:2px'>"+cat.desc+"</div></div>";
+            h+="<div style='text-align:right'><div style='font-size:18px;font-weight:bold;color:"+statusCol+"'>"+statusTxt+"</div>";
+            if(count>0&&!cat.auto)h+="<div style='font-size:10px;color:#555'>Manuel</div>";
+            h+="</div></div>";
+        }
+
+        if(totalTasks===0){
+            h+="<div style='text-align:center;padding:25px;color:#00ff88;font-size:15px;margin-top:10px'>\u2705 Tout est parfait ! Aucune correction nécessaire.</div>";
+        }
+
+        // Bouton corriger
+        h+="<div id='azActions' style='margin-top:20px;display:flex;gap:10px;align-items:center'>";
+        if(totalTasks>0){
+            h+="<button class='btn btn-p' onclick='runAutoFix()' style='flex:1;padding:14px;font-size:15px;background:linear-gradient(135deg,#00ff88,#00cc6a);color:#000;font-weight:700;border:none;border-radius:8px;cursor:pointer'>&#128640; Corriger "+totalTasks+" t&acirc;ches automatiquement</button>";
+        }
+        h+="</div>";
+        h+="<div id='azProgress' style='display:none;margin-top:15px'>";
+        h+="<div style='display:flex;justify-content:space-between;margin-bottom:8px'><span id='azProgressTxt' style='font-size:12px;color:#888'>Préparation...</span><span id='azProgressPct' style='font-size:12px;color:#00ff88'>0%</span></div>";
+        h+="<div style='background:#222;border-radius:6px;height:8px;overflow:hidden'><div id='azBar' style='background:#00ff88;height:100%;width:0%;border-radius:6px;transition:width 0.3s'></div></div>";
+        h+="<div id='azLog' style='margin-top:12px;max-height:200px;overflow-y:auto;font-size:11px;color:#666'></div>";
+        h+="</div>";
+
+        el.innerHTML=h;
+    },200);
+}
+
+function runAutoFix(){
+    // Construire la liste de tâches
+    var tasks=[];
+    // 1. Descriptions (body_html) - inclut noDesc + noLink
+    var descPids=[];
+    for(var i=0;i<azIssues.noDesc.length;i++){var id=azIssues.noDesc[i].id;if(descPids.indexOf(id)<0){descPids.push(id);tasks.push({pid:id,type:"seo",fields:["body_html"],label:"Bio"})}}
+    for(var i=0;i<azIssues.noLink.length;i++){var id=azIssues.noLink[i].id;if(descPids.indexOf(id)<0){descPids.push(id);tasks.push({pid:id,type:"seo",fields:["body_html"],label:"Bio"})}}
+    // 2. Images (alt + filename)
+    var imgPids=[];
+    for(var i=0;i<azIssues.badAlt.length;i++){var id=azIssues.badAlt[i].id;if(imgPids.indexOf(id)<0)imgPids.push(id)}
+    for(var i=0;i<azIssues.badFn.length;i++){var id=azIssues.badFn[i].id;if(imgPids.indexOf(id)<0)imgPids.push(id)}
+    for(var i=0;i<imgPids.length;i++){tasks.push({pid:imgPids[i],type:"images",label:"Images"})}
+
+    if(tasks.length===0)return;
+
+    var prog=document.getElementById("azProgress");
+    var bar=document.getElementById("azBar");
+    var txt=document.getElementById("azProgressTxt");
+    var pct=document.getElementById("azProgressPct");
+    var log=document.getElementById("azLog");
+    var btn=document.querySelector("#azActions button");
+    prog.style.display="block";
+    if(btn){btn.disabled=true;btn.style.opacity="0.5";btn.textContent="\u23F3 Correction en cours...";}
+
+    var done=0,ok=0,errs=0;
+    function next(){
+        if(done>=tasks.length){
+            bar.style.width="100%";pct.textContent="100%";
+            txt.innerHTML="<span style='color:#00ff88;font-weight:600'>\u2705 Terminé ! "+ok+" corrections réussies"+(errs>0?", "+errs+" erreurs":"")+"</span>";
+            if(btn){btn.textContent="\u2705 Terminé !";btn.style.background="#00ff88";}
+            log.innerHTML+="<div style='color:#00ff88;margin-top:8px;font-weight:600'>Rechargement dans 3s...</div>";
+            setTimeout(function(){try{sessionStorage.removeItem("kp_cache")}catch(e){}location.reload();},3000);
+            return;
+        }
+        var t=tasks[done];
+        var p=Math.round(done/tasks.length*100);
+        bar.style.width=p+"%";pct.textContent=p+"%";
+        txt.textContent="\u23F3 "+t.label+" — produit "+(done+1)+"/"+tasks.length;
+
+        var promise;
+        if(t.type==="seo"){
+            promise=fetch("/api/seo/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:t.pid,fields:t.fields})});
+        }else{
+            promise=fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:t.pid})});
+        }
+        promise.then(function(r){return r.json()}).then(function(d){
+            if(d.success||d.fixed>=0){ok++;log.innerHTML+="<div>\u2705 #"+t.pid+" "+t.label+" OK</div>"}
+            else{errs++;log.innerHTML+="<div style='color:#ff4757'>\u274C #"+t.pid+" "+t.label+": "+(d.error||"erreur")+"</div>"}
+            done++;log.scrollTop=log.scrollHeight;setTimeout(next,100);
+        }).catch(function(e){
+            errs++;log.innerHTML+="<div style='color:#ff4757'>\u274C #"+t.pid+" "+t.label+": "+e.message+"</div>";
+            done++;log.scrollTop=log.scrollHeight;setTimeout(next,100);
+        });
+    }
+    next();
+}
+
+if(!loadCache())load();
+</script>
+</body>
+</html>

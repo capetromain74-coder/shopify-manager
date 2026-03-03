@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Produit - KP SHOES</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
+.hd{background:#111;padding:12px 20px;border-bottom:1px solid #222;display:flex;align-items:center;gap:20px}
+.hd a{color:#888;text-decoration:none}.hd a:hover{color:#fff}
+.hd-title{font-size:16px;font-weight:bold;color:#00ff88}
+.main{max-width:1200px;margin:0 auto;padding:20px}
+.top{display:grid;grid-template-columns:350px 1fr;gap:25px;margin-bottom:25px}
+.gallery{background:#111;border-radius:10px;overflow:hidden}
+.main-img{width:100%;height:350px;object-fit:contain;background:#1a1a2e}
+.thumbs{display:flex;gap:8px;padding:10px;overflow-x:auto}
+.thumb{width:50px;height:50px;object-fit:cover;border-radius:5px;cursor:pointer;border:2px solid transparent}
+.thumb:hover,.thumb.active{border-color:#00ff88}
+.info{display:flex;flex-direction:column;gap:12px}
+.title{font-size:18px;font-weight:bold}
+.sku{color:#666;font-size:12px}
+.price{font-size:24px;font-weight:bold;color:#00ff88}
+.seo-box{display:flex;align-items:center;gap:15px;background:#111;padding:12px;border-radius:8px}
+.score{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold}
+.score.excellent{background:#00ff8833;color:#00ff88;border:3px solid #00ff88}
+.score.good{background:#00cc6a33;color:#00cc6a;border:3px solid #00cc6a}
+.score.warning{background:#ffa50033;color:#ffa500;border:3px solid #ffa500}
+.score.poor{background:#ff475733;color:#ff4757;border:3px solid #ff4757}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:10px 16px;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:12px;text-decoration:none}
+.btn-p{background:#00ff88;color:#000}.btn-s{background:#333;color:#fff}.btn-o{background:#ff9500;color:#000}.btn-g{background:#3b82f6;color:#fff}
+.section{background:#111;border-radius:10px;padding:15px;margin-bottom:15px}
+.section-title{font-size:13px;font-weight:bold;margin-bottom:10px;color:#00ff88;display:flex;justify-content:space-between;align-items:center}
+.checks{display:flex;flex-direction:column;gap:6px}
+.check{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#1a1a2e;border-radius:6px;cursor:pointer;border:2px solid transparent}
+.check:hover{border-color:#333}.check.selected{border-color:#00ff88;background:#00ff8815}
+.check-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px}
+.check-icon.success{background:#00ff8833;color:#00ff88}
+.check-icon.warning{background:#ffa50033;color:#ffa500}
+.check-icon.error{background:#ff475733;color:#ff4757}
+.check-info{flex:1}.check-name{font-weight:600;font-size:11px}.check-msg{font-size:9px;color:#888}
+.check-pts{font-weight:bold;font-size:10px}
+.meta-box{background:#1a1a2e;border-radius:6px;padding:10px;margin-bottom:8px}
+.meta-label{font-size:9px;color:#666;margin-bottom:3px}
+.meta-value{font-size:11px;word-break:break-all}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #222;font-size:11px}
+th{background:#1a1a2e;font-size:9px;color:#888}
+.loading{text-align:center;padding:40px;color:#666}
+.spinner{width:30px;height:30px;border:3px solid #222;border-top-color:#00ff88;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:6px;font-size:12px;z-index:100}
+.toast.success{background:#00ff88;color:#000}.toast.error{background:#ff4757}
+.goat-preview{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:200;overflow-y:auto;padding:20px}
+.goat-preview.show{display:block}
+.goat-content{max-width:800px;margin:0 auto;background:#111;border-radius:10px;padding:20px}
+.goat-close{position:absolute;top:20px;right:20px;background:#333;border:none;color:#fff;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px}
+.goat-images{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:20px 0}
+.goat-images img{width:100%;height:150px;object-fit:contain;background:#1a1a2e;border-radius:8px;border:2px solid transparent}
+.goat-images img.selected{border-color:#00ff88}
+@media(max-width:800px){.top{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="hd">
+<a href="/">← Retour</a>
+<div class="hd-title">Detail Produit</div>
+</header>
+<main class="main" id="main"><div class="loading"><div class="spinner"></div>Chargement...</div></main>
+
+<!-- Modal GOAT Preview -->
+<div class="goat-preview" id="goatPreview">
+<button class="goat-close" onclick="closeGoat()">×</button>
+<div class="goat-content">
+<h2 style="margin-bottom:10px">Photos GOAT</h2>
+<p id="goatStatus" style="color:#888;font-size:12px;margin-bottom:15px">Recherche en cours...</p>
+<div class="goat-images" id="goatImages"></div>
+<div style="display:flex;gap:10px;margin-top:15px">
+<button class="btn btn-p" onclick="applyGoatImages()">Remplacer les photos</button>
+<button class="btn btn-s" onclick="closeGoat()">Annuler</button>
+</div>
+</div>
+</div>
+
+<script>
+var pid=PRODUCT_ID_PLACEHOLDER;
+var P=null;
+var SEO=null;
+var SHOP_URL="SHOP_PLACEHOLDER";
+var selectedFields=[];
+var goatImages=[];
+
+function load(){
+    fetch("/api/product/"+pid).then(function(r){return r.json();}).then(function(d){
+        if(d.error){document.getElementById("main").innerHTML="<div class='loading'>Produit non trouve</div>";return;}
+        P=d.product;SEO=d.seo;render();
+    }).catch(function(e){document.getElementById("main").innerHTML="<div class='loading'>Erreur: "+e.message+"</div>";});
+}
+
+function render(){
+    var p=P;var seo=SEO;
+    var mainImg=(p.images&&p.images[0])?p.images[0].src:"";
+    var sku=(p.variants&&p.variants[0])?p.variants[0].sku||"N/A":"N/A";
+    var price=(p.variants&&p.variants[0])?p.variants[0].price:"0";
+    
+    var h="<div class='top'><div class='gallery'><img class='main-img' id='mainImg' src='"+mainImg+"'>";
+    if(p.images&&p.images.length>1){h+="<div class='thumbs'>";for(var i=0;i<p.images.length;i++){h+="<img class='thumb"+(i===0?" active":"")+"' src='"+p.images[i].src+"' onclick='chImg(this)'>";}h+="</div>";}
+    h+="</div><div class='info'>";
+    h+="<div class='title'>"+esc(p.title)+"</div>";
+    h+="<div class='sku'>SKU: "+sku+" | ID: "+p.id+"</div>";
+    h+="<div class='price'>"+price+" EUR</div>";
+    h+="<div class='seo-box'><div class='score "+seo.status+"'>"+seo.score+"</div><div><div style='font-weight:bold'>Score SEO</div><div style='font-size:11px;color:#888'>"+getLabel(seo.status)+"</div></div></div>";
+    h+="<div class='btns'>";
+    h+="<button class='btn btn-p' onclick='regenSelected()'>Modifier Selection</button>";
+    h+="<button class='btn btn-s' onclick='regenAll()'>Tout Regenerer</button>";
+    h+="<button class='btn btn-g' onclick='openGoat()'>📷 Photos GOAT</button>";
+    h+="<a href='https://"+SHOP_URL+"/admin/products/"+p.id+"' target='_blank' class='btn btn-s'>Shopify</a>";
+    h+="</div></div></div>";
+    
+    h+="<div class='section'><div class='section-title'>Analyse SEO <span style='font-size:10px;color:#888;font-weight:normal'>Cliquez pour selectionner</span></div><div class='checks'>";
+    var fields=["meta_title","meta_description","body_html","","images_seo"];
+    for(var i=0;i<seo.checks.length;i++){
+        var c=seo.checks[i];
+        var icon=c.status==="success"?"✓":c.status==="warning"?"!":"✗";
+        var fld=fields[i]||"";
+        h+="<div class='check' data-field='"+fld+"' onclick='toggleField(this)'>";
+        h+="<div class='check-icon "+c.status+"'>"+icon+"</div>";
+        h+="<div class='check-info'><div class='check-name'>"+c.name+"</div><div class='check-msg'>"+c.message+"</div></div>";
+        h+="<div class='check-pts'>"+c.points+"/"+c.max+"</div></div>";
+    }
+    h+="</div></div>";
+    
+    h+="<div class='section'><div class='section-title'>Donnees SEO</div>";
+    h+="<div class='meta-box'><div class='meta-label'>META TITLE</div><div class='meta-value'>"+(seo.meta_title||"Non defini")+"</div></div>";
+    h+="<div class='meta-box'><div class='meta-label'>META DESCRIPTION</div><div class='meta-value'>"+(seo.meta_description||"Non definie")+"</div></div>";
+    h+="<div class='meta-box'><div class='meta-label'>DESCRIPTION</div><div class='meta-value' style='max-height:80px;overflow-y:auto'>"+(p.body_html||"Non definie")+"</div></div>";
+    h+="</div>";
+    
+    h+="<div class='section'><div class='section-title'>Images ("+p.images.length+") <button class='btn btn-o' onclick='fixImages()' style='float:right;font-size:11px;padding:5px 12px'>🖼️ Fix Images</button></div>";
+    h+="<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px'>";
+    var titleFn=(p.title||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ /g,"_").replace(/[^\w\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+    for(var i=0;i<p.images.length;i++){
+        var img=p.images[i];
+        var src=img.src||"";
+        var alt=img.alt||"";
+        var fn=src.split("/").pop().split("?")[0];
+        var altOk=(alt===p.title);
+        var fnOk=(fn.indexOf(titleFn)>=0);
+        var borderColor=(altOk&&fnOk)?"#00ff88":(altOk||fnOk)?"#ff9500":"#ff4757";
+        h+="<div style='border:2px solid "+borderColor+";border-radius:8px;overflow:hidden;background:#1a1a2e'>";
+        h+="<img src='"+src+"' style='width:100%;height:100px;object-fit:contain'>";
+        h+="<div style='padding:6px;font-size:10px'>";
+        h+="<div style='color:"+(altOk?"#00ff88":"#ff4757")+"'>Alt: "+(altOk?"✓":"✗ "+esc(alt||"vide").substring(0,25))+"</div>";
+        h+="<div style='color:"+(fnOk?"#00ff88":"#ff4757")+";overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>Nom: "+(fnOk?"✓":"✗ "+fn.substring(0,20))+"</div>";
+        h+="</div></div>";
+    }
+    h+="</div>";
+    h+="<div id='imgFixResult' style='margin-top:10px'></div>";
+    h+="</div>";
+    
+    h+="<div class='section'><div class='section-title'>Variantes ("+p.variants.length+")</div>";
+    h+="<table><thead><tr><th>Taille</th><th>SKU</th><th>Prix</th><th>Stock</th></tr></thead><tbody>";
+    for(var i=0;i<p.variants.length;i++){
+        var v=p.variants[i];
+        h+="<tr><td><strong>"+v.title+"</strong></td><td>"+(v.sku||"-")+"</td><td>"+v.price+" EUR</td><td>"+v.inventory_quantity+"</td></tr>";
+    }
+    h+="</tbody></table></div>";
+    
+    document.getElementById("main").innerHTML=h;
+}
+
+function getLabel(s){if(s==="excellent")return"Excellent";if(s==="good")return"Bon";if(s==="warning")return"A ameliorer";return"Faible";}
+function chImg(el){document.getElementById("mainImg").src=el.src;var all=document.querySelectorAll(".thumb");for(var i=0;i<all.length;i++)all[i].classList.remove("active");el.classList.add("active");}
+function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function toggleField(el){
+    var field=el.getAttribute("data-field");
+    if(!field)return;
+    var idx=selectedFields.indexOf(field);
+    if(idx>=0){selectedFields.splice(idx,1);el.classList.remove("selected");}
+    else{selectedFields.push(field);el.classList.add("selected");}
+}
+
+function regenSelected(){
+    if(selectedFields.length===0){toast("Selectionnez des elements","error");return;}
+    toast("Mise a jour...","success");
+    fetch("/api/seo/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid,fields:selectedFields})})
+        .then(function(r){return r.json();}).then(function(d){
+            if(d.success){toast("Mis a jour!","success");setTimeout(function(){location.reload();},1500);}
+            else{toast("Erreur","error");}
+        }).catch(function(){toast("Erreur","error");});
+}
+
+function regenAll(){
+    toast("Regeneration...","success");
+    fetch("/api/seo/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid})})
+        .then(function(r){return r.json();}).then(function(d){
+            if(d.success){toast("SEO mis a jour!","success");setTimeout(function(){location.reload();},1500);}
+            else{toast("Erreur","error");}
+        }).catch(function(){toast("Erreur","error");});
+}
+
+// ===== GOAT Functions =====
+function openGoat(){
+    var sku=(P.variants&&P.variants[0])?P.variants[0].sku:"";
+    if(!sku){toast("Pas de SKU","error");return;}
+    
+    document.getElementById("goatPreview").classList.add("show");
+    document.getElementById("goatStatus").innerHTML="🔍 Recherche pour <strong>"+sku+"</strong>...<br><small style='color:#888'>(peut prendre 30-60s si le serveur est en veille)</small>";
+    document.getElementById("goatImages").innerHTML="<div class='spinner'></div>";
+    goatImages=[];
+    
+    fetch("/api/goat/images?sku="+encodeURIComponent(sku))
+        .then(function(r){return r.json();})
+        .then(function(d){
+            if(d.error){
+                document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ "+d.error+"</span>";
+                document.getElementById("goatImages").innerHTML="";
+                return;
+            }
+            
+            // Multi-SKU : afficher les onglets
+            if(d.multi){
+                var results=d.results;
+                var tabsHtml="<div style='display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap'>";
+                var firstWithImages=-1;
+                for(var t=0;t<results.length;t++){
+                    var count=results[t].images?results[t].images.length:0;
+                    var label=results[t].sku+(results[t].name?" - "+results[t].name.substring(0,30):"")+" ("+count+" photos)";
+                    var disabled=count===0;
+                    tabsHtml+="<button class='goat-tab"+(firstWithImages===-1&&!disabled?" active":"")+"' onclick='switchGoatTab("+t+")' "+(disabled?"disabled style='opacity:0.4;cursor:not-allowed;padding:8px 16px;background:#222;border:1px solid #333;border-radius:6px;color:#666;font-size:12px'":"style='padding:8px 16px;background:#1a1a2e;border:1px solid #333;border-radius:6px;color:#fff;font-size:12px;cursor:pointer'")+">"+label+"</button>";
+                    if(firstWithImages===-1&&!disabled)firstWithImages=t;
+                }
+                tabsHtml+="</div>";
+                
+                // Stocker les résultats multi
+                window._goatMultiResults=results;
+                
+                document.getElementById("goatStatus").innerHTML="📦 <strong>SKU multiple détecté</strong> — Choisissez les photos à utiliser :"+tabsHtml;
+                
+                if(firstWithImages>=0){
+                    switchGoatTab(firstWithImages);
+                }else{
+                    document.getElementById("goatImages").innerHTML="<p style='color:#666;text-align:center'>Aucune image trouvée pour ces SKU</p>";
+                }
+                return;
+            }
+            
+            // Single SKU
+            goatImages=d.images||[];
+            document.getElementById("goatStatus").innerHTML="✅ <strong>"+d.name+"</strong> - "+goatImages.length+" photos trouvées<br><small style='color:#888'>Cliquez sur une image pour la désélectionner</small>";
+            var html="";
+            for(var i=0;i<goatImages.length;i++){
+                html+="<img src='"+goatImages[i]+"' class='selected' onclick='toggleGoatImg(this,"+i+")'>";
+            }
+            document.getElementById("goatImages").innerHTML=html;
+        })
+        .catch(function(e){
+            document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+e.message+"</span>";
+            document.getElementById("goatImages").innerHTML="";
+        });
+}
+
+function switchGoatTab(idx){
+    var results=window._goatMultiResults;
+    if(!results||!results[idx])return;
+    
+    // Update active tab
+    var tabs=document.querySelectorAll(".goat-tab");
+    for(var i=0;i<tabs.length;i++){
+        tabs[i].style.borderColor=i===idx?"#00ff88":"#333";
+        tabs[i].style.background=i===idx?"#00ff8822":"#1a1a2e";
+    }
+    
+    goatImages=results[idx].images||[];
+    var html="";
+    for(var i=0;i<goatImages.length;i++){
+        html+="<img src='"+goatImages[i]+"' class='selected' onclick='toggleGoatImg(this,"+i+")'>";
+    }
+    document.getElementById("goatImages").innerHTML=html;
+}
+
+function closeGoat(){
+    document.getElementById("goatPreview").classList.remove("show");
+}
+
+function toggleGoatImg(el,idx){
+    el.classList.toggle("selected");
+}
+
+function applyGoatImages(){
+    var selected=[];
+    var imgs=document.querySelectorAll("#goatImages img.selected");
+    for(var i=0;i<imgs.length;i++){
+        selected.push(imgs[i].src);
+    }
+    if(selected.length===0){toast("Selectionnez au moins une image","error");return;}
+    
+    // Désactiver le bouton et montrer le loader
+    var btn=document.querySelector(".goat-content .btn-p");
+    btn.disabled=true;
+    btn.innerHTML="<span class='spinner' style='width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px'></span>Remplacement en cours...";
+    document.getElementById("goatStatus").textContent="⏳ Suppression des anciennes photos et ajout des nouvelles ("+selected.length+" photos)...";
+    
+    fetch("/api/goat/apply",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({product_id:pid,images:selected})
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.success){
+            document.getElementById("goatStatus").innerHTML="<span style='color:#00ff88;font-size:16px'>✅ "+d.added+" photos remplacées avec succès!</span>";
+            btn.innerHTML="✅ Terminé!";
+            btn.style.background="#00ff88";
+            toast("Photos remplacees! Rechargement...","success");
+            setTimeout(function(){location.reload();},2000);
+        }else{
+            document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+d.error+"</span>";
+            btn.disabled=false;
+            btn.innerHTML="Remplacer les photos";
+            toast("Erreur: "+d.error,"error");
+        }
+    })
+    .catch(function(e){
+        document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+e.message+"</span>";
+        btn.disabled=false;
+        btn.innerHTML="Remplacer les photos";
+        toast("Erreur: "+e.message,"error");
+    });
+}
+
+function toast(m,t){var e=document.createElement("div");e.className="toast "+t;e.textContent=m;document.body.appendChild(e);setTimeout(function(){e.remove();},3000);}
+
+function fixImages(){
+    var el=document.getElementById("imgFixResult");
+    el.innerHTML="<div style='padding:10px;background:#333;border-radius:8px;font-size:13px;color:#aaa'><span class='spinner' style='width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:8px'></span>Correction des images...</div>";
+    fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+        if(d.success){
+            var msg="&#9989; "+d.fixed+" images corrig&eacute;es sur "+d.total;
+            if(d.rename_errors){
+                msg+="<br><span style='color:#ff9500'>&#9888;&#65039; Erreur renommage: "+JSON.stringify(d.rename_errors)+"</span>";
+                if(d.attempted_filenames)msg+="<br><small style='color:#888'>Noms tent&eacute;s: "+d.attempted_filenames.join(", ")+"</small>";
+            }
+            el.innerHTML="<div style='padding:10px;background:#00ff8822;border-radius:8px;font-size:13px;color:#00ff88'>"+msg+"</div>";
+            if(!d.rename_errors)setTimeout(function(){location.reload();},1500);
+        }else{
+            el.innerHTML="<div style='padding:10px;background:#ff475722;border-radius:8px;font-size:13px;color:#ff4757'>&#10060; Erreur: "+(d.error||"Inconnue")+"</div>";
+        }
+    }).catch(function(e){
+        el.innerHTML="<div style='padding:10px;background:#ff475722;border-radius:8px;font-size:13px;color:#ff4757'>&#10060; "+e.message+"</div>";
+    });
+}
+
+load();
+</script>
+</body>
+</html>
