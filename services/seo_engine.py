@@ -9,7 +9,7 @@ import unicodedata
 import logging
 
 from config import SITE_NAME, SITE_DOMAIN
-from data.descriptions import MODEL_DESCRIPTIONS, COLLAB_DESCRIPTIONS, ICONIC_COLORWAYS, COLOR_KEYWORDS
+from data.descriptions import MODEL_DESCRIPTIONS, ICONIC_COLORWAYS, COLOR_KEYWORDS
 from data.mappings import MODEL_COLLECTIONS, BRAND_COLLECTIONS, EXCLUDED
 from services.shopify import shopify_request
 
