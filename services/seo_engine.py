@@ -552,9 +552,18 @@ def extract_colorway(title):
     return colorway if colorway and colorway != t else ''
 
 
+_ai_story_cache = {}
+
 def generate_story_ai(title, brand, colorway, model_desc, goat_data=None):
     """Utilise Claude pour generer une description complete (story) enrichie.
-    Utilise les donnees GOAT si disponibles pour ne pas inventer."""
+    Utilise les donnees GOAT si disponibles pour ne pas inventer.
+    Cache le resultat par titre pour eviter les appels doubles."""
+    # Verifier le cache
+    cache_key = title.strip().lower()
+    if cache_key in _ai_story_cache:
+        log.info(f"[AI Story] Cache hit for {title}")
+        return _ai_story_cache[cache_key]
+
     try:
         import os, ssl, json as _json
         from urllib.request import Request, urlopen
@@ -621,6 +630,7 @@ def generate_story_ai(title, brand, colorway, model_desc, goat_data=None):
                     story = result['content'][0]['text'].strip()
                     if len(story) > 50:
                         log.info(f"[AI Story] Generated story for {title}")
+                        _ai_story_cache[cache_key] = story
                         return story
         except Exception as http_err:
             # Lire le body d'erreur pour debug
