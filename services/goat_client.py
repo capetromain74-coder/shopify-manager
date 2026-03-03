@@ -34,8 +34,8 @@ def _get_session(force_new=False, rotate_profile=False):
             try: _goat_session.close()
             except Exception: pass
         if rotate_profile:
-            _goat_impersonate_idx = (_goat_impersonate_idx + 1) % len(_GOAT_PROFILES)
-        profile = _GOAT_PROFILES[_goat_impersonate_idx]
+            _goat_impersonate_idx = (_goat_impersonate_idx + 1) % len(GOAT_TLS_PROFILES)
+        profile = GOAT_TLS_PROFILES[_goat_impersonate_idx]
         _goat_session = Session(impersonate=profile)
         _goat_session_time = now
         log.info(f"[GOAT] New curl_cffi session created (profile={profile})")
