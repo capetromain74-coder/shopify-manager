@@ -181,6 +181,47 @@ def get_product_images(slug):
     return []
 
 
+def get_product_details(slug):
+    """Récupère les détails texte d'un produit GOAT (description, couleurs, matières, story).
+    Utilisé pour générer des descriptions produit précises."""
+    raw = _goat_get(f"{GOAT_PRODUCT_API}/{slug}")
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+    details = {
+        'name': data.get('name', ''),
+        'color': data.get('color', ''),
+        'details': data.get('details', ''),
+        'story': data.get('story', '') or data.get('storyHtml', ''),
+        'upper_material': data.get('upperMaterial', ''),
+        'midsole': data.get('midsole', ''),
+        'silhouette': data.get('silhouette', ''),
+        'designer': data.get('designer', ''),
+        'release_date': data.get('releaseDate', '') or data.get('releaseDateUnix', ''),
+        'nickname': data.get('nickname', ''),
+        'category': data.get('category', ''),
+    }
+
+    # Nettoyer le HTML du story si présent
+    if details['story']:
+        details['story'] = re.sub(r'<[^>]+>', '', details['story']).strip()
+    if details['details']:
+        details['details'] = re.sub(r'<[^>]+>', '', details['details']).strip()
+
+    # Vérifier qu'on a au moins quelque chose d'utile
+    has_data = any(details.get(k) for k in ['color', 'details', 'story', 'upper_material'])
+    if not has_data:
+        log.info(f"[GOAT] No useful text data for {slug}")
+        return None
+
+    log.info(f"[GOAT] Got details for {slug}: color={details['color'][:30]}, material={details['upper_material'][:30]}, story={'yes' if details['story'] else 'no'}")
+    return details
+
+
 def discover_image_angles(base_url):
     """Découvre les images d'angles supplémentaires en testant les URLs numérotées sur le CDN GOAT.
     Pattern: https://image.goat.com/.../1118288_00.png.png -> _01, _02, _03, etc.
