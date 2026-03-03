@@ -412,8 +412,9 @@ def generate_meta_description(product):
             desc = desc[:152].rsplit(' ', 1)[0] + '...'
         return desc
 
-    # -- SNEAKERS : essayer GOAT pour une meta description specifique --
+    # -- SNEAKERS : essayer GOAT puis IA pour une meta description specifique --
     goat_desc = None
+    goat_details = None
     if sku:
         goat_details = _fetch_goat_details(sku)
         if goat_details:
@@ -425,26 +426,33 @@ def generate_meta_description(product):
                     max_len = 140 - len(SITE_NAME)
                     if len(story_fr) > max_len:
                         cut = story_fr[:max_len].rfind('.')
-                        if cut > 60:
+                        if cut > 90:
                             story_fr = story_fr[:cut + 1]
                         else:
                             cut = story_fr[:max_len].rfind(',')
-                            if cut > 60:
+                            if cut > 90:
                                 story_fr = story_fr[:cut] + '...'
                             else:
                                 story_fr = story_fr[:max_len].rsplit(' ', 1)[0] + '...'
                     goat_desc = story_fr
 
-            # Option 2 : materiaux + couleurs GOAT
+            # Option 2 : pas de story GOAT - generer via IA
             if not goat_desc:
-                materials_fr = _translate_materials(goat_details.get('upper_material', ''))
-                colors_fr = _translate_colors(goat_details.get('color', ''))
-                if materials_fr and colors_fr:
-                    goat_desc = 'La ' + title + ' presente une empeigne en ' + materials_fr + ' dans les tons ' + colors_fr + '.'
-                elif materials_fr:
-                    goat_desc = 'La ' + title + ' est confectionnee en ' + materials_fr + '.'
-                elif colors_fr:
-                    goat_desc = 'La ' + title + ' se decline dans les tons ' + colors_fr + '.'
+                ai_story = generate_story_ai(title, brand, colorway, '', goat_data=goat_details)
+                if ai_story:
+                    # Tronquer la story IA pour la meta description
+                    max_len = 140 - len(SITE_NAME)
+                    if len(ai_story) > max_len:
+                        cut = ai_story[:max_len].rfind('.')
+                        if cut > 90:
+                            ai_story = ai_story[:cut + 1]
+                        else:
+                            cut = ai_story[:max_len].rfind(',')
+                            if cut > 90:
+                                ai_story = ai_story[:cut] + '...'
+                            else:
+                                ai_story = ai_story[:max_len].rsplit(' ', 1)[0] + '...'
+                    goat_desc = ai_story
 
     if goat_desc:
         if len(goat_desc) < 120:
@@ -453,7 +461,7 @@ def generate_meta_description(product):
             goat_desc = goat_desc[:152].rsplit(' ', 1)[0] + '...'
         return goat_desc
 
-    # -- Fallback sans GOAT (ameliore : pas de SKU) --
+    # -- Fallback sans GOAT ni IA --
     collabs = ['Travis Scott', 'Off-White', 'Fragment', 'Union LA', 'Undefeated', 'A Ma Maniere',
                'Sacai', 'CLOT', 'Stussy', 'Patta', 'Supreme', 'BAPE', 'Kith', 'Bad Bunny',
                'Pharrell', 'Drake', 'NOCTA', 'The Simpsons', 'Mercedes AMG', 'Jacquemus', 'Nigo']
@@ -469,6 +477,8 @@ def generate_meta_description(product):
     if len(desc) > 155:
         desc = desc[:152].rsplit(' ', 1)[0] + '...'
     return desc
+
+
 
 
 def extract_colorway(title):
@@ -540,6 +550,80 @@ def extract_colorway(title):
     
     colorway = colorway.strip(' -')
     return colorway if colorway and colorway != t else ''
+
+
+def generate_story_ai(title, brand, colorway, model_desc, goat_data=None):
+    """Utilise Claude pour generer une description complete (story) enrichie.
+    Utilise les donnees GOAT si disponibles pour ne pas inventer."""
+    try:
+        import os, ssl, json as _json
+        from urllib.request import Request, urlopen
+
+        # Construire le contexte GOAT si dispo
+        goat_context = ""
+        if goat_data:
+            parts = []
+            if goat_data.get('upper_material'):
+                parts.append("Materiaux tige : " + goat_data['upper_material'])
+            if goat_data.get('color'):
+                parts.append("Couleurs : " + goat_data['color'])
+            if goat_data.get('midsole'):
+                parts.append("Semelle : " + goat_data['midsole'])
+            if goat_data.get('nickname'):
+                parts.append("Surnom : " + goat_data['nickname'])
+            if goat_data.get('details'):
+                parts.append("Details : " + goat_data['details'][:200])
+            if parts:
+                goat_context = "\n\nDonnees techniques confirmees (utilise-les, ne les contredis pas) :\n" + "\n".join(parts)
+
+        prompt = (
+            "Tu es un expert sneakers qui redige des descriptions produits pour un site e-commerce francais (KP SHOES).\n\n"
+            "Produit : " + title + "\n"
+            "Marque : " + brand + "\n"
+            + ("Coloris : " + colorway + "\n" if colorway else "")
+            + goat_context
+            + "\n\nEcris un paragraphe de 3-4 phrases decrivant cette paire.\n"
+            "- Base-toi UNIQUEMENT sur les donnees techniques ci-dessus et le nom du produit\n"
+            "- Decris les materiaux, couleurs, et le style de la paire\n"
+            "- Si le nom indique une collaboration (x, collab), mentionne-la\n"
+            "- Si le surnom evoque un theme (pays, ville, film, etc.), mentionne-le\n"
+            "- Sois precis et naturel, en francais\n"
+            "- Ne mentionne PAS de prix ni de date de sortie exacte\n"
+            "- N'INVENTE PAS de details techniques non fournis\n"
+            "- Ne commence PAS par 'Decouvrez' ni 'La " + title + "'\n"
+            "- Reponds UNIQUEMENT avec le paragraphe, rien d'autre."
+        )
+
+        api_url = "https://api.anthropic.com/v1/messages"
+        headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': os.environ.get('ANTHROPIC_API_KEY', ''),
+            'anthropic-version': '2023-06-01'
+        }
+        body = {
+            'model': 'claude-sonnet-4-20250514',
+            'max_tokens': 300,
+            'messages': [{'role': 'user', 'content': prompt}]
+        }
+
+        if not headers['x-api-key']:
+            log.warning("[AI Story] No ANTHROPIC_API_KEY set")
+            return None
+
+        req = Request(api_url, data=_json.dumps(body).encode('utf-8'), headers=headers, method='POST')
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with urlopen(req, context=ctx, timeout=20) as r:
+            result = _json.loads(r.read().decode('utf-8'))
+            if result.get('content') and result['content'][0].get('text'):
+                story = result['content'][0]['text'].strip()
+                if len(story) > 50:
+                    log.info(f"[AI Story] Generated story for {title}")
+                    return story
+    except Exception as e:
+        log.error(f"[AI Story] Error: {e}")
+    return None
 
 
 def generate_color_description_ai(title, colorway, brand, model_desc):
@@ -947,7 +1031,15 @@ def generate_body_html(product, collections):
                 cw_type = goat_type
                 log.info(f"[SEO] Using GOAT description for {title}")
 
-    # Fallback : description IA ou générique si GOAT n'a rien donné
+    # Si GOAT n'a pas de story mais a des données basiques, enrichir via IA
+    if not goat_sentence or (goat_details and not goat_details.get('story') and cw_type == 'goat_details'):
+        ai_story = generate_story_ai(title, brand, colorway, model_desc, goat_data=goat_details)
+        if ai_story:
+            goat_sentence = ai_story
+            cw_type = 'ai_story'
+            log.info(f"[SEO] Using AI story for {title}")
+
+    # Fallback : description IA coloris ou générique
     color_sentence = goat_sentence
     if not color_sentence and colorway:
         color_sentence, cw_type = generate_color_description_ai(title, colorway, brand, model_desc)
@@ -961,8 +1053,8 @@ def generate_body_html(product, collections):
     else:
         lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}.</p>')
     
-    # Paragraphe 2: Description du modèle (skip si GOAT fournit une description)
-    if not goat_sentence:
+    # Paragraphe 2: Description du modèle (skip si GOAT ou AI fournit une description)
+    if not goat_sentence and cw_type != 'ai_story':
         lines.append(f'<p>{model_desc}</p>')
     
     # Paragraphe 3: Description spécifique (GOAT traduit ou fallback)
