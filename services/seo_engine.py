@@ -399,41 +399,76 @@ def generate_meta_description(product):
     sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
     brand = extract_brand(title)
     colorway = extract_colorway(title)
-    
-    # ── VÊTEMENTS ──
+
+    # -- VETEMENTS --
     if is_clothing(title):
         clothing_type = get_clothing_type(title)
         color = extract_clothing_color(title)
         if color:
-            desc = f"{title} sur {SITE_NAME}. {clothing_type.capitalize()} streetwear premium, coloris {color}. 100% authentique, livraison rapide en France."
+            desc = 'La ' + title + ' en coloris ' + color + '. Piece streetwear premium disponible sur ' + SITE_NAME + '. Authenticite garantie, livraison rapide.'
         else:
-            desc = f"{title} sur {SITE_NAME}. {clothing_type.capitalize()} streetwear premium, 100% authentique. Livraison rapide en France."
+            desc = 'La ' + title + ' disponible sur ' + SITE_NAME + '. Piece streetwear premium, authenticite garantie. Livraison rapide.'
         if len(desc) > 155:
             desc = desc[:152].rsplit(' ', 1)[0] + '...'
         return desc
-    
-    # ── SNEAKERS ──
+
+    # -- SNEAKERS : essayer GOAT pour une meta description specifique --
+    goat_desc = None
+    if sku:
+        goat_details = _fetch_goat_details(sku)
+        if goat_details:
+            # Option 1 : GOAT a une story - la traduire et tronquer
+            story = goat_details.get('story', '')
+            if story and len(story) > 40:
+                story_fr = translate_to_french(story.strip())
+                if story_fr and len(story_fr) > 40:
+                    max_len = 140 - len(SITE_NAME)
+                    if len(story_fr) > max_len:
+                        cut = story_fr[:max_len].rfind('.')
+                        if cut > 60:
+                            story_fr = story_fr[:cut + 1]
+                        else:
+                            cut = story_fr[:max_len].rfind(',')
+                            if cut > 60:
+                                story_fr = story_fr[:cut] + '...'
+                            else:
+                                story_fr = story_fr[:max_len].rsplit(' ', 1)[0] + '...'
+                    goat_desc = story_fr
+
+            # Option 2 : materiaux + couleurs GOAT
+            if not goat_desc:
+                materials_fr = _translate_materials(goat_details.get('upper_material', ''))
+                colors_fr = _translate_colors(goat_details.get('color', ''))
+                if materials_fr and colors_fr:
+                    goat_desc = 'La ' + title + ' presente une empeigne en ' + materials_fr + ' dans les tons ' + colors_fr + '.'
+                elif materials_fr:
+                    goat_desc = 'La ' + title + ' est confectionnee en ' + materials_fr + '.'
+                elif colors_fr:
+                    goat_desc = 'La ' + title + ' se decline dans les tons ' + colors_fr + '.'
+
+    if goat_desc:
+        if len(goat_desc) < 120:
+            goat_desc = goat_desc + ' Disponible sur ' + SITE_NAME + '.'
+        if len(goat_desc) > 155:
+            goat_desc = goat_desc[:152].rsplit(' ', 1)[0] + '...'
+        return goat_desc
+
+    # -- Fallback sans GOAT (ameliore : pas de SKU) --
     collabs = ['Travis Scott', 'Off-White', 'Fragment', 'Union LA', 'Undefeated', 'A Ma Maniere',
                'Sacai', 'CLOT', 'Stussy', 'Patta', 'Supreme', 'BAPE', 'Kith', 'Bad Bunny',
                'Pharrell', 'Drake', 'NOCTA', 'The Simpsons', 'Mercedes AMG', 'Jacquemus', 'Nigo']
     is_collab = any(c.lower() in title.lower() for c in collabs)
-    
+
     if is_collab:
-        desc = f"{title} sur {SITE_NAME}. Édition limitée 100% authentique, vérifiée par nos experts. Livraison rapide en France."
-    elif colorway and sku:
-        desc = f"{title} ({sku}) sur {SITE_NAME}. Coloris {colorway}, 100% authentique. Livraison rapide et paiement sécurisé."
+        desc = 'La ' + title + ', edition limitee disponible sur ' + SITE_NAME + '. Authenticite garantie, livraison rapide.'
     elif colorway:
-        desc = f"Achetez la {title} sur {SITE_NAME}. Coloris {colorway}, authenticité garantie par nos experts. Livraison rapide."
-    elif sku:
-        desc = f"Achetez la {title} ({sku}) sur {SITE_NAME}. 100% authentique, vérifiée par nos experts. Livraison rapide."
+        desc = 'La ' + title + ' en coloris ' + colorway + ' disponible sur ' + SITE_NAME + '. Authenticite garantie, livraison rapide.'
     else:
-        desc = f"Achetez la {title} sur {SITE_NAME}. Authenticité garantie, vérifiée par nos experts. Livraison rapide et paiement sécurisé."
-    
+        desc = 'Achetez la ' + title + ' sur ' + SITE_NAME + '. Authenticite garantie par nos experts. Livraison rapide et paiement securise.'
+
     if len(desc) > 155:
         desc = desc[:152].rsplit(' ', 1)[0] + '...'
     return desc
-
-
 
 
 def extract_colorway(title):
