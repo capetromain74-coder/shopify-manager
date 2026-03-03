@@ -17,6 +17,51 @@ from services.goat_client import search as goat_search, get_product_details as g
 log = logging.getLogger('kpshoes.seo')
 
 
+def translate_to_french(text):
+    """Traduit un texte anglais en francais via Google Translate gratuit"""
+    if not text or len(text) < 10:
+        return text
+    french_indicators = [' le ', ' la ', ' les ', ' des ', ' une ', ' est ',
+                         ' sont ', ' dans ', ' pour ', ' avec ', ' cette ',
+                         ' sur ', ' qui ', ' que ']
+    text_lower = text.lower()
+    french_count = sum(1 for ind in french_indicators if ind in text_lower)
+    if french_count >= 3:
+        return text
+    try:
+        import urllib.parse, urllib.request, json as _json
+        protected = {}
+        protected_text = text
+        brands = ['Air Jordan', 'Air Force', 'Air Max', 'Dunk Low', 'Dunk High',
+                  'New Balance', 'Nike SB', 'adidas', 'Adidas', 'Campus', 'SL 72',
+                  'Samba', 'Gazelle', 'Yeezy', 'Forum', 'Superstar', 'Stan Smith',
+                  'Fragment', 'Travis Scott', 'Off-White', 'Sacai', 'Trefoil',
+                  'Primeknit', 'Flyknit', 'Gore-Tex', 'CAMPUS', 'Boost', 'React',
+                  'Jordan', 'Nike', 'Puma', 'Reebok', 'Converse', 'Vans']
+        bx = 0
+        for brand in brands:
+            if brand in protected_text:
+                placeholder = 'XBRAND' + str(bx) + 'X'
+                protected[placeholder] = brand
+                protected_text = protected_text.replace(brand, placeholder)
+                bx += 1
+        encoded = urllib.parse.quote(protected_text[:2000])
+        turl = ('https://translate.googleapis.com/translate_a/single'
+                '?client=gtx&sl=en&tl=fr&dt=t&q=' + encoded)
+        req = urllib.request.Request(turl, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = _json.loads(resp.read().decode('utf-8'))
+            translated = ''.join([s[0] for s in data[0] if s[0]])
+            if translated and len(translated) > 10:
+                for placeholder, original in protected.items():
+                    translated = translated.replace(placeholder, original)
+                    translated = translated.replace(placeholder.lower(), original)
+                return translated
+    except Exception as e:
+        log.error('[Translate] Error: ' + str(e))
+    return text
+
+
 def title_to_filename(title):
     """Convertit un titre produit en nom de fichier safe: 'Air Jordan 4 Rétro (2025)' -> 'Air_Jordan_4_Retro_2025'"""
     # Enlever les accents : è→e, é→e, à→a, etc.
@@ -733,7 +778,8 @@ def build_goat_description(goat_details, title, colorway):
                 story_clean = story_clean[:cut + 1]
             else:
                 story_clean = story_clean[:400] + '...'
-        return story_clean, 'goat_story'
+        story_fr = translate_to_french(story_clean)
+        return story_fr, 'goat_story'
 
     # ── Option 2 : Construire à partir des matières + couleurs ──
     colors_fr = _translate_colors(color_raw)
@@ -880,10 +926,11 @@ def generate_body_html(product, collections):
     else:
         lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}.</p>')
     
-    # Paragraphe 2: Description du modèle
-    lines.append(f'<p>{model_desc}</p>')
+    # Paragraphe 2: Description du modèle (skip si GOAT fournit une description)
+    if not goat_sentence:
+        lines.append(f'<p>{model_desc}</p>')
     
-    # Paragraphe 3: Description spécifique au coloris/collab
+    # Paragraphe 3: Description spécifique (GOAT traduit ou fallback)
     if color_sentence:
         lines.append(f'<p>{color_sentence}</p>')
     
@@ -897,16 +944,6 @@ def generate_body_html(product, collections):
             tech_items.append(f'<li><strong>Édition :</strong> {colorway}</li>')
         else:
             tech_items.append(f'<li><strong>Coloris :</strong> {colorway}</li>')
-    # Ajouter matière et couleur GOAT si disponibles
-    if goat_details:
-        if goat_details.get('upper_material'):
-            mat_fr = _translate_materials(goat_details['upper_material'])
-            if mat_fr:
-                tech_items.append(f'<li><strong>Matière :</strong> {mat_fr.capitalize()}</li>')
-        if goat_details.get('color'):
-            col_fr = _translate_colors(goat_details['color'])
-            if col_fr:
-                tech_items.append(f'<li><strong>Couleurs :</strong> {col_fr.capitalize()}</li>')
     lines.append('<ul style="list-style:none;padding-left:0;">' + ''.join(tech_items) + '</ul>')
     
     # Paragraphe 5: Garanties KP SHOES
