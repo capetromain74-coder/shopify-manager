@@ -350,7 +350,7 @@ function startBulkGoat(){
         updateProgress();
         
         // Étape 1 : récupérer les images GOAT
-        fetch("/api/goat/images?sku="+encodeURIComponent(p.sku))
+        fetch("/api/goat/images?sku="+encodeURIComponent(p.sku)+"&title="+encodeURIComponent(p.title||""))
         .then(function(r){return r.json()})
         .then(function(d){
             if(d.error||!d.images||!d.images.length){
