@@ -330,8 +330,13 @@ def api_goat_apply():
         
         # Si une seule image (produit sans galerie), la redimensionner en 750x500
         # Détection: 1 seule image ET c'est une image GOAT (pas une galerie multi-angles)
-        needs_resize = len(images) == 1 and 'image.goat.com' in images[0]
-        log.info(f"[GOAT Apply] {len(images)} images, needs_resize={needs_resize}, first_url={images[0][:80]}...")
+        # Exception: pas de resize pour les vêtements (le crop rogne mal les images)
+        product_title = product.get('title', '').lower()
+        clothing_kw = ['hoodie', 'sweatshirt', 'sweater', 'sweatpant', 'sweatshort', 'tee ', 't-shirt',
+                       'crewneck', 'jacket', 'pant ', 'pants', 'short ', 'shorts', 'polo', 'jersey', 'vest ']
+        is_clothing_product = any(kw in product_title for kw in clothing_kw)
+        needs_resize = len(images) == 1 and 'image.goat.com' in images[0] and not is_clothing_product
+        log.info(f"[GOAT Apply] {len(images)} images, needs_resize={needs_resize}, is_clothing={is_clothing_product}, first_url={images[0][:80]}...")
         
         # Add new images
         added = 0
