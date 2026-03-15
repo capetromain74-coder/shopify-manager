@@ -107,8 +107,9 @@ def _goat_post(url, json_data):
         log.warning(f"[GOAT] subprocess curl POST failed: {e}")
     return None
 
-def search(sku):
-    """Recherche un produit GOAT via Algolia. Retourne slug + image principale."""
+def search(sku, title=None):
+    """Recherche un produit GOAT via Algolia. Retourne slug + image principale.
+    Si Algolia ne trouve rien et qu'un titre est fourni, tente de deviner le slug."""
     url = f"{GOAT_ALGOLIA_URL}?x-algolia-application-id={GOAT_ALGOLIA_APP_ID}&x-algolia-api-key={GOAT_ALGOLIA_API_KEY}"
     payload = {"requests": [{"indexName": "product_variants_v2", "params": f"distinct=true&maxValuesPerFacet=1&page=0&query={sku}"}]}
     raw = _goat_post(url, payload)
@@ -116,21 +117,67 @@ def search(sku):
     try: data = json.loads(raw)
     except (json.JSONDecodeError, ValueError): return None
     hits = data.get('results', [{}])[0].get('hits', [])
-    if not hits: return None
-    sku_clean = sku.replace('-', ' ').replace('  ', ' ').upper()
-    best = None
-    for h in hits:
-        h_sku = (h.get('sku', '') or '').upper()
-        if h_sku == sku_clean or h_sku == sku.upper():
-            best = h; break
-    if not best: best = hits[0]
-    return {
-        'name': best.get('name', ''),
-        'sku': best.get('sku', sku),
-        'slug': best.get('slug', ''),
-        'brand': best.get('brand_name', ''),
-        'main_picture_url': best.get('original_picture_url', '') or best.get('main_picture_url', ''),
-    }
+    if hits:
+        sku_clean = sku.replace('-', ' ').replace('  ', ' ').upper()
+        best = None
+        for h in hits:
+            h_sku = (h.get('sku', '') or '').upper()
+            if h_sku == sku_clean or h_sku == sku.upper():
+                best = h; break
+        if not best: best = hits[0]
+        return {
+            'name': best.get('name', ''),
+            'sku': best.get('sku', sku),
+            'slug': best.get('slug', ''),
+            'brand': best.get('brand_name', ''),
+            'main_picture_url': best.get('original_picture_url', '') or best.get('main_picture_url', ''),
+        }
+    # Fallback: pas dans Algolia (vetements/apparel) - tenter via slug direct
+    if not hits and title:
+        log.info(f"[GOAT] Algolia miss for {sku}, trying slug fallback with title: {title[:50]}")
+        result = search_by_slug(title, sku)
+        if result:
+            return result
+    return None
+
+
+def search_by_slug(title, sku=''):
+    """Tente de trouver un produit GOAT en construisant un slug à partir du titre.
+    Utile pour les vêtements qui ne sont pas dans l'index Algolia."""
+    import re as _re
+    # Nettoyer le titre: enlever les quotes, parenthèses, caractères spéciaux
+    clean = title.strip()
+    clean = _re.sub(r"['''\"]", '', clean)
+    clean = _re.sub(r'\([^)]*\)', '', clean)  # enlever (FW24) etc
+    clean = clean.strip()
+    # Slugifier
+    slug_base = _re.sub(r'[^a-z0-9]+', '-', clean.lower()).strip('-')
+    
+    # Essayer plusieurs variantes de slug
+    slugs_to_try = [slug_base]
+    if sku:
+        sku_slug = _re.sub(r'[^a-z0-9]+', '-', sku.lower()).strip('-')
+        slugs_to_try.insert(0, f"{slug_base}-{sku_slug}")
+    
+    for slug in slugs_to_try:
+        raw = _goat_get(f"{GOAT_PRODUCT_API}/{slug}")
+        if raw:
+            try:
+                data = json.loads(raw)
+                if data.get('name'):
+                    log.info(f"[GOAT] Slug fallback found: {slug}")
+                    return {
+                        'name': data.get('name', ''),
+                        'sku': data.get('sku', sku),
+                        'slug': slug,
+                        'brand': data.get('brandName', ''),
+                        'main_picture_url': data.get('mainPictureUrl', '') or data.get('pictureUrl', ''),
+                    }
+            except (json.JSONDecodeError, ValueError):
+                pass
+    
+    log.info(f"[GOAT] Slug fallback failed for: {title[:50]}")
+    return None
 
 def get_product_images(slug):
     """Récupère TOUTES les images d'un produit via web-api. Gère les produits à 1 seule image."""
@@ -306,9 +353,10 @@ def _url_exists(url):
     return False
 
 
-def get_images(sku):
+def get_images(sku, title=None):
     """Récupère les images GOAT pour un SKU. Gère les SKU multiples (ex: 0951301/0951303).
     Stratégie: Algolia pour trouver le produit + découverte d'angles sur le CDN.
+    Pour les vêtements (non trouvés via Algolia), utilise le titre pour deviner le slug.
     """
     try:
         sku = re.sub(r':\d+$', '', sku.strip())
@@ -316,7 +364,7 @@ def get_images(sku):
         if not skus: skus = [sku]
         
         if len(skus) == 1:
-            product = search(skus[0])
+            product = search(skus[0], title=title)
             if not product or not product.get('slug'): return None
             
             # 1. Essayer l'API produit (peut être bloquée par Cloudflare)
