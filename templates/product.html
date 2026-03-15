@@ -215,12 +215,17 @@ function openGoat(){
     document.getElementById("goatImages").innerHTML="<div class='spinner'></div>";
     goatImages=[];
     
-    fetch("/api/goat/images?sku="+encodeURIComponent(sku))
+    fetch("/api/goat/images?sku="+encodeURIComponent(sku)+"&title="+encodeURIComponent(P.title||""))
         .then(function(r){return r.json();})
         .then(function(d){
             if(d.error){
                 document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ "+d.error+"</span>";
-                document.getElementById("goatImages").innerHTML="";
+                document.getElementById("goatImages").innerHTML="<div style='margin-top:12px;padding:15px;background:#1a1a2e;border-radius:8px;border:1px solid #333'>"
+                    +"<p style='color:#ccc;margin:0 0 8px 0;font-size:13px'>Colle le lien GOAT du produit :</p>"
+                    +"<div style='display:flex;gap:8px'>"
+                    +"<input id='goatUrlInput' type='text' placeholder='https://www.goat.com/apparel/...' style='flex:1;padding:8px 12px;background:#0d0d1a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px'/>"
+                    +"<button onclick='searchGoatByUrl()' style='padding:8px 16px;background:#6c5ce7;border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:13px'>Chercher</button>"
+                    +"</div></div>";
                 return;
             }
             
@@ -263,6 +268,42 @@ function openGoat(){
         .catch(function(e){
             document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+e.message+"</span>";
             document.getElementById("goatImages").innerHTML="";
+        });
+}
+
+function searchGoatByUrl(){
+    var url=document.getElementById("goatUrlInput").value.trim();
+    if(!url){return;}
+    // Extraire le slug depuis l'URL GOAT (ex: https://www.goat.com/apparel/denim-tears-...-grey)
+    var match=url.match(/goat\.com\/(?:apparel|sneakers|fr-fr\/apparel|fr-fr\/sneakers|en-us\/apparel)\/([a-z0-9\-]+)/i);
+    if(!match){
+        document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ URL GOAT invalide</span>";
+        return;
+    }
+    var slug=match[1];
+    document.getElementById("goatStatus").innerHTML="🔍 Recherche via slug <strong>"+slug.substring(0,40)+"...</strong>";
+    document.getElementById("goatImages").innerHTML="<div class='spinner'></div>";
+    goatImages=[];
+    fetch("/api/goat/images-by-slug?slug="+encodeURIComponent(slug))
+        .then(function(r){return r.json();})
+        .then(function(d){
+            if(d.error){
+                document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ "+d.error+"</span>";
+                document.getElementById("goatImages").innerHTML="";
+                return;
+            }
+            goatImages=d.images||[];
+            document.getElementById("goatStatus").innerHTML="✅ "+goatImages.length+" images trouvées pour <strong>"+d.name.substring(0,50)+"</strong>";
+            var html="<div style='display:flex;flex-wrap:wrap;gap:10px;margin-top:10px'>";
+            goatImages.forEach(function(u,i){
+                html+="<img src='"+u+"' style='width:120px;height:80px;object-fit:cover;border-radius:6px;border:2px solid #333'/>";
+            });
+            html+="</div>";
+            document.getElementById("goatImages").innerHTML=html;
+            document.getElementById("goatApplyBtn").style.display="block";
+        })
+        .catch(function(e){
+            document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+e+"</span>";
         });
 }
 
