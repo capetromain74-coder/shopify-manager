@@ -300,7 +300,6 @@ function searchGoatByUrl(){
             });
             html+="</div>";
             document.getElementById("goatImages").innerHTML=html;
-            document.getElementById("goatApplyBtn").style.display="block";
         })
         .catch(function(e){
             document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+e+"</span>";
