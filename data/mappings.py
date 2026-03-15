@@ -14,7 +14,7 @@ MODEL_COLLECTIONS = {
     'asics-gel-kayano': ['kayano'], 'asics-gel-nyc': ['gel-nyc', 'gel nyc'],
     'ugg-tasman': ['tasman'], 'ugg-tazz': ['tazz'], 'ugg-ultra-mini': ['ultra mini'],
     'travis-scott': ['travis scott'], 'off-white': ['off-white'], 'supreme': ['supreme'],
-    'tous-nos-vetements': ['essentials', 'hoodie', 'sweatpant', 'sweatshort', 'tee ', 't-shirt'],
+    'tous-nos-vetements': ['essentials', 'hoodie', 'sweatshirt', 'sweater', 'sweatpant', 'sweatshort', 'tee ', 't-shirt', 'crewneck', 'jacket', 'pants', 'pant ', 'short ', 'shorts', 'polo', 'jersey', 'vest '],
 }
 
 BRAND_COLLECTIONS = {
