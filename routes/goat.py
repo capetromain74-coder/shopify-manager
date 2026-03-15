@@ -241,12 +241,13 @@ def api_goat_debug_api():
 def api_goat_images():
     """Recherche les images GOAT pour un SKU via l'app 360. Gère les SKU multiples."""
     sku = request.args.get('sku', '').strip()
+    title = request.args.get('title', '').strip()
     if not sku:
         return jsonify({'error': 'SKU requis'}), 400
     
-    log.info(f"[GOAT] Searching images for SKU: {sku}")
+    log.info(f"[GOAT] Searching images for SKU: {sku}" + (f" (title: {title[:40]})" if title else ""))
     
-    result = get_goat_images(sku)
+    result = get_goat_images(sku, title=title if title else None)
     
     if not result:
         return jsonify({'error': 'Produit non trouve sur GOAT'}), 404
@@ -270,6 +271,37 @@ def api_goat_images():
         'sku': result.get('sku', sku),
         'images': result.get('images', []),
         'multi': False
+    })
+
+
+@goat_bp.route('/api/goat/images-by-slug')
+def api_goat_images_by_slug():
+    """Recherche les images GOAT directement via un slug (pour vêtements/apparel)."""
+    slug = request.args.get('slug', '').strip()
+    if not slug:
+        return jsonify({'error': 'Slug requis'}), 400
+    
+    log.info(f"[GOAT] Searching images by slug: {slug}")
+    
+    images = goat_get_product_images(slug)
+    if not images:
+        return jsonify({'error': 'Aucune image trouvee pour ce produit'}), 404
+    
+    # Récupérer aussi le nom
+    raw = _goat_get(f"https://www.goat.com/web-api/v1/product_templates/{slug}")
+    name = ''
+    if raw:
+        try:
+            import json as _json
+            data = _json.loads(raw)
+            name = data.get('name', '')
+        except:
+            pass
+    
+    return jsonify({
+        'name': name,
+        'slug': slug,
+        'images': images,
     })
 
 
@@ -331,5 +363,3 @@ def api_goat_apply():
     except Exception as e:
         log.error(f"[GOAT Apply] Error: {e}")
         return jsonify({'error': str(e)}), 500
-
-
