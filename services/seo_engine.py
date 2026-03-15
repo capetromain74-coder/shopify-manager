@@ -95,11 +95,22 @@ def find_collection(title, collections):
 def extract_brand(title):
     t = title.lower()
     if 'fear of god' in t or 'essentials' in t: return 'Fear of God'
+    if 'denim tears' in t: return 'Denim Tears'
+    if 'stussy' in t or 'stüssy' in t: return 'Stüssy'
+    if 'palm angels' in t: return 'Palm Angels'
+    if 'rhude' in t: return 'Rhude'
+    if 'gallery dept' in t: return 'Gallery Dept.'
+    if 'human made' in t: return 'Human Made'
+    if 'kith' in t and 'nike' not in t: return 'Kith'
+    if 'sp5der' in t: return 'Sp5der'
+    if 'corteiz' in t: return 'Corteiz'
     if 'jordan' in t: return 'Jordan'
     if 'yeezy' in t: return 'Yeezy'
     if 'travis scott' in t: return 'Nike x Travis Scott'
     if 'off-white' in t.replace(' ', '-'): return 'Nike x Off-White'
     if 'dior' in t: return 'Dior'
+    if 'bape' in t or 'bathing ape' in t: return 'BAPE'
+    if 'supreme' in t: return 'Supreme'
     if 'mschf' in t: return 'MSCHF'
     brands = [
         ('Nike', ['nike', 'dunk', 'air force', 'air max', 'nocta', 'blazer', 'vomero', 'p-6000']),
@@ -120,7 +131,7 @@ def extract_brand(title):
     for brand, kws in brands:
         for kw in kws:
             if kw in t: return brand
-    return 'Sneakers'
+    return 'Streetwear'
 
 
 def analyze_seo(product, meta_title, meta_description):
@@ -404,6 +415,32 @@ def generate_meta_description(product):
     if is_clothing(title):
         clothing_type = get_clothing_type(title)
         color = extract_clothing_color(title)
+        
+        # Essayer GOAT + IA pour une meta description riche
+        goat_details = None
+        if sku:
+            goat_details = _fetch_goat_details(sku)
+        
+        ai_desc = generate_story_ai(title, brand, color or '', '', goat_data=goat_details)
+        if ai_desc:
+            max_len = 140 - len(SITE_NAME)
+            if len(ai_desc) > max_len:
+                cut = ai_desc[:max_len].rfind('.')
+                if cut > 90:
+                    ai_desc = ai_desc[:cut + 1]
+                else:
+                    cut = ai_desc[:max_len].rfind(',')
+                    if cut > 90:
+                        ai_desc = ai_desc[:cut] + '...'
+                    else:
+                        ai_desc = ai_desc[:max_len].rsplit(' ', 1)[0] + '...'
+            if len(ai_desc) < 120:
+                ai_desc = ai_desc + ' Disponible sur ' + SITE_NAME + '.'
+            if len(ai_desc) > 155:
+                ai_desc = ai_desc[:152].rsplit(' ', 1)[0] + '...'
+            return ai_desc
+        
+        # Fallback sans IA
         if color:
             desc = 'La ' + title + ' en coloris ' + color + '. Piece streetwear premium disponible sur ' + SITE_NAME + '. Authenticite garantie, livraison rapide.'
         else:
@@ -568,16 +605,31 @@ def generate_story_ai(title, brand, colorway, model_desc, goat_data=None):
         import os, ssl, json as _json
         from urllib.request import Request, urlopen
 
+        # Detecter si c'est un vetement
+        is_clothing_product = is_clothing(title) or (goat_data and goat_data.get('productCategory') == 'clothing')
+
         # Construire le contexte GOAT si dispo
         goat_context = ""
         if goat_data:
             parts = []
-            if goat_data.get('upper_material'):
-                parts.append("Materiaux tige : " + goat_data['upper_material'])
-            if goat_data.get('color'):
-                parts.append("Couleurs : " + goat_data['color'])
-            if goat_data.get('midsole'):
-                parts.append("Semelle : " + goat_data['midsole'])
+            if is_clothing_product:
+                if goat_data.get('composition'):
+                    parts.append("Composition : " + goat_data['composition'])
+                if goat_data.get('color'):
+                    parts.append("Couleur : " + goat_data['color'])
+                if goat_data.get('season'):
+                    parts.append("Saison : " + goat_data['season'])
+                if goat_data.get('taxonomyLevel3'):
+                    parts.append("Type : " + goat_data['taxonomyLevel3'])
+                if goat_data.get('fit'):
+                    parts.append("Coupe : " + goat_data['fit'])
+            else:
+                if goat_data.get('upper_material'):
+                    parts.append("Materiaux tige : " + goat_data['upper_material'])
+                if goat_data.get('color'):
+                    parts.append("Couleurs : " + goat_data['color'])
+                if goat_data.get('midsole'):
+                    parts.append("Semelle : " + goat_data['midsole'])
             if goat_data.get('nickname'):
                 parts.append("Surnom : " + goat_data['nickname'])
             if goat_data.get('details'):
@@ -585,23 +637,43 @@ def generate_story_ai(title, brand, colorway, model_desc, goat_data=None):
             if parts:
                 goat_context = "\n\nDonnees techniques confirmees (utilise-les, ne les contredis pas) :\n" + "\n".join(parts)
 
-        prompt = (
-            "Tu es un expert sneakers qui redige des descriptions produits pour un site e-commerce francais (KP SHOES).\n\n"
-            "Produit : " + title + "\n"
-            "Marque : " + brand + "\n"
-            + ("Coloris : " + colorway + "\n" if colorway else "")
-            + goat_context
-            + "\n\nEcris un paragraphe de 3-4 phrases decrivant cette paire.\n"
-            "- Base-toi UNIQUEMENT sur les donnees techniques ci-dessus et le nom du produit\n"
-            "- Decris les materiaux, couleurs, et le style de la paire\n"
-            "- Si le nom indique une collaboration (x, collab), mentionne-la\n"
-            "- Si le surnom evoque un theme (pays, ville, film, etc.), mentionne-le\n"
-            "- Sois precis et naturel, en francais\n"
-            "- Ne mentionne PAS de prix ni de date de sortie exacte\n"
-            "- N'INVENTE PAS de details techniques non fournis\n"
-            "- Ne commence PAS par 'Decouvrez' ni 'La " + title + "'\n"
-            "- Reponds UNIQUEMENT avec le paragraphe, rien d'autre."
-        )
+        if is_clothing_product:
+            prompt = (
+                "Tu es un expert streetwear qui redige des descriptions produits pour un site e-commerce francais (KP SHOES).\n\n"
+                "Produit : " + title + "\n"
+                "Marque : " + brand + "\n"
+                + ("Coloris : " + colorway + "\n" if colorway else "")
+                + goat_context
+                + "\n\nEcris un paragraphe de 3-4 phrases decrivant cette piece streetwear.\n"
+                "- Base-toi UNIQUEMENT sur les donnees techniques ci-dessus et le nom du produit\n"
+                "- Decris la composition, la couleur et le style de la piece\n"
+                "- Si la marque est connue (Denim Tears, Essentials, Stussy, etc.), mentionne son univers/ADN\n"
+                "- Si le nom indique un motif ou theme specifique (Cotton Wreath, etc.), explique-le\n"
+                "- Si le nom indique une collaboration, mentionne-la\n"
+                "- Sois precis et naturel, en francais\n"
+                "- Ne mentionne PAS de prix ni de date de sortie exacte\n"
+                "- N'INVENTE PAS de details techniques non fournis\n"
+                "- Ne commence PAS par 'Decouvrez'\n"
+                "- Reponds UNIQUEMENT avec le paragraphe, rien d'autre."
+            )
+        else:
+            prompt = (
+                "Tu es un expert sneakers qui redige des descriptions produits pour un site e-commerce francais (KP SHOES).\n\n"
+                "Produit : " + title + "\n"
+                "Marque : " + brand + "\n"
+                + ("Coloris : " + colorway + "\n" if colorway else "")
+                + goat_context
+                + "\n\nEcris un paragraphe de 3-4 phrases decrivant cette paire.\n"
+                "- Base-toi UNIQUEMENT sur les donnees techniques ci-dessus et le nom du produit\n"
+                "- Decris les materiaux, couleurs, et le style de la paire\n"
+                "- Si le nom indique une collaboration (x, collab), mentionne-la\n"
+                "- Si le surnom evoque un theme (pays, ville, film, etc.), mentionne-le\n"
+                "- Sois precis et naturel, en francais\n"
+                "- Ne mentionne PAS de prix ni de date de sortie exacte\n"
+                "- N'INVENTE PAS de details techniques non fournis\n"
+                "- Ne commence PAS par 'Decouvrez' ni 'La " + title + "'\n"
+                "- Reponds UNIQUEMENT avec le paragraphe, rien d'autre."
+            )
 
         api_url = "https://api.anthropic.com/v1/messages"
         headers = {
@@ -771,8 +843,8 @@ def generate_color_sentence_fallback(title, colorway):
 
 def is_clothing(title):
     """Détecte si le produit est un vêtement (pas une sneaker)"""
-    clothing_kw = ['hoodie', 'sweatpant', 'sweatshort', 'tee ', 't-shirt', 'crewneck', 'jacket',
-                   'pant ', 'pants', 'short ', 'shorts']
+    clothing_kw = ['hoodie', 'sweatshirt', 'sweatpant', 'sweatshort', 'tee ', 't-shirt', 'crewneck', 'jacket',
+                   'pant ', 'pants', 'short ', 'shorts', 'sweater', 'vest ', 'polo', 'jersey']
     t = title.lower()
     return any(kw in t for kw in clothing_kw)
 
@@ -781,10 +853,15 @@ def get_clothing_type(title):
     """Retourne le type de vêtement en français"""
     t = title.lower()
     if 'hoodie' in t: return 'hoodie'
+    if 'sweatshirt' in t: return 'sweatshirt'
+    if 'sweater' in t: return 'pull'
     if 'sweatpant' in t: return 'jogging'
     if 'sweatshort' in t: return 'short'
     if 'crewneck' in t or 's/s tee' in t or 'ss tee' in t or 't-shirt' in t or 'tee ' in t: return 't-shirt'
+    if 'polo' in t: return 'polo'
+    if 'jersey' in t: return 'jersey'
     if 'jacket' in t: return 'veste'
+    if 'vest' in t: return 'gilet'
     if 'pant' in t: return 'pantalon'
     if 'short' in t: return 'short'
     return 'pièce'
@@ -793,15 +870,21 @@ def get_clothing_type(title):
 def extract_clothing_color(title):
     """Extrait la couleur d'un vêtement depuis le titre"""
     t = title
-    # Supprimer les patterns connus pour garder la couleur à la fin
-    for remove in ['Fear Of God Fear of God Essentials ', 'Fear Of God ', '(FW24)', '(SS25)', '(FW23)']:
+    # Supprimer les patterns de marque connus pour garder la couleur à la fin
+    brand_patterns = [
+        'Fear Of God Fear of God Essentials ', 'Fear Of God ', 'Fear of God Essentials ',
+        'Denim Tears ', 'Stussy ', 'Palm Angels ', 'Rhude ', 'Gallery Dept ',
+        '(FW24)', '(SS25)', '(FW23)', '(FW25)', '(SS24)', '(SS26)',
+    ]
+    for remove in brand_patterns:
         t = t.replace(remove, '')
     # Le dernier mot/groupe est généralement la couleur
     parts = t.strip().split()
     # Trouver où commence la couleur (après le type de vêtement)
     clothing_words = ['Classic', 'Fleece', 'Essential', 'Jersey', 'Crewneck', 'Core', 'Collection',
                       'Heavy', 'S/S', 'SS', 'NBA', 'Relaxed', 'Hoodie', 'Sweatpant', 'Sweatshort',
-                      'Sweatshorts', 'Tee', 'T-Shirt']
+                      'Sweatshorts', 'Sweatshirt', 'Sweater', 'Tee', 'T-Shirt', 'Jacket', 'Vest',
+                      'Polo', 'Shorts', 'Pants', 'The', 'Cotton', 'Wreath']
     color_start = 0
     for i, p in enumerate(parts):
         if p in clothing_words:
@@ -994,41 +1077,49 @@ def generate_body_html(product, collections):
         clothing_type = get_clothing_type(title)
         color = extract_clothing_color(title)
         
+        # Chercher les données GOAT pour les vêtements aussi
+        goat_details = None
+        if sku:
+            goat_details = _fetch_goat_details(sku)
+        
         lines = []
-        # Paragraphe 1: Introduction
+        # Paragraphe 1: Introduction avec lien collection
         if collection:
             lines.append(f'<p>Découvrez le <strong>{title}</strong> disponible sur {SITE_NAME}. Retrouvez cette pièce et bien d\'autres dans notre collection <a href="{collection["url"]}">{collection["title"]}</a>.</p>')
         else:
             lines.append(f'<p>Découvrez le <strong>{title}</strong> disponible sur {SITE_NAME}.</p>')
         
-        # Paragraphe 2: Description de la marque/ligne
-        if 'essentials' in title.lower():
-            lines.append(f'<p>La ligne Essentials de Fear of God, créée par Jerry Lorenzo, propose des basiques streetwear premium au design minimaliste et intemporel. Chaque pièce se distingue par sa coupe oversize signature, ses matériaux de haute qualité et le logo Essentials discret qui est devenu un symbole du luxe décontracté.</p>')
+        # Paragraphe 2: Description IA enrichie (marque + pièce)
+        ai_clothing_desc = generate_story_ai(title, brand, color or '', '', goat_data=goat_details)
+        if ai_clothing_desc:
+            lines.append(f'<p>{ai_clothing_desc}</p>')
         else:
-            lines.append(f'<p>{get_model_description(title)}</p>')
+            # Fallback: description générique par type
+            type_descs = {
+                'hoodie': 'Ce hoodie en molleton offre un confort enveloppant avec sa capuche doublée et ses finitions côtelées. Une pièce essentielle de toute garde-robe streetwear.',
+                'jogging': 'Ce jogging en molleton premium allie confort et style avec sa coupe décontractée et ses finitions côtelées aux chevilles.',
+                'short': 'Ce short combine confort et style décontracté avec sa coupe ample et ses finitions soignées.',
+                't-shirt': 'Ce t-shirt en coton premium offre une coupe ample et décontractée. Un basique streetwear élevé au rang de pièce premium.',
+                'veste': 'Cette veste allie fonctionnalité et esthétique streetwear avec ses matériaux premium et sa coupe contemporaine.',
+            }
+            desc = type_descs.get(clothing_type, 'Cette pièce incarne l\'esthétique streetwear avec des matériaux de haute qualité et une coupe contemporaine.')
+            lines.append(f'<p>{desc}</p>')
         
-        # Paragraphe 3: Description spécifique à la pièce
-        type_descs = {
-            'hoodie': f'Ce hoodie en molleton épais offre un confort enveloppant avec sa capuche doublée, sa poche kangourou et ses finitions côtelées aux poignets et à la taille. Une pièce essentielle de toute garde-robe streetwear.',
-            'jogging': f'Ce jogging en molleton premium allie confort et style avec sa coupe décontractée, sa taille élastiquée à cordon et ses finitions côtelées aux chevilles. Parfait pour un look streetwear complet.',
-            'short': f'Ce short en molleton combine confort et style décontracté avec sa coupe ample, sa taille élastiquée et ses finitions soignées. Idéal pour un look casual urbain.',
-            't-shirt': f'Ce t-shirt en jersey de coton premium offre une coupe ample et décontractée avec des coutures renforcées et une finition douce au toucher. Un basique streetwear élevé au rang de pièce premium.',
-            'veste': f'Cette veste allie fonctionnalité et esthétique streetwear avec ses matériaux premium et sa coupe contemporaine.',
-        }
-        desc = type_descs.get(clothing_type, f'Cette pièce incarne l\'esthétique minimaliste et premium de la collection, avec des matériaux de haute qualité et une coupe contemporaine.')
-        lines.append(f'<p>{desc}</p>')
-        
-        # Paragraphe 4: Caractéristiques
+        # Paragraphe 3: Caractéristiques techniques
         tech_items = []
         if sku:
             tech_items.append(f'<li><strong>Référence :</strong> {sku}</li>')
-        tech_items.append(f'<li><strong>Marque :</strong> Fear of God Essentials</li>')
+        tech_items.append(f'<li><strong>Marque :</strong> {brand}</li>')
         tech_items.append(f'<li><strong>Type :</strong> {clothing_type.capitalize()}</li>')
+        if goat_details and goat_details.get('composition'):
+            tech_items.append(f'<li><strong>Composition :</strong> {goat_details["composition"]}</li>')
+        if goat_details and goat_details.get('season'):
+            tech_items.append(f'<li><strong>Saison :</strong> {goat_details["season"]}</li>')
         if color:
             tech_items.append(f'<li><strong>Coloris :</strong> {color}</li>')
         lines.append('<ul style="list-style:none;padding-left:0;">' + ''.join(tech_items) + '</ul>')
         
-        # Paragraphe 5: Garanties
+        # Paragraphe 4: Garanties
         lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque article. Tous nos produits sont vérifiés par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
         
         return ''.join(lines)
