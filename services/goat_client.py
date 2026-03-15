@@ -204,6 +204,14 @@ def get_product_details(slug):
         'release_date': data.get('releaseDate', '') or data.get('releaseDateUnix', ''),
         'nickname': data.get('nickname', ''),
         'category': data.get('category', ''),
+        # Champs vetements
+        'productCategory': data.get('productCategory', ''),
+        'productType': data.get('productType', ''),
+        'composition': data.get('composition', ''),
+        'season': data.get('season', ''),
+        'fit': data.get('fit', ''),
+        'taxonomyLevel3': data.get('taxonomyLevel3', ''),
+        'brandName': data.get('brandName', ''),
     }
 
     # Nettoyer le HTML du story si présent
@@ -213,7 +221,7 @@ def get_product_details(slug):
         details['details'] = re.sub(r'<[^>]+>', '', details['details']).strip()
 
     # Vérifier qu'on a au moins quelque chose d'utile
-    has_data = any(details.get(k) for k in ['color', 'details', 'story', 'upper_material'])
+    has_data = any(details.get(k) for k in ['color', 'details', 'story', 'upper_material', 'composition', 'productCategory'])
     if not has_data:
         log.info(f"[GOAT] No useful text data for {slug}")
         return None
