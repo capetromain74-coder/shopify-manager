@@ -263,6 +263,12 @@ function openGoat(){
             for(var i=0;i<goatImages.length;i++){
                 html+="<img src='"+goatImages[i]+"' class='selected' onclick='toggleGoatImg(this,"+i+")'>";
             }
+            html+="<div style='margin-top:12px;padding:12px;background:#1a1a2e;border-radius:8px;border:1px solid #333'>"
+                +"<p style='color:#999;margin:0 0 6px 0;font-size:12px'>Mauvaises photos ? Colle le bon lien GOAT :</p>"
+                +"<div style='display:flex;gap:8px'>"
+                +"<input id='goatUrlInput' type='text' placeholder='https://www.goat.com/sneakers/...' style='flex:1;padding:8px 12px;background:#0d0d1a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px'/>"
+                +"<button onclick='searchGoatByUrl()' style='padding:8px 16px;background:#6c5ce7;border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:13px'>Chercher</button>"
+                +"</div></div>";
             document.getElementById("goatImages").innerHTML=html;
         })
         .catch(function(e){
