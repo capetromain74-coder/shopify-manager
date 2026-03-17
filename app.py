@@ -78,42 +78,35 @@ def image_scanner_page():
     return open('templates/image_scanner.html').read()
 
 
-@app.route('/api/products/single-image')
-def api_products_single_image():
-    """Récupère tous les produits avec 1 seule image."""
-    since_id = 0
-    single_image_products = []
-    total_scanned = 0
+@app.route('/api/products/single-image-page')
+def api_products_single_image_page():
+    """Récupère UNE page de produits (250 max) et filtre ceux avec 1 seule image."""
+    since_id = request.args.get('since_id', '0')
+    r = shopify_request(f'products.json?limit=250&since_id={since_id}&fields=id,title,handle,images,variants')
+    if not r or not r.get('products'):
+        return jsonify({'products': [], 'has_more': False, 'next_since_id': '0', 'page_total': 0})
 
-    while True:
-        r = shopify_request(f'products.json?limit=250&since_id={since_id}&fields=id,title,handle,images,variants')
-        if not r or not r.get('products'):
-            break
-        products = r['products']
-        total_scanned += len(products)
+    products = r['products']
+    single_image = []
+    for p in products:
+        if len(p.get('images', [])) == 1:
+            sku = p['variants'][0].get('sku', '') if p.get('variants') else ''
+            single_image.append({
+                'id': p['id'],
+                'title': p['title'],
+                'handle': p.get('handle', ''),
+                'sku': sku,
+                'image_url': p['images'][0]['src'] if p.get('images') else '',
+            })
 
-        for p in products:
-            img_count = len(p.get('images', []))
-            if img_count == 1:
-                sku = p['variants'][0].get('sku', '') if p.get('variants') else ''
-                single_image_products.append({
-                    'id': p['id'],
-                    'title': p['title'],
-                    'handle': p.get('handle', ''),
-                    'sku': sku,
-                    'image_url': p['images'][0]['src'] if p.get('images') else '',
-                })
+    has_more = len(products) >= 250
+    next_id = str(products[-1]['id']) if products else '0'
 
-        if len(products) < 250:
-            break
-        since_id = products[-1]['id']
-        time.sleep(0.5)
-
-    log.info(f"[Image Scanner] Scanned {total_scanned} products, found {len(single_image_products)} with 1 image")
     return jsonify({
-        'products': single_image_products,
-        'count': len(single_image_products),
-        'total_scanned': total_scanned
+        'products': single_image,
+        'page_total': len(products),
+        'has_more': has_more,
+        'next_since_id': next_id,
     })
 
 
@@ -121,7 +114,6 @@ def api_products_single_image():
 def api_goat_check_new_images():
     """Vérifie si GOAT a plus d'images disponibles pour un SKU donné."""
     sku = request.args.get('sku', '').strip()
-    title = request.args.get('title', '').strip()
     if not sku:
         return jsonify({'error': 'SKU requis'}), 400
 
@@ -129,12 +121,7 @@ def api_goat_check_new_images():
     result = get_goat_images(sku_clean)
 
     if not result or not result.get('images'):
-        return jsonify({
-            'sku': sku,
-            'goat_found': False,
-            'goat_images': 0,
-            'images': []
-        })
+        return jsonify({'sku': sku, 'goat_found': False, 'goat_images': 0, 'images': []})
 
     images = result.get('images', [])
     return jsonify({
