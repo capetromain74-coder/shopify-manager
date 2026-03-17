@@ -22,7 +22,7 @@ def update_collection_seo(collection_id, handle):
         if r and singular in r:
             update_data = {singular: {
                 'id': collection_id,
-                'body_html': '<div style="display:none">' + seo['description'] + '</div>',
+                'body_html': seo['description'],
             }}
             shopify_request(f'{ctype}/{collection_id}.json', 'PUT', update_data)
             time.sleep(0.3)
