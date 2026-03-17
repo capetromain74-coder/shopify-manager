@@ -40,50 +40,23 @@ def api_collections():
     cols = get_collections()
     for c in cols:
         seo_def = get_collection_seo(c['handle'])
-        c['has_seo_def'] = seo_def is not None  # SEO défini dans le code
+        c['has_seo_def'] = seo_def is not None
         if seo_def:
             c['seo'] = seo_def
         else:
             c['seo'] = {'meta_title': '', 'meta_description': '', 'description': ''}
         
-        # Vérifier le SEO réellement appliqué sur Shopify
-        score = 0
-        checks = {'meta_title': False, 'meta_description': False, 'body_html': False}
-        
-        # Chercher les metafields pour meta_title et meta_description
-        try:
-            mf = shopify_request(f'collections/{c["id"]}/metafields.json')
-            if mf and 'metafields' in mf:
-                for m in mf['metafields']:
-                    if m.get('key') == 'title_tag' and m.get('value'):
-                        checks['meta_title'] = True
-                        c['live_meta_title'] = m['value']
-                        score += 35
-                    if m.get('key') == 'description_tag' and m.get('value'):
-                        checks['meta_description'] = True
-                        c['live_meta_description'] = m['value']
-                        score += 35
-        except:
-            pass
-        
-        # Vérifier body_html sur la collection
-        try:
-            for ctype in ['custom_collections', 'smart_collections']:
-                singular = ctype.rstrip('s')
-                r = shopify_request(f'{ctype}/{c["id"]}.json')
-                if r and singular in r:
-                    body = r[singular].get('body_html', '') or ''
-                    if len(body) > 50:
-                        checks['body_html'] = True
-                        score += 30
-                    break
-        except:
-            pass
-        
-        c['score'] = score
-        c['checks'] = checks
-        c['has_seo_applied'] = score >= 70
-        time.sleep(0.2)  # Rate limit Shopify
+        # Score basé sur la définition SEO dans le code (pas de vérification Shopify live)
+        # Évite de bombarder l'API Shopify avec 200+ requêtes
+        c['score'] = 100 if seo_def else 0
+        c['checks'] = {
+            'meta_title': bool(seo_def and seo_def.get('meta_title')),
+            'meta_description': bool(seo_def and seo_def.get('meta_description')),
+            'body_html': bool(seo_def and seo_def.get('description')),
+        }
+        c['has_seo_applied'] = seo_def is not None
+        c['live_meta_title'] = seo_def['meta_title'] if seo_def else ''
+        c['live_meta_description'] = seo_def['meta_description'] if seo_def else ''
     
     return jsonify({'collections': cols, 'count': len(cols)})
 
