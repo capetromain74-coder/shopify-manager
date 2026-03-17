@@ -406,7 +406,7 @@ def generate_meta_title(product):
     return meta_title
 
 
-def generate_meta_description(product):
+def generate_meta_description(product, goat_slug=''):
     title = product.get('title', '')
     sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
     brand = extract_brand(title)
@@ -419,8 +419,8 @@ def generate_meta_description(product):
         
         # Essayer GOAT + IA pour une meta description riche
         goat_details = None
-        if sku:
-            goat_details = _fetch_goat_details(sku)
+        if sku or goat_slug:
+            goat_details = _fetch_goat_details(sku, goat_slug=goat_slug)
         
         ai_desc = generate_story_ai(title, brand, color or '', '', goat_data=goat_details)
         if ai_desc:
@@ -453,8 +453,8 @@ def generate_meta_description(product):
     # -- SNEAKERS : essayer GOAT puis IA pour une meta description specifique --
     goat_desc = None
     goat_details = None
-    if sku:
-        goat_details = _fetch_goat_details(sku)
+    if sku or goat_slug:
+        goat_details = _fetch_goat_details(sku, goat_slug=goat_slug)
         if goat_details:
             # Option 1 : GOAT a une story - la traduire et tronquer
             story = goat_details.get('story', '')
@@ -961,9 +961,14 @@ def _translate_materials(material_str):
     return ' et '.join(found_materials[:3]) if found_materials else ''
 
 
-def _fetch_goat_details(sku):
-    """Cherche un produit sur GOAT par SKU et retourne ses détails texte."""
+def _fetch_goat_details(sku, goat_slug=''):
+    """Cherche un produit sur GOAT par SKU (ou slug direct) et retourne ses détails texte."""
     try:
+        if goat_slug:
+            details = goat_get_details(goat_slug)
+            if details:
+                log.info(f"[SEO] Got GOAT details via slug override: {goat_slug}")
+                return details
         product = goat_search(sku)
         if product and product.get('slug'):
             details = goat_get_details(product['slug'])
@@ -1067,7 +1072,7 @@ def build_goat_description(goat_details, title, colorway):
     return sentence, 'goat_details'
 
 
-def generate_body_html(product, collections):
+def generate_body_html(product, collections, goat_slug=''):
     title = product.get('title', '')
     brand = extract_brand(title)
     sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
@@ -1080,8 +1085,8 @@ def generate_body_html(product, collections):
         
         # Chercher les données GOAT pour les vêtements aussi
         goat_details = None
-        if sku:
-            goat_details = _fetch_goat_details(sku)
+        if sku or goat_slug:
+            goat_details = _fetch_goat_details(sku, goat_slug=goat_slug)
         
         lines = []
         # Paragraphe 1: Introduction avec lien collection
@@ -1133,8 +1138,8 @@ def generate_body_html(product, collections):
     goat_details = None
     goat_sentence = None
     cw_type = 'color'
-    if sku:
-        goat_details = _fetch_goat_details(sku)
+    if sku or goat_slug:
+        goat_details = _fetch_goat_details(sku, goat_slug=goat_slug)
         if goat_details:
             goat_sentence, goat_type = build_goat_description(goat_details, title, colorway)
             if goat_sentence:
