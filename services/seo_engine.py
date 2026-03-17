@@ -104,6 +104,7 @@ def extract_brand(title):
     if 'kith' in t and 'nike' not in t: return 'Kith'
     if 'sp5der' in t: return 'Sp5der'
     if 'corteiz' in t: return 'Corteiz'
+    if 'mihara' in t or 'mmy' in t: return 'Maison Mihara Yasuhiro'
     if 'jordan' in t: return 'Jordan'
     if 'yeezy' in t: return 'Yeezy'
     if 'travis scott' in t: return 'Nike x Travis Scott'
