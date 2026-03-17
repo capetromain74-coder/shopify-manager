@@ -61,8 +61,17 @@ app = create_app()
 
 # ══════════════════════════════════════════════════════════════
 # IMAGE SCANNER - Détection de nouvelles images GOAT
-# Ajouter ce code dans app.py, avant le if __name__ == '__main__'
+# À coller dans app.py après app = create_app()
+# et avant if __name__ == '__main__'
 # ══════════════════════════════════════════════════════════════
+
+import time, re, logging
+from flask import jsonify, request
+from services.shopify import shopify_request
+from services.goat_client import get_images as get_goat_images
+
+log = logging.getLogger("kpshoes.image_scanner")
+
 
 @app.route('/image-scanner')
 def image_scanner_page():
