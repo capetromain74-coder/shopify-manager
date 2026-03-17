@@ -123,15 +123,15 @@ function filterCols(){
         var seoClass=c.has_seo?"ok":"miss";
         var seoText=c.has_seo?"Pr\\u00eat":"Manquant";
         var preview=c.has_seo?(c.seo.meta_title||"").substring(0,50)+"...":"\\u2014";
-        html+="<tr onclick=\\"showDetail("+i+")\\" style=\\"cursor:pointer\\">";
+        html+="<tr onclick='showDetail("+i+")' style='cursor:pointer'>";
         html+="<td><strong>"+c.title+"</strong></td>";
-        html+="<td><span class=\\"handle\\">"+c.handle+"</span></td>";
-        html+="<td><span class=\\"badge-seo "+seoClass+"\\">"+seoText+"</span></td>";
-        html+="<td><span class=\\"preview\\">"+preview+"</span></td>";
-        html+="<td><button class=\\"btn-apply\\" onclick=\\"event.stopPropagation();applySeo("+c.id+",this)\\" "+(c.has_seo?"":"")+">Appliquer</button></td>";
+        html+="<td><span class='handle'>"+c.handle+"</span></td>";
+        html+="<td><span class='badge-seo "+seoClass+"'>"+seoText+"</span></td>";
+        html+="<td><span class='preview'>"+preview+"</span></td>";
+        html+="<td><button class='btn-apply' onclick='event.stopPropagation();applySeo("+c.id+",this)'>Appliquer</button></td>";
         html+="</tr>";
     }
-    if(!html)html="<tr><td colspan=\\"5\\" style=\\"text-align:center;padding:40px;color:#666\\">Aucune collection</td></tr>";
+    if(!html)html="<tr><td colspan='5' style='text-align:center;padding:40px;color:#666'>Aucune collection</td></tr>";
     tb.innerHTML=html;
 }
 
@@ -141,13 +141,13 @@ function showDetail(idx){
     document.getElementById("detailLink").href="https://kpshoes.fr/collections/"+c.handle;
     var html="";
     if(c.has_seo){
-        html+="<div class=\\"detail-section\\"><h3>Meta Title</h3><div class=\\"val\\">"+c.seo.meta_title+"</div></div>";
-        html+="<div class=\\"detail-section\\"><h3>Meta Description</h3><div class=\\"val\\">"+c.seo.meta_description+"</div></div>";
-        html+="<div class=\\"detail-section\\"><h3>Description (Body HTML)</h3><div class=\\"val\\">"+c.seo.description+"</div></div>";
+        html+="<div class='detail-section'><h3>Meta Title</h3><div class='val'>"+c.seo.meta_title+"</div></div>";
+        html+="<div class='detail-section'><h3>Meta Description</h3><div class='val'>"+c.seo.meta_description+"</div></div>";
+        html+="<div class='detail-section'><h3>Description (Body HTML)</h3><div class='val'>"+c.seo.description+"</div></div>";
         document.getElementById("detailApplyBtn").style.display="block";
         document.getElementById("detailApplyBtn").setAttribute("data-id",c.id);
     }else{
-        html="<div style=\\"text-align:center;padding:30px;color:#666\\"><p>Aucun SEO d\\u00e9fini pour cette collection.</p><p style=\\"font-size:12px;margin-top:10px\\">Handle: "+c.handle+"</p></div>";
+        html="<div style='text-align:center;padding:30px;color:#666'><p>Aucun SEO d\u00e9fini pour cette collection.</p><p style='font-size:12px;margin-top:10px'>Handle: "+c.handle+"</p></div>";
         document.getElementById("detailApplyBtn").style.display="none";
     }
     document.getElementById("detailContent").innerHTML=html;
@@ -158,7 +158,7 @@ function closeDetail(){document.getElementById("detailModal").style.display="non
 
 function applySeo(cid,btn){
     var old=btn.innerHTML;
-    btn.innerHTML="<span class=\\"spinner-sm\\"></span>";
+    btn.innerHTML="<span class='spinner-sm'></span>";
     btn.disabled=true;
     fetch("/api/collections/"+cid+"/seo",{method:"POST",headers:{"Content-Type":"application/json"}}).then(function(r){return r.json()}).then(function(d){
         if(d.success){
@@ -175,7 +175,7 @@ function applySeo(cid,btn){
 function applyFromDetail(){
     var cid=document.getElementById("detailApplyBtn").getAttribute("data-id");
     var btn=document.getElementById("detailApplyBtn");
-    btn.innerHTML="<span class=\\"spinner-sm\\"></span> Application...";
+    btn.innerHTML="<span class='spinner-sm'></span> Application...";
     btn.disabled=true;
     fetch("/api/collections/"+cid+"/seo",{method:"POST",headers:{"Content-Type":"application/json"}}).then(function(r){return r.json()}).then(function(d){
         if(d.success){
