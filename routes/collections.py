@@ -25,13 +25,15 @@ def update_collection_seo(collection_id, handle):
                 'body_html': seo['description'],
             }}
             shopify_request(f'{ctype}/{collection_id}.json', 'PUT', update_data)
-            time.sleep(0.3)
+            time.sleep(0.8)
             shopify_request(f'collections/{collection_id}/metafields.json', 'POST',
                 {'metafield': {'namespace': 'global', 'key': 'title_tag', 'value': seo['meta_title'], 'type': 'single_line_text_field'}})
-            time.sleep(0.3)
+            time.sleep(0.8)
             shopify_request(f'collections/{collection_id}/metafields.json', 'POST',
                 {'metafield': {'namespace': 'global', 'key': 'description_tag', 'value': seo['meta_description'], 'type': 'single_line_text_field'}})
+            time.sleep(0.5)
             return True
+        time.sleep(0.5)
     return False
 
 
