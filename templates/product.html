@@ -185,16 +185,22 @@ function toggleField(el){
 function regenSelected(){
     if(selectedFields.length===0){toast("Selectionnez des elements","error");return;}
     toast("Mise a jour...","success");
-    fetch("/api/seo/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid,fields:selectedFields})})
+    var body={product_id:pid,fields:selectedFields};
+    if(goatOverrideSlug) body.goat_slug=goatOverrideSlug;
+    fetch("/api/seo/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
         .then(function(r){return r.json();}).then(function(d){
             if(d.success){toast("Mis a jour: "+d.updated.join(", "),"success");setTimeout(function(){location.reload();},2000);}
             else{toast("Erreur","error");}
         }).catch(function(){toast("Erreur","error");});
 }
 
+var goatOverrideSlug="";
+
 function regenAll(){
     toast("Regeneration...","success");
-    fetch("/api/seo/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid})})
+    var body={product_id:pid};
+    if(goatOverrideSlug) body.goat_slug=goatOverrideSlug;
+    fetch("/api/seo/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
         .then(function(r){return r.json();}).then(function(d){
             if(d.success){
                 var src=d.source==="goat"?"GOAT":"generique";
@@ -299,7 +305,8 @@ function searchGoatByUrl(){
                 return;
             }
             goatImages=d.images||[];
-            document.getElementById("goatStatus").innerHTML="✅ "+goatImages.length+" images trouvées pour <strong>"+d.name.substring(0,50)+"</strong><br><small style='color:#888'>Cliquez sur une image pour la désélectionner</small>";
+            goatOverrideSlug=slug;
+            document.getElementById("goatStatus").innerHTML="✅ "+goatImages.length+" images trouvées pour <strong>"+d.name.substring(0,50)+"</strong><br><small style='color:#888'>Cliquez sur une image pour la désélectionner. Le SEO utilisera aussi ce produit GOAT.</small>";
             var html="";
             for(var i=0;i<goatImages.length;i++){
                 html+="<img src='"+goatImages[i]+"' class='selected' onclick='toggleGoatImg(this,"+i+")'>";
