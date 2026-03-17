@@ -1,358 +1,657 @@
 """
 KP SHOES - SEO des collections
-Meta titles, descriptions et body_html pour chaque collection.
+Format WetTheNew: H2 titre + intro + H2 histoire + paragraphe
+Contenu visible, pas de display:none
 """
 
+# Style wrapper appliqué à chaque description
+_S = '<div class="collection-seo" style="max-width:900px;margin:40px auto 20px;padding:0 20px;line-height:1.8;color:#555;font-size:14px">'
+_E = '</div>'
+_H1 = '<h2 style="font-size:20px;color:#222;margin:0 0 14px 0;font-weight:600">'
+_H2 = '<h2 style="font-size:17px;color:#222;margin:32px 0 10px 0;font-weight:600">'
+_P = '<p style="margin:0 0 16px 0">'
+
 COLLECTION_SEO = {
-    'jordan-4': {
-        'meta_title': 'Air Jordan 4 - Sneakers Jordan pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre Air Jordan 4 sur KP SHOES. Tous les coloris disponibles : Military Black, Bred, Cement. 100% authentique, livraison rapide en France.",
-        'description': "<p>Conçue par Tinker Hatfield en 1989, la <strong>Air Jordan 4</strong> est l'une des silhouettes les plus emblématiques de l'histoire des sneakers. Imaginée pour répondre aux besoins de Michael Jordan sur le terrain, elle a introduit le mesh sur une chaussure de basketball, les œillets en TPU et un amorti Air visible au talon — des innovations qui ont redéfini le design sneaker.</p><p>C'est avec la AJ4 aux pieds que MJ a inscrit son nom dans la légende avec « The Shot », le tir décisif contre Craig Ehlo lors des Playoffs 1989. La silhouette a aussi conquis la rue grâce au réalisateur Spike Lee, qui l'a portée dans plusieurs de ses films et a créé une série de publicités iconiques avec Nike sous le personnage de Mars Blackmon.</p><p>Depuis, la Jordan 4 a été déclinée dans des coloris devenus cultes : <strong>Bred</strong>, <strong>White Cement</strong>, <strong>Military Black</strong>, <strong>Fire Red</strong> ou encore la collaboration avec <strong>Travis Scott</strong>. Chaque nouvelle release continue de provoquer un engouement massif auprès des collectionneurs et amateurs de streetwear.</p><p>Chez <strong>KP SHOES</strong>, retrouvez toutes les Air Jordan 4 disponibles, 100% authentiques et vérifiées par nos experts. Livraison rapide en France et paiement sécurisé.</p>",
-    },
-    'jordan-1-high': {
-        'meta_title': 'Air Jordan 1 High - Sneakers Jordan pour Homme et Femme | KP SHOES',
-        'meta_description': "Découvrez toutes les Air Jordan 1 High sur KP SHOES. Chicago, Bred, Mocha, University Blue... 100% authentiques, livraison rapide en France.",
-        'description': "<p>Créée par Peter Moore en 1985, la <strong>Air Jordan 1 High</strong> est la sneaker qui a tout commencé. Premier modèle signature de Michael Jordan chez Nike, elle a été immédiatement bannie par la NBA pour infraction au code couleur — une amende de 5 000 dollars par match que Nike a payée avec plaisir, transformant la controverse en opération marketing légendaire.</p><p>Avec son upper en cuir premium, son col montant et sa technologie Air dans la semelle, la Jordan 1 High a posé les fondations d'un empire. Les coloris originaux — <strong>Chicago</strong>, <strong>Bred</strong>, <strong>Royal Blue</strong>, <strong>Shadow</strong> — sont devenus des grails qui continuent de faire vibrer les collectionneurs à chaque réédition.</p><p>Au fil des décennies, la silhouette a été sublimée par des collaborations d'exception : <strong>Off-White</strong> et Virgil Abloh, <strong>Travis Scott</strong> avec le Swoosh inversé, <strong>Union LA</strong>, <strong>Dior</strong> ou encore l'édition <strong>Lost and Found</strong> qui reproduit l'effet d'une paire retrouvée dans un entrepôt. Chaque release crée l'événement.</p><p>Retrouvez toutes les Air Jordan 1 High sur <strong>KP SHOES</strong>, 100% authentiques et vérifiées par nos experts.</p>",
-    },
-    'jordan-1-low': {
-        'meta_title': 'Air Jordan 1 Low - Sneakers Jordan pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Air Jordan 1 Low sur KP SHOES. Panda, Mocha, University Blue, Travis Scott... Authenticité garantie, livraison rapide en France.",
-        'description': "<p>Version basse de la légendaire Air Jordan 1, la <strong>Air Jordan 1 Low</strong> conserve l'ADN iconique du modèle de 1985 avec un col plus bas pour un confort quotidien optimal. Même cuir premium, même semelle Air, même style — dans un profil plus discret et polyvalent qui se porte avec tout.</p><p>Déclinée dans une multitude de coloris, la AJ1 Low est devenue l'une des silhouettes les plus populaires du moment. Du classique <strong>Panda</strong> noir et blanc aux éditions <strong>Travis Scott Reverse Mocha</strong>, en passant par les <strong>University Blue</strong> et les <strong>Starfish</strong>, il existe une Jordan 1 Low pour chaque style.</p><p>Chez <strong>KP SHOES</strong>, découvrez tous les coloris Air Jordan 1 Low disponibles. Chaque paire est 100% authentique et vérifiée par nos experts avant expédition.</p>",
-    },
-    'jordan-1-mid': {
-        'meta_title': 'Air Jordan 1 Mid - Sneakers Jordan pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre Air Jordan 1 Mid sur KP SHOES. Des centaines de coloris disponibles, 100% authentiques. Livraison rapide en France.",
-        'description': "<p>La <strong>Air Jordan 1 Mid</strong> offre le parfait équilibre entre la High et la Low avec un col intermédiaire qui allie style et confort. Sortie dans des centaines de coloris depuis 1985, elle est l'entrée idéale dans l'univers Jordan grâce à son rapport qualité-prix imbattable.</p><p>Du <strong>UNC</strong> au <strong>Banned</strong> en passant par des éditions saisonnières toujours plus créatives, la AJ1 Mid est la toile idéale pour toutes les inspirations. Sa polyvalence en fait un modèle adopté aussi bien par les collectionneurs que par ceux qui découvrent l'univers sneakers.</p><p>Retrouvez toutes les Air Jordan 1 Mid disponibles sur <strong>KP SHOES</strong>. 100% authentiques, livrées dans leur boîte d'origine.</p>",
-    },
-    'nike-dunk': {
-        'meta_title': 'Nike Dunk Low & High - Sneakers Nike pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez vos Nike Dunk Low et High sur KP SHOES. Panda, Travis Scott, Off-White... Tous les coloris, 100% authentiques. Livraison rapide.",
-        'description': "<p>Créée en 1985 pour le programme basketball universitaire <em>Be True To Your School</em>, la <strong>Nike Dunk</strong> est devenue l'une des silhouettes les plus populaires au monde. Du parquet au skatepark, puis du skatepark au trottoir, elle a traversé quatre décennies sans jamais perdre de son attrait.</p><p>La <strong>Dunk Low</strong> est la star incontestée : le coloris <strong>Panda</strong> (Black White) a été la sneaker la plus vendue en 2022 et 2023. Les collaborations légendaires — <strong>Travis Scott</strong>, <strong>Off-White</strong>, <strong>Supreme</strong>, <strong>Ben &amp; Jerry's</strong> — ont propulsé la Dunk au rang de grail ultime. La <strong>Dunk High</strong> conserve quant à elle le charme du modèle original avec sa tige montante.</p><p>Découvrez toutes les Nike Dunk disponibles sur <strong>KP SHOES</strong>. Authenticité garantie, livraison rapide en France.</p>",
-    },
-    'air-force-1': {
-        'meta_title': 'Nike Air Force 1 - Sneakers Nike pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Nike Air Force 1 sur KP SHOES. White, Black, collaborations... Le modèle Nike le plus vendu, 100% authentique. Livraison rapide.",
-        'description': "<p>Première sneaker de l'histoire à intégrer la technologie Air en 1982, la <strong>Nike Air Force 1</strong> dessinée par Bruce Kilgore est tout simplement le modèle le plus vendu de Nike — et l'une des chaussures les plus vendues de tous les temps. Son cuir premium, sa semelle Air et sa silhouette épaisse en ont fait un classique absolu de la culture urbaine.</p><p>De la version <strong>Triple White</strong> immaculée à la <strong>Triple Black</strong>, en passant par les collaborations avec <strong>Off-White</strong>, <strong>Supreme</strong> ou <strong>Louis Vuitton</strong>, l'AF1 se réinvente sans cesse tout en restant fidèle à son ADN. Adoptée par le hip-hop depuis les années 80, elle est aujourd'hui un symbole universel du style streetwear.</p><p>Retrouvez toutes les Nike Air Force 1 sur <strong>KP SHOES</strong>, 100% authentiques et vérifiées par nos experts.</p>",
-    },
-    'air-max': {
-        'meta_title': 'Nike Air Max - Sneakers Nike pour Homme et Femme | KP SHOES',
-        'meta_description': "Découvrez toutes les Nike Air Max sur KP SHOES. Air Max 1, 90, 95, 97, Plus TN, Dn... 100% authentiques, livraison rapide en France.",
-        'description': "<p>Depuis 1987 et la révolution de la bulle Air visible imaginée par Tinker Hatfield, la gamme <strong>Nike Air Max</strong> n'a cessé de repousser les limites de l'innovation et du design. De la <strong>Air Max 1</strong> qui a tout lancé à la <strong>Air Max Dn</strong> de nouvelle génération, chaque modèle a marqué son époque.</p><p>La <strong>Air Max 90</strong> est un pilier de la culture urbaine, la <strong>Air Max 95</strong> inspirée de l'anatomie humaine a bouleversé les codes du design, la <strong>Air Max 97</strong> avec ses lignes de Shinkansen a introduit le full-length Air, et la <strong>Air Max Plus TN</strong> est devenue un phénomène mondial particulièrement culte en France.</p><p>Découvrez toute la collection Nike Air Max sur <strong>KP SHOES</strong>. Tous les modèles, tous les coloris, 100% authentiques.</p>",
-    },
-    'nike-vomero': {
-        'meta_title': 'Nike Vomero 5 - Sneakers Nike pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez la Nike Zoom Vomero 5 sur KP SHOES. Tous les coloris disponibles. 100% authentique, livraison rapide en France.",
-        'description': "<p>La <strong>Nike Zoom Vomero 5</strong>, modèle running technique sorti en 2000, fait son grand retour sur la scène streetwear. Ses superpositions en cuir et mesh, sa technologie Zoom Air et son look chunky rétro-technique en font un favori des amateurs de silhouettes Y2K.</p><p>Retrouvez toutes les Nike Vomero 5 disponibles sur <strong>KP SHOES</strong>. 100% authentiques, vérifiées par nos experts.</p>",
-    },
-    'nike-sacai': {
-        'meta_title': 'Nike x Sacai - Sneakers en Édition Limitée | KP SHOES',
-        'meta_description': "Toutes les Nike x Sacai sur KP SHOES. LD Waffle, VaporWaffle, Cortez... Éditions limitées 100% authentiques. Livraison rapide en France.",
-        'description': "<p>La collaboration entre <strong>Nike et Sacai</strong>, label japonais fondé par Chitose Abe, a redéfini le concept de sneaker hybride. En superposant deux modèles en un — double semelle, double languette, double Swoosh — Sacai a créé un langage visuel unique qui a conquis le monde entier.</p><p>La <strong>LD Waffle</strong>, la <strong>VaporWaffle</strong> et la <strong>Cortez 4.0</strong> sont devenues des pièces maîtresses du streetwear contemporain. Chaque release est un événement qui mêle héritage running et innovation déconstructiviste.</p><p>Retrouvez toutes les Nike x Sacai sur <strong>KP SHOES</strong>, 100% authentiques et vérifiées par nos experts.</p>",
-    },
-    'adidas-samba': {
-        'meta_title': 'Adidas Samba - Sneakers Adidas pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre Adidas Samba sur KP SHOES. OG, Bold, Decon... Tous les coloris disponibles. 100% authentique, livraison rapide en France.",
-        'description': "<p>Née en 1950 pour permettre aux footballeurs de s'entraîner sur terrain gelé, l'<strong>Adidas Samba</strong> est devenue l'une des chaussures les plus vendues de l'histoire. Son upper en cuir, sa semelle en gomme, son toe cap en T et ses trois bandes latérales sont reconnaissables entre mille.</p><p>Portée par les terraces britanniques dans les années 80, adoptée par le monde de la mode et du streetwear dans les années 2020, la Samba connaît un revival spectaculaire. Les versions <strong>OG</strong>, <strong>Bold</strong> (plateforme) et <strong>Decon</strong> se déclinent dans des dizaines de coloris, du classique <strong>Core Black</strong> aux éditions les plus créatives.</p><p>Retrouvez toutes les Adidas Samba sur <strong>KP SHOES</strong>. 100% authentiques, livraison rapide en France.</p>",
-    },
-    'adidas-campus': {
-        'meta_title': 'Adidas Campus 00s - Sneakers Adidas pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Adidas Campus 00s sur KP SHOES. Core Black, Grey, Forest Glade... En daim premium, 100% authentiques. Livraison rapide.",
-        'description': "<p>Apparue dans les années 80, l'<strong>Adidas Campus</strong> se distingue par son upper en daim premium et ses trois bandes contrastées. Adoptée par la scène hip-hop new-yorkaise puis par le skateboarding, elle incarne l'esprit universitaire américain.</p><p>La version <strong>Campus 00s</strong> revisite le classique avec une semelle jaunie pour un effet vintage et une coupe modernisée. Disponible dans des coloris comme le <strong>Core Black</strong>, <strong>Grey White</strong> ou <strong>Forest Glade</strong>, c'est la silhouette rétro parfaite pour un look casual raffiné.</p><p>Retrouvez toutes les Adidas Campus sur <strong>KP SHOES</strong>. Authenticité garantie.</p>",
-    },
-    'adidas-gazelle': {
-        'meta_title': 'Adidas Gazelle - Sneakers Adidas pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre Adidas Gazelle sur KP SHOES. Bold, Indoor, OG... Tous les coloris en daim, 100% authentiques. Livraison rapide en France.",
-        'description': "<p>Créée en 1966, l'<strong>Adidas Gazelle</strong> est un classique intemporel qui traverse les décennies. Son upper en daim, sa semelle en caoutchouc et son profil épuré en ont fait un modèle adopté par les terrains de foot, les scènes musicales et les rues du monde entier.</p><p>Avec les versions <strong>Bold</strong> (plateforme), <strong>Indoor</strong> et les déclinaisons saisonnières, la Gazelle se réinvente tout en restant fidèle à son ADN minimaliste. Un must-have de toute garde-robe streetwear.</p><p>Découvrez toutes les Adidas Gazelle sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'adidas-spezial': {
-        'meta_title': 'Adidas Spezial - Sneakers Adidas pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Adidas Spezial sur KP SHOES. Handball Spezial, terrace style... 100% authentiques, livraison rapide en France.",
-        'description': "<p>L'<strong>Adidas Spezial</strong>, née dans les années 70 pour le handball, incarne l'esprit terrace culture britannique. Son daim premium, sa semelle en gomme translucide et sa silhouette basse en font un symbole du style casual européen.</p><p>Portée par les supporters de football anglais et adoptée par la scène streetwear mondiale, la Spezial est la sneaker du connaisseur. Son design épuré et ses matériaux nobles en font une pièce qui se bonifie avec le temps.</p><p>Retrouvez toutes les Adidas Spezial sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'adidas-forum': {
-        'meta_title': 'Adidas Forum - Sneakers Adidas pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre Adidas Forum sur KP SHOES. Forum Low, Mid, 84... Tous les coloris, 100% authentiques. Livraison rapide en France.",
-        'description': "<p>Sortie en 1984, l'<strong>Adidas Forum</strong> était la chaussure de basketball la plus chère de l'époque. Son strap à boucle distinctif, son upper en cuir et sa silhouette imposante en ont fait un favori du hip-hop dès les années 80.</p><p>Déclinée en versions <strong>Low</strong>, <strong>Mid</strong> et <strong>84</strong>, la Forum revient en force avec des collaborations remarquées et des coloris contemporains. Le strap signature reste son signe distinctif.</p><p>Retrouvez toutes les Adidas Forum sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'adidas-superstar': {
-        'meta_title': 'Adidas Superstar - Sneakers Adidas pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre Adidas Superstar sur KP SHOES. OG, XLG, collaborations BAPE... Tous les coloris, 100% authentiques. Livraison rapide en France.",
-        'description': "<p>Lancée en 1969 pour le basketball, l'<strong>Adidas Superstar</strong> est devenue une icône culturelle grâce au groupe Run-DMC qui l'a adoptée dans les années 80, en faisant le premier sponsoring sneaker du hip-hop. Sa coque en caoutchouc emblématique (shell toe), son upper en cuir lisse et ses trois bandes latérales en font l'une des silhouettes les plus reconnaissables au monde.</p><p>Déclinée en versions <strong>OG</strong>, <strong>XLG</strong> (plateforme) et à travers des collaborations avec <strong>BAPE</strong>, <strong>Pharrell</strong> et bien d'autres, la Superstar reste un classique intemporel du streetwear. Du blanc immaculé aux éditions les plus audacieuses, elle s'adapte à tous les styles.</p><p>Retrouvez toutes les Adidas Superstar sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'maison-mihara': {
-        'meta_title': 'Maison Mihara Yasuhiro - Sneakers MMY pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez vos Maison Mihara Yasuhiro sur KP SHOES. Peterson, Wayne, Blakey... Sneakers déstructurées 100% authentiques. Livraison rapide.",
-        'description': "<p><strong>Maison Mihara Yasuhiro (MMY)</strong>, fondée en 1997 par le designer japonais Mihara Yasuhiro, repousse les limites du design sneaker avec une approche artisanale et avant-gardiste. Chaque paire est pensée comme une œuvre d'art, mêlant déconstruction, matériaux inattendus et silhouettes sculpturales.</p><p>Les modèles phares comme la <strong>Peterson</strong> avec sa semelle fondante, la <strong>Wayne</strong> et la <strong>Blakey</strong> sont devenus des symboles de la mode expérimentale. Fabriquées au Japon avec un souci du détail exceptionnel, les sneakers MMY séduisent les amateurs de pièces uniques qui sortent des sentiers battus.</p><p>Retrouvez toutes les Maison Mihara Yasuhiro sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'yeezy-slide': {
-        'meta_title': 'Yeezy Slide - Slides Yeezy pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez vos Yeezy Slide sur KP SHOES. Onyx, Bone, Pure... Tous les coloris disponibles, 100% authentiques. Livraison rapide en France.",
-        'description': "<p>La <strong>Yeezy Slide</strong>, conçue par Kanye West, est une sandale monobloc en mousse EVA injectée devenue l'un des slides les plus désirées du marché. Son design minimaliste, son confort exceptionnel et sa rareté en ont fait un phénomène culturel.</p><p>Disponible dans les coloris <strong>Onyx</strong>, <strong>Bone</strong>, <strong>Pure</strong> et bien d'autres, la Yeezy Slide est la pièce indispensable de l'été et du style décontracté toute l'année.</p><p>Retrouvez toutes les Yeezy Slide sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'yeezy-350': {
-        'meta_title': 'Yeezy Boost 350 V2 - Sneakers Yeezy pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre Yeezy 350 V2 sur KP SHOES. Zebra, Beluga, Bred... Tous les coloris, 100% authentiques. Livraison rapide en France.",
-        'description': "<p>La <strong>Yeezy Boost 350 V2</strong>, fruit de la collaboration entre Kanye West et Adidas, a révolutionné le marché sneaker en 2016. Son upper Primeknit, son boost pleine longueur et sa bande latérale SPLY-350 sont immédiatement reconnaissables.</p><p>Des coloris iconiques comme <strong>Zebra</strong>, <strong>Beluga</strong>, <strong>Bred</strong> et <strong>Cream White</strong> ont défini une ère de la culture sneakers. Chaque drop continue de créer l'événement.</p><p>Retrouvez toutes les Yeezy 350 V2 sur <strong>KP SHOES</strong>, 100% authentiques et vérifiées.</p>",
-    },
-    'yeezy-700': {
-        'meta_title': 'Yeezy 700 - Sneakers Yeezy pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Yeezy 700 sur KP SHOES. Wave Runner, V2, V3... Tous les coloris, 100% authentiques. Livraison rapide en France.",
-        'description': "<p>La <strong>Yeezy 700</strong>, sortie en 2017, a relancé la tendance chunky sneaker. Ses multiples couches de daim, mesh et cuir combinées à un amorti Boost encapsulé en font une pièce aussi confortable que visuellement audacieuse.</p><p>Du <strong>Wave Runner</strong> original aux versions <strong>V2</strong> et <strong>V3</strong>, la Yeezy 700 décline un design futuriste dans des coloris recherchés.</p><p>Retrouvez toutes les Yeezy 700 sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'new-balance-550': {
-        'meta_title': 'New Balance 550 - Sneakers NB pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre New Balance 550 sur KP SHOES. White Green, ALD, Sea Salt... 100% authentiques, livraison rapide en France.",
-        'description': "<p>Ressortie des archives en 2020, la <strong>New Balance 550</strong> de 1989 est une chaussure de basketball au cuir premium et logo N en relief. Propulsée par la collaboration avec <strong>Aimé Leon Dore</strong>, elle incarne le revival du design vintage des années 80.</p><p>Son esthétique rétro épurée et ses déclinaisons infinies en font l'un des modèles les plus populaires du moment. De la <strong>White Green</strong> à la <strong>Sea Salt</strong>, chaque coloris raconte une histoire différente.</p><p>Retrouvez toutes les New Balance 550 sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'new-balance-530': {
-        'meta_title': 'New Balance 530 - Sneakers NB pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les New Balance 530 sur KP SHOES. White Silver, tous les coloris disponibles. 100% authentiques, livraison rapide en France.",
-        'description': "<p>La <strong>New Balance 530</strong>, modèle running des années 90, séduit par son design chunky avec sa technologie ABZORB et sa tige en mesh/synthétique. Son esthétique Y2K et son confort quotidien en font une silhouette très demandée.</p><p>Retrouvez toutes les New Balance 530 sur <strong>KP SHOES</strong>, 100% authentiques et vérifiées par nos experts.</p>",
-    },
-    'new-balance-2002r': {
-        'meta_title': 'New Balance 2002R - Sneakers NB pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre New Balance 2002R sur KP SHOES. Protection Pack, Rain Cloud... 100% authentiques, livraison rapide en France.",
-        'description': "<p>La <strong>New Balance 2002R</strong> combine les technologies N-ERGY et ABZORB SBS pour un confort premium. Son upper en daim et mesh avec sa silhouette arrondie est devenue un favori du streetwear contemporain.</p><p>Du <strong>Protection Pack</strong> aux éditions saisonnières, la 2002R séduit par son équilibre entre technique et style. Retrouvez toutes les New Balance 2002R sur <strong>KP SHOES</strong>.</p>",
-    },
-    'new-balance-9060': {
-        'meta_title': 'New Balance 9060 - Sneakers NB pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les New Balance 9060 sur KP SHOES. Sea Salt, Rain Cloud... Design futuriste, 100% authentiques. Livraison rapide en France.",
-        'description': "<p>Sortie en 2022, la <strong>New Balance 9060</strong> fusionne des éléments de la 990, 860 et 2002R pour créer une silhouette futuriste. Ses lignes exagérées, ses superpositions de daim/mesh et son amorti FuelCell en font un modèle d'avant-garde plébiscité par la nouvelle génération.</p><p>Retrouvez toutes les New Balance 9060 sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'asics-gel-1130': {
-        'meta_title': 'Asics Gel-1130 - Sneakers Asics pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre Asics Gel-1130 sur KP SHOES. White Clay Canyon, Black Silver... 100% authentiques, livraison rapide en France.",
-        'description': "<p>Sortie en 2008, l'<strong>Asics Gel-1130</strong> a resurgi sur la scène streetwear grâce à sa silhouette technique Y2K. Sa technologie Gel au talon, son upper en mesh/synthétique et son look rétro-technique sont devenus irrésistibles.</p><p>Retrouvez toutes les Asics Gel-1130 sur <strong>KP SHOES</strong>, 100% authentiques et vérifiées.</p>",
-    },
-    'asics-gel-kayano': {
-        'meta_title': 'Asics Gel-Kayano 14 - Sneakers Asics pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Asics Gel-Kayano sur KP SHOES. Kayano 14, tous les coloris. 100% authentiques, livraison rapide en France.",
-        'description': "<p>Lancée en 1993 par Toshikazu Kayano, l'<strong>Asics Gel-Kayano</strong> est la référence des chaussures de running stabilisantes. La version <strong>Kayano 14</strong>, sortie en 2008, impressionne par son design ultra-technique avec gel visible et technologie IGS — le modèle le plus prisé des amateurs de gorpcore.</p><p>Retrouvez toutes les Asics Gel-Kayano sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'asics-gel-nyc': {
-        'meta_title': 'Asics Gel-NYC - Sneakers Asics pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre Asics Gel-NYC sur KP SHOES. Graphite Grey, Cream... Design hybride unique, 100% authentiques. Livraison rapide.",
-        'description': "<p>Sortie en 2023, l'<strong>Asics Gel-NYC</strong> fusionne le Gel-Nimbus 3 et le MC Plus V pour une silhouette inédite. Son design hybride avec gel apparent, daim et mesh en fait l'une des sorties les plus remarquées de la marque japonaise.</p><p>Retrouvez toutes les Asics Gel-NYC sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'ugg-tasman': {
-        'meta_title': 'UGG Tasman - Chaussures UGG pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre UGG Tasman sur KP SHOES. Chestnut, Black, Sand... Peau de mouton authentique, livraison rapide en France.",
-        'description': "<p>La <strong>UGG Tasman</strong> combine l'iconique peau de mouton UGG avec un design slip-on inspiré du mocassin. Sa doublure en laine mérinos de 17mm, sa semelle Treadlite et ses coutures tressées offrent un confort exceptionnel en toute saison.</p><p>Disponible en <strong>Chestnut</strong>, <strong>Black</strong>, <strong>Sand</strong> et d'autres coloris, la Tasman est devenue un incontournable du style casual. Retrouvez toutes les UGG Tasman sur <strong>KP SHOES</strong>.</p>",
-    },
-    'ugg-tazz': {
-        'meta_title': 'UGG Tazz - Chaussures UGG pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les UGG Tazz sur KP SHOES. Sand, Chestnut, Black... Semelle plateforme, peau de mouton. 100% authentiques, livraison rapide.",
-        'description': "<p>La <strong>UGG Tazz</strong> revisite le classique Tasman avec une semelle plateforme en EVA qui ajoute 3cm de hauteur. Même confort en peau de mouton, même facilité d'enfilage, avec un twist contemporain qui a conquis les réseaux sociaux.</p><p>Retrouvez toutes les UGG Tazz sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'ugg-ultra-mini': {
-        'meta_title': 'UGG Ultra Mini - Boots UGG pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre UGG Ultra Mini sur KP SHOES. Chestnut, Black, Mustard Seed... Peau de mouton recyclée, livraison rapide en France.",
-        'description': "<p>La <strong>UGG Ultra Mini</strong> est la version compacte du classique boot UGG. Sa tige ultra-courte, sa doublure en peau de mouton recyclée et sa semelle Treadlite en font la boot parfaite pour un style décontracté toute l'année.</p><p>Retrouvez toutes les UGG Ultra Mini sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'travis-scott': {
-        'meta_title': 'Travis Scott x Nike - Sneakers Cactus Jack en Édition Limitée | KP SHOES',
-        'meta_description': "Toutes les Travis Scott x Nike sur KP SHOES. Jordan 1, Dunk, Air Max... Swoosh inversé, éditions limitées 100% authentiques.",
-        'description': "<p>Les collaborations <strong>Travis Scott x Nike</strong>, lancées en 2019, ont révolutionné le marché sneaker. Le <strong>Swoosh inversé</strong> est devenu la signature de Cactus Jack, tandis que les coloris terreux inspirés de Houston et les détails cachés (poches secrètes, languettes multiples) font de chaque paire une pièce de collection.</p><p>De la <strong>Air Jordan 1 High Mocha</strong> à la <strong>SB Dunk Low</strong>, en passant par les <strong>Air Jordan 4</strong> et les <strong>Air Max 1</strong>, chaque release Travis Scott génère un engouement sans précédent et une prise de valeur immédiate.</p><p>Retrouvez toutes les Travis Scott x Nike sur <strong>KP SHOES</strong>, 100% authentiques et vérifiées.</p>",
-    },
-    'off-white': {
-        'meta_title': 'Off-White x Nike - Sneakers Virgil Abloh en Édition Limitée | KP SHOES',
-        'meta_description': "Toutes les Off-White x Nike sur KP SHOES. The Ten, Jordan, Dunk... Éditions limitées de Virgil Abloh, 100% authentiques.",
-        'description': "<p>Les collaborations <strong>Off-White x Nike</strong> imaginées par <strong>Virgil Abloh</strong> ont redéfini le concept de sneaker en 2017 avec la collection <em>The Ten</em>. L'esthétique déconstructiviste — zip-ties oranges, inscriptions entre guillemets, Swoosh décalé — a créé un mouvement qui a influencé toute l'industrie.</p><p>De la <strong>Air Jordan 1 Chicago</strong> à la <strong>Dunk Low</strong>, en passant par les <strong>Air Force 1</strong> et <strong>Air Max 90</strong>, chaque modèle Off-White est devenu un grail dont la valeur ne cesse de monter, en hommage à la vision créative de Virgil Abloh.</p><p>Retrouvez toutes les Off-White x Nike sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'supreme': {
-        'meta_title': 'Supreme x Nike - Sneakers Supreme en Édition Limitée | KP SHOES',
-        'meta_description': "Toutes les Supreme x Nike sur KP SHOES. Dunk, Air Force 1, Air Max... Éditions limitées 100% authentiques. Livraison rapide.",
-        'description': "<p>Depuis les années 2000, les collaborations <strong>Supreme x Nike</strong> sont devenues des événements majeurs de la culture streetwear. La marque new-yorkaise fondée par James Jebbia apporte son esthétique audacieuse aux silhouettes iconiques de Nike.</p><p>Des <strong>SB Dunk Low</strong> aux <strong>Air Force 1</strong> en passant par les <strong>Air Max</strong>, chaque collaboration Supreme est une pièce de collection recherchée. Retrouvez-les sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'tous-nos-vetements': {
-        'meta_title': 'Streetwear - Hoodies, T-shirts et Joggers Premium | KP SHOES',
-        'meta_description': "Découvrez notre collection streetwear sur KP SHOES. Fear of God Essentials, hoodies, t-shirts, joggers. 100% authentiques, livraison rapide.",
-        'description': "<p>Découvrez notre sélection de <strong>vêtements streetwear premium</strong> sur KP SHOES. Des pièces essentielles signées <strong>Fear of God Essentials</strong> : hoodies en molleton épais, joggings à coupe oversize, t-shirts en jersey de coton premium et shorts décontractés.</p><p>Créée par <strong>Jerry Lorenzo</strong>, la ligne Essentials incarne le luxe minimaliste avec des basiques élevés au rang de pièces mode. Chaque vêtement se distingue par sa coupe oversize signature, ses matériaux de haute qualité et le logo Essentials discret.</p><p>Tous nos articles sont <strong>100% authentiques</strong> et vérifiés par nos experts avant expédition.</p>",
-    },
-    # Collections de marques
+
+    # ══════════════════════════════════════════
+    # JORDAN
+    # ══════════════════════════════════════════
+
     'jordan-1': {
         'meta_title': 'Air Jordan - Sneakers Jordan pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les sneakers Jordan sur KP SHOES. Air Jordan 1, 3, 4, 5, 11... Tous les modèles et coloris, 100% authentiques. Livraison rapide.",
-        'description': "<p><strong>Jordan Brand</strong>, né de la collaboration entre Michael Jordan et Nike en 1984, est devenu bien plus qu'une marque de sneakers — c'est un symbole culturel. De la <strong>Air Jordan 1</strong> bannie par la NBA en 1985 aux collaborations modernes avec Travis Scott et Off-White, chaque modèle raconte un chapitre de l'histoire du sport et du streetwear.</p><p>Retrouvez tous les modèles Jordan sur <strong>KP SHOES</strong> : Air Jordan 1 High, Mid, Low, Air Jordan 3, 4, 5, 6, 11, 12, 13... Tous 100% authentiques.</p>",
+        'meta_description': "Toutes les Air Jordan sur KP SHOES. Jordan 1, 3, 4, 5, 11... Authentiques et livrées rapidement en France.",
+        'description': f'{_S}{_H1}Air Jordan</h2>'
+            f'{_P}Symbole ultime de la culture sneakers, la gamme <strong>Air Jordan</strong> dépasse largement le cadre du basketball. Née de la collaboration entre <strong>Michael Jordan</strong> et Nike en 1984, elle a donné naissance à des silhouettes devenues des objets de collection. Retrouvez tous les modèles Air Jordan sur <strong>KP SHOES</strong> : <a href="/collections/jordan-1-high">Jordan 1 High</a>, <a href="/collections/jordan-1-mid">Mid</a>, <a href="/collections/jordan-1-low">Low</a>, <a href="/collections/jordan-4">Jordan 4</a> et <a href="/collections/autres-jordan">bien d\'autres</a>.</p>'
+            f'{_H2}L\'histoire de la Air Jordan</h2>'
+            f'{_P}Tout commence en 1984, quand Nike signe un jeune rookie nommé Michael Jordan. La première <strong>Air Jordan 1</strong>, dessinée par Peter Moore, est bannie par la NBA pour avoir enfreint le code vestimentaire — une amende de 5 000 dollars par match que Nike s\'empresse de payer, transformant l\'interdiction en coup marketing légendaire. En 1988, Tinker Hatfield prend les rênes du design avec la <strong>Air Jordan 3</strong>, introduisant l\'imprimé éléphant et le logo Jumpman. Suivront la Jordan 4 immortalisée par « The Shot » en 1989, la Jordan 11 portée lors du retour de MJ en 1995, et des dizaines d\'autres modèles qui ont chacun marqué leur époque.</p>{_E}',
     },
-    'nike-1': {
-        'meta_title': 'Nike - Sneakers Nike pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les sneakers Nike sur KP SHOES. Dunk, Air Force 1, Air Max, Vomero... Tous les modèles, 100% authentiques. Livraison rapide.",
-        'description': "<p><strong>Nike</strong>, fondée en 1964 par Phil Knight et Bill Bowerman, est le leader mondial de l'équipement sportif. De la <strong>Air Force 1</strong> à la <strong>Dunk</strong>, de la <strong>Air Max</strong> aux collaborations avec les plus grands artistes et designers, Nike définit la culture sneakers depuis plus de 50 ans.</p><p>Retrouvez toutes les sneakers Nike sur <strong>KP SHOES</strong>, 100% authentiques et vérifiées par nos experts.</p>",
+
+    'jordan-1-high': {
+        'meta_title': 'Air Jordan 1 High - Sneakers Jordan 1 High | KP SHOES',
+        'meta_description': "Achetez votre Air Jordan 1 High sur KP SHOES. Chicago, Bred, Royal, Travis Scott... 100% authentiques.",
+        'description': f'{_S}{_H1}Air Jordan 1 High</h2>'
+            f'{_P}La <strong>Air Jordan 1 High</strong> est la sneaker qui a tout lancé. Avec sa tige montante en cuir, son col rembourré et son Swoosh latéral, elle reste la silhouette la plus emblématique du streetwear. Des coloris légendaires comme les <strong>Chicago</strong>, <strong>Bred</strong>, <strong>Royal</strong> et <strong>Shadow</strong> aux collaborations modernes avec <a href="/collections/travis-scott">Travis Scott</a> et <a href="/collections/off-white">Off-White</a>, chaque édition est un événement.</p>'
+            f'{_H2}L\'histoire de la Air Jordan 1 High</h2>'
+            f'{_P}Sortie en 1985, la Air Jordan 1 High a été conçue par Peter Moore pour accompagner Michael Jordan lors de sa première saison en NBA avec les Chicago Bulls. La NBA la bannit immédiatement pour non-respect du code couleur — une polémique qui fait exploser les ventes. Le coloris <strong>Chicago</strong> (rouge, blanc, noir) devient un symbole culturel. Après des années de rééditions, la Jordan 1 High connaît un second souffle spectaculaire avec la collaboration <strong>Travis Scott</strong> et son Swoosh inversé en 2019, puis le coloris <strong>Lost and Found</strong> en 2022 qui reproduit l\'effet d\'une paire vintage retrouvée dans un entrepôt.</p>{_E}',
     },
-    'adidas-1': {
-        'meta_title': 'Adidas - Sneakers Adidas pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les sneakers Adidas sur KP SHOES. Samba, Campus, Gazelle, Forum, Spezial... 100% authentiques, livraison rapide en France.",
-        'description': "<p><strong>Adidas</strong>, fondée en 1949 par Adi Dassler à Herzogenaurach en Allemagne, est un pilier de la culture sportive et streetwear mondiale. Des trois bandes iconiques à l'héritage terrace culture, Adidas allie tradition et innovation depuis plus de 75 ans.</p><p>Retrouvez les <strong>Samba</strong>, <strong>Campus</strong>, <strong>Gazelle</strong>, <strong>Spezial</strong>, <strong>Forum</strong> et toutes les sneakers Adidas sur <strong>KP SHOES</strong>. 100% authentiques.</p>",
+
+    'jordan-1-low': {
+        'meta_title': 'Air Jordan 1 Low - Sneakers Jordan 1 Low | KP SHOES',
+        'meta_description': "Toutes les Air Jordan 1 Low sur KP SHOES. Mocha, UNC, Travis Scott Reverse... 100% authentiques.",
+        'description': f'{_S}{_H1}Air Jordan 1 Low</h2>'
+            f'{_P}La <strong>Air Jordan 1 Low</strong> reprend l\'ADN de la mythique <a href="/collections/jordan-1-high">Jordan 1 High</a> dans une version basse plus polyvalente et moderne. Les coloris <strong>Mocha</strong>, <strong>UNC</strong>, <strong>Bred Toe</strong> et <strong>Travis Scott Reverse</strong> en font l\'une des <a href="/collections/jordan-1">sneakers Jordan</a> les plus recherchées du marché.</p>'
+            f'{_H2}L\'histoire de la Air Jordan 1 Low</h2>'
+            f'{_P}Apparue peu après la version High en 1985, la Jordan 1 Low est longtemps restée dans l\'ombre de sa grande sœur. C\'est à partir de 2019 que le modèle explose, porté par la tendance des silhouettes basses et la collaboration <strong>Travis Scott x Fragment</strong> avec son Swoosh inversé et ses tons olive. La <strong>Reverse Mocha</strong> de 2022 devient l\'une des paires les plus attendues de l\'année, tandis que les éditions OG comme la UNC et la Bred Toe continuent de s\'arracher.</p>{_E}',
     },
-    'yeezy-1': {
-        'meta_title': 'Yeezy - Sneakers Yeezy pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Yeezy sur KP SHOES. 350 V2, 700, Slide, Foam Runner... Kanye West x Adidas, 100% authentiques. Livraison rapide.",
-        'description': "<p>La gamme <strong>Yeezy</strong>, née de la collaboration entre Kanye West et Adidas, a bouleversé l'industrie sneakers dès 2015. Du <strong>Boost 350 V2</strong> à la <strong>Foam Runner</strong>, en passant par la <strong>700 Wave Runner</strong> et la <strong>Slide</strong>, chaque modèle a redéfini les codes du design et du marché.</p><p>Retrouvez toutes les Yeezy sur <strong>KP SHOES</strong>, 100% authentiques et vérifiées.</p>",
+
+    'jordan-1-mid': {
+        'meta_title': 'Air Jordan 1 Mid - Sneakers Jordan 1 Mid | KP SHOES',
+        'meta_description': "Achetez votre Air Jordan 1 Mid sur KP SHOES. Tous les coloris disponibles, 100% authentiques.",
+        'description': f'{_S}{_H1}Air Jordan 1 Mid</h2>'
+            f'{_P}La <strong>Air Jordan 1 Mid</strong> offre une silhouette intermédiaire entre la <a href="/collections/jordan-1-high">version High</a> et <a href="/collections/jordan-1-low">Low</a>, alliant style et accessibilité. Avec son col mi-montant et sa construction en cuir, elle conserve l\'esprit de la <a href="/collections/jordan-1">Jordan 1</a> originale tout en proposant une coupe confortable et des coloris audacieux.</p>'
+            f'{_H2}L\'histoire de la Air Jordan 1 Mid</h2>'
+            f'{_P}La Jordan 1 Mid apparaît dans les années 90 comme alternative plus accessible à la version High. Si les puristes lui préfèrent les OG, la Mid se démarque par la variété de ses coloris — souvent des combinaisons exclusives qu\'on ne retrouve ni sur la High ni sur la Low. Avec des prix plus abordables et un catalogue immense, elle est devenue la porte d\'entrée pour des millions de fans de sneakers à travers le monde.</p>{_E}',
     },
-    'new-balance-1': {
-        'meta_title': 'New Balance - Sneakers NB pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les New Balance sur KP SHOES. 550, 530, 2002R, 9060, 990... Tous les modèles, 100% authentiques. Livraison rapide en France.",
-        'description': "<p><strong>New Balance</strong>, fondée en 1906 à Boston, se distingue par son approche premium et son savoir-faire artisanal. Des modèles <strong>Made in USA</strong> et <strong>Made in UK</strong> aux collaborations avec Aimé Leon Dore et JJJJound, New Balance incarne le confort et l'élégance discrète.</p><p>Retrouvez les <strong>550</strong>, <strong>530</strong>, <strong>2002R</strong>, <strong>9060</strong>, <strong>990</strong> et toutes les New Balance sur <strong>KP SHOES</strong>.</p>",
+
+    'jordan-4': {
+        'meta_title': 'Air Jordan 4 - Sneakers Jordan 4 Retro | KP SHOES',
+        'meta_description': "Toutes les Air Jordan 4 sur KP SHOES. White Cement, Bred, Military Black, Black Cat... 100% authentiques.",
+        'description': f'{_S}{_H1}Air Jordan 4</h2>'
+            f'{_P}La <strong>Air Jordan 4</strong>, dessinée par Tinker Hatfield en 1989, est l\'une des silhouettes les plus iconiques de <a href="/collections/jordan-1">Jordan Brand</a>. Reconnaissable à ses ailes en mesh, ses œillets latéraux et sa languette à tirette, elle a été immortalisée par Michael Jordan lors du tir légendaire « The Shot ». Des coloris mythiques comme les <strong>White Cement</strong>, <strong>Bred</strong>, <strong>Military Black</strong> et <strong>Black Cat</strong> restent parmi les plus convoités au monde.</p>'
+            f'{_H2}L\'histoire de la Air Jordan 4</h2>'
+            f'{_P}Tinker Hatfield dessine la Jordan 4 en s\'inspirant de l\'aviation militaire. Les ailes en mesh sur les flancs et les œillets latéraux créent un design inédit. Le 7 mai 1989, Michael Jordan inscrit un tir au buzzer face aux Cavaliers — « The Shot » — chaussé de Jordan 4 Cement. En 2023, les collaborations avec <a href="/collections/travis-scott">Travis Scott</a> et les retours des coloris OG confirment que la Jordan 4 reste l\'une des sneakers les plus désirables, plus de 35 ans après sa création.</p>{_E}',
     },
-    'asics-1': {
-        'meta_title': 'Asics - Sneakers Asics pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Asics sur KP SHOES. Gel-1130, Gel-Kayano, Gel-NYC, GT-2160... 100% authentiques, livraison rapide en France.",
-        'description': "<p><strong>Asics</strong> (Anima Sana In Corpore Sano), marque japonaise fondée en 1949, est synonyme de performance et d'innovation technique. Sa technologie <strong>Gel</strong> brevetée a révolutionné l'amorti dans le running.</p><p>Retrouvez les <strong>Gel-1130</strong>, <strong>Gel-Kayano 14</strong>, <strong>Gel-NYC</strong>, <strong>GT-2160</strong> et toutes les Asics sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'ugg-1': {
-        'meta_title': 'UGG - Boots et Slides UGG pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les UGG sur KP SHOES. Tasman, Tazz, Ultra Mini, Classic Mini... Peau de mouton authentique, livraison rapide en France.",
-        'description': "<p><strong>UGG</strong>, marque californienne fondée en 1978, est devenue synonyme de confort premium grâce à sa doublure en peau de mouton signature. De la <strong>Classic Mini</strong> à la <strong>Tasman</strong>, de la <strong>Tazz</strong> à la <strong>Ultra Mini</strong>, chaque modèle offre un confort inégalé.</p><p>Retrouvez toutes les UGG sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'puma-1': {
-        'meta_title': 'Puma - Sneakers Puma pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Puma sur KP SHOES. Speedcat, Suede, LaMelo Ball... 100% authentiques, livraison rapide en France.",
-        'description': "<p><strong>Puma</strong>, fondée en 1948 par Rudolf Dassler (frère d'Adi Dassler), est une marque sportive au riche héritage. De la <strong>Suede</strong> adoptée par le hip-hop aux <strong>Speedcat</strong> inspirées de la Formule 1, Puma allie sport et style depuis plus de 75 ans.</p><p>Retrouvez toutes les Puma sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'crocs': {
-        'meta_title': 'Crocs - Classic Clog et Slides pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Crocs sur KP SHOES. Classic Clog, Slides, collaborations... Confort Croslite, 100% authentiques. Livraison rapide.",
-        'description': "<p>Inventées en 2002, les <strong>Crocs</strong> sont devenues un phénomène mondial grâce à leur matériau breveté Croslite ultra-léger et confortable. Personnalisables avec les <strong>Jibbitz</strong>, elles sont passées des blocs opératoires aux podiums de mode.</p><p>Retrouvez toutes les Crocs sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'birkenstock-1': {
-        'meta_title': 'Birkenstock - Sandales Birkenstock pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Birkenstock sur KP SHOES. Arizona, Boston... Semelle en liège anatomique, 100% authentiques. Livraison rapide.",
-        'description': "<p>Fabriquées en Allemagne depuis 1774, les <strong>Birkenstock</strong> sont célèbres pour leur semelle anatomique en liège et latex naturel qui s'adapte à la forme du pied. Un confort orthopédique devenu symbole de style normcore.</p><p>Retrouvez toutes les Birkenstock sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'salomon': {
-        'meta_title': 'Salomon - Sneakers Trail Salomon pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Salomon sur KP SHOES. XT-6, ACS Pro, trail outdoor... Technologie Contagrip, 100% authentiques. Livraison rapide.",
-        'description': "<p>Marque française d'Annecy depuis 1947, <strong>Salomon</strong> a conquis le streetwear avec ses modèles trail comme la <strong>XT-6</strong> et l'<strong>ACS Pro</strong>. Technologie Contagrip, design technique et résistance aux éléments font de Salomon la marque outdoor préférée du mouvement gorpcore.</p><p>Retrouvez toutes les Salomon sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'converse': {
-        'meta_title': 'Converse - Chuck Taylor et Chuck 70 pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Converse sur KP SHOES. Chuck Taylor, Chuck 70... Les sneakers les plus iconiques, 100% authentiques. Livraison rapide.",
-        'description': "<p>Les <strong>Converse Chuck Taylor</strong>, créées en 1917, sont les sneakers les plus vendues de tous les temps. Toile de coton, semelle vulcanisée et patch étoile All-Star : un symbole universel de la culture jeune qui traverse les générations.</p><p>Retrouvez toutes les Converse sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'timberland': {
-        'meta_title': 'Timberland - Boots Timberland pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Timberland sur KP SHOES. 6-Inch Premium Boot, Wheat, Black... Cuir nubuck imperméable, 100% authentiques. Livraison rapide.",
-        'description': "<p>Les <strong>Timberland 6-Inch Premium</strong>, surnommées Timbs, sont un symbole du hip-hop et de la culture urbaine depuis les années 90. Cuir nubuck imperméable, semelle anti-fatigue et durabilité légendaire en font un classique toutes saisons.</p><p>Retrouvez toutes les Timberland sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'tout-nos-modeles': {
-        'meta_title': 'Toutes nos Sneakers - Sneakers pour Homme et Femme | KP SHOES',
-        'meta_description': "Parcourez l'ensemble de nos sneakers sur KP SHOES. Nike, Jordan, Adidas, New Balance, Yeezy, Asics... 100% authentiques, livraison rapide.",
-        'description': "<p>Découvrez l'intégralité de notre catalogue sur <strong>KP SHOES</strong>. Plus de 2 500 modèles de sneakers authentiques des plus grandes marques : <strong>Nike</strong>, <strong>Jordan</strong>, <strong>Adidas</strong>, <strong>New Balance</strong>, <strong>Yeezy</strong>, <strong>Asics</strong>, <strong>UGG</strong> et bien d'autres.</p><p>Chaque paire est <strong>100% authentique</strong>, vérifiée par nos experts et livrée dans sa boîte d'origine. Livraison rapide en France et paiement sécurisé.</p>",
-    },
-    'best-seller': {
-        'meta_title': 'Meilleures Ventes - Sneakers les Plus Populaires | KP SHOES',
-        'meta_description': "Nos best-sellers : les sneakers les plus populaires du moment sur KP SHOES. Testées et approuvées, 100% authentiques. Livraison rapide.",
-        'description': "<p>Découvrez les <strong>sneakers les plus vendues</strong> du moment sur KP SHOES. Notre sélection best-sellers regroupe les modèles les plus demandés : <strong>Nike Dunk Low</strong>, <strong>Air Jordan 1</strong>, <strong>Adidas Samba</strong>, <strong>New Balance 550</strong> et bien d'autres.</p><p>Tous nos produits sont <strong>100% authentiques</strong> et vérifiés par nos experts avant expédition.</p>",
-    },
-    'moins-de-150': {
-        'meta_title': 'Sneakers à Moins de 150€ - Bons Plans Sneakers | KP SHOES',
-        'meta_description': "Des sneakers tendance à moins de 150€ sur KP SHOES. Nike, Adidas, New Balance... Petit prix, grande qualité. 100% authentiques.",
-        'description': "<p>Découvrez notre sélection de <strong>sneakers à moins de 150€</strong> sur KP SHOES. Des modèles tendance des plus grandes marques à prix accessible, sans compromis sur l'authenticité.</p><p><strong>Nike</strong>, <strong>Adidas</strong>, <strong>New Balance</strong>, <strong>Asics</strong>... Trouvez votre paire idéale sans vous ruiner. Toutes 100% authentiques et vérifiées.</p>",
-    },
-    'livraison-48h': {
-        'meta_title': 'Livraison 48h - Sneakers Livrées en Express | KP SHOES',
-        'meta_description': "Recevez vos sneakers en 48h avec KP SHOES. Sélection de modèles disponibles en livraison express. 100% authentiques.",
-        'description': "<p>Besoin de vos sneakers rapidement ? Découvrez notre sélection <strong>livraison en 48h</strong>. Ces modèles sont en stock dans notre entrepôt et expédiés immédiatement pour une réception ultra-rapide.</p><p>Même garantie d'<strong>authenticité</strong>, même qualité de service, en deux fois moins de temps.</p>",
-    },
-    'pour-enfants': {
-        'meta_title': 'Sneakers Enfant - Nike, Jordan, Adidas pour Kids | KP SHOES',
-        'meta_description': "Sneakers pour enfants sur KP SHOES. Nike, Jordan, Adidas, New Balance... Confort, style et durabilité. 100% authentiques, livraison rapide.",
-        'description': "<p>Découvrez notre sélection de <strong>sneakers pour enfants</strong> sur KP SHOES. Les plus grandes marques — <strong>Nike</strong>, <strong>Jordan</strong>, <strong>Adidas</strong>, <strong>New Balance</strong> — dans des tailles kids et junior.</p><p>Confort, style et durabilité pour accompagner chaque aventure. Toutes <strong>100% authentiques</strong> et livrées dans leur boîte d'origine.</p>",
-    },
-    'sport': {
-        'meta_title': 'Sneakers Sport - Performance et Running | KP SHOES',
-        'meta_description': "Sneakers sport et running sur KP SHOES. Nike, Asics, New Balance... Performance et style réunis. 100% authentiques, livraison rapide.",
-        'description': "<p>Découvrez notre sélection de <strong>sneakers sport et performance</strong> sur KP SHOES. Des modèles pensés pour l'entraînement, la course et le quotidien actif, signés <strong>Nike</strong>, <strong>Asics</strong>, <strong>New Balance</strong> et <strong>Adidas</strong>.</p><p>Performance, confort et style réunis. Toutes <strong>100% authentiques</strong>.</p>",
-    },
-    'autre-marques': {
-        'meta_title': 'Autres Marques - Dior, Puma, Crocs et Plus | KP SHOES',
-        'meta_description': "Découvrez nos autres marques sur KP SHOES. Dior, Puma, Crocs, Birkenstock, Salomon... 100% authentiques, livraison rapide en France.",
-        'description': "<p>Au-delà des incontournables, <strong>KP SHOES</strong> propose une sélection de marques premium : <strong>Dior</strong>, <strong>Puma</strong>, <strong>Crocs</strong>, <strong>Birkenstock</strong>, <strong>Salomon</strong>, <strong>Converse</strong>, <strong>Vans</strong> et plus encore.</p><p>Tous nos produits sont <strong>100% authentiques</strong> et vérifiés par nos experts.</p>",
-    },
-    'stock-x-sneakers': {
-        'meta_title': 'Stock X Sneakers - Baskets en Édition Limitée | KP SHOES',
-        'meta_description': "Découvrez le lien entre le Stock et les Sneakers \"Stock x Sneakers\" qui impacte le prix et la hype sur ces modèles de baskets en éditions limitées.",
-        'description': "<p>Le marché de la revente de sneakers, souvent désigné par l'expression <strong>Stock X Sneakers</strong>, connaît une croissance exponentielle depuis plusieurs années. La demande pour les sneakers en édition limitée ne cesse d'augmenter, notamment pour les modèles des marques les plus populaires comme <strong>Nike</strong>, <strong>Jordan</strong>, <strong>Adidas</strong>, <strong>New Balance</strong> ou <strong>UGG</strong>. Cette forte demande crée une pression sur les stocks disponibles, rendant certaines paires particulièrement rares et convoitées.</p><p>L'équation est simple : des stocks limités face à une demande massive font grimper les prix et la hype autour de ces modèles. Prenons l'exemple des <strong>Adidas Samba</strong> ou des <strong>Nike Dunk Low</strong> : initialement vendues autour d'une centaine d'euros, certaines éditions valent désormais le double, voire le triple, en raison de leur popularité qui a rapidement épuisé les stocks. Ce phénomène touche toutes les grandes marques : le stock Jordan, le stock Nike, le stock Adidas, le stock UGG — tous sont impactés par ces tendances.</p><p>Face à cette rareté, les plateformes de revente de sneakers comme <strong>StockX</strong>, <strong>GOAT</strong> et <strong>Flight Club</strong> sont devenues des acteurs incontournables du marché. StockX, fondée en 2016 par Josh Luber et Dan Gilbert, s'est imposée grâce à son système de vérification d'authenticité et son modèle inspiré de la bourse. GOAT, créée en 2015 par Eddy Lu et Daishin Sugano, a développé le système « ship-to-verify » pour garantir l'authenticité de chaque paire. Ces marketplaces sont devenues des alliés précieux pour les passionnés à la recherche de modèles introuvables.</p><p>Chez <strong>KP SHOES</strong>, nous proposons une alternative fiable à ces grandes plateformes. Notre sélection de sneakers en édition limitée est <strong>100% authentique</strong>, vérifiée par nos experts, et livrée rapidement en France. Que vous cherchiez des <strong>Air Jordan 4</strong>, des <strong>Nike Dunk</strong>, des <strong>Yeezy</strong> ou des <strong>New Balance 550</strong>, retrouvez les modèles les plus recherchés du marché à des prix compétitifs, sans les frais et délais des plateformes internationales.</p>",
-    },
-    'ugg-lowmel': {
-        'meta_title': 'UGG Lowmel - Chaussures UGG pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre UGG Lowmel sur KP SHOES. Chestnut, Black, Sand... Design hybride mule-clog en peau de mouton. 100% authentiques, livraison rapide.",
-        'description': "<p>La <strong>UGG Lowmel</strong> est un hybride entre la mule et le clog qui fusionne le confort signature UGG avec un design contemporain. Sa tige basse en daim premium, sa doublure en peau de mouton et sa semelle plateforme en EVA offrent un confort exceptionnel dans un profil tendance facile à enfiler.</p><p>Disponible en <strong>Chestnut</strong>, <strong>Black</strong> et d'autres coloris, la Lowmel est devenue un incontournable du style décontracté. Retrouvez toutes les UGG Lowmel sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'ugg-classic-mini': {
-        'meta_title': 'UGG Classic Mini - Boots UGG pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les UGG Classic Mini sur KP SHOES. Chestnut, Black... La boot iconique en peau de mouton. 100% authentiques, livraison rapide en France.",
-        'description': "<p>La <strong>UGG Classic Mini</strong> est la version raccourcie de l'iconique Classic Boot, avec une tige qui arrive à la cheville. Sa doublure en peau de mouton de 17mm, son upper en daim Twinface et sa semelle Treadlite légère en font la boot parfaite pour un confort quotidien.</p><p>Silhouette la plus polyvalente de la gamme UGG, la Classic Mini se porte aussi bien avec un jean qu'avec un jogging. Disponible en <strong>Chestnut</strong>, <strong>Black</strong>, <strong>Grey</strong> et d'autres coloris. Retrouvez-la sur <strong>KP SHOES</strong>, 100% authentique.</p>",
-    },
-    'nouveautes': {
-        'meta_title': 'Nouveautés - Dernières Sneakers Disponibles | KP SHOES',
-        'meta_description': "Découvrez les dernières sorties sneakers sur KP SHOES. Nouveautés Nike, Jordan, Adidas, New Balance... 100% authentiques, livraison rapide.",
-        'description': "<p>Restez à la pointe des tendances avec les <strong>dernières sorties sneakers</strong> disponibles sur KP SHOES. Chaque semaine, de nouveaux modèles <strong>Nike</strong>, <strong>Jordan</strong>, <strong>Adidas</strong>, <strong>New Balance</strong>, <strong>Asics</strong> et d'autres marques viennent enrichir notre catalogue.</p><p>Des releases les plus attendues aux drops surprise, retrouvez les nouveautés sneakers avant tout le monde. Toutes nos paires sont <strong>100% authentiques</strong> et livrées rapidement en France.</p>",
-    },
-    'pata': {
-        'meta_title': 'Patta - Sneakers Patta en Édition Limitée | KP SHOES',
-        'meta_description': "Toutes les Patta sur KP SHOES. Patta x Nike Air Max 1, collaborations... Éditions limitées 100% authentiques. Livraison rapide en France.",
-        'description': "<p>Fondé en 2004 à Amsterdam par Edson Sabajo et Guillaume Schmidt, <strong>Patta</strong> est un label streetwear devenu une référence mondiale grâce à ses collaborations exceptionnelles avec Nike. Le shop néerlandais, dont le nom signifie « chaussure » en surinamais, est né d'une passion commune pour les sneakers rares, et plus particulièrement pour la gamme Air Max.</p><p>La collaboration <strong>Patta x Nike Air Max 1</strong> est devenue légendaire. Du « 5th Anniversary Pack » de 2009 avec l'iconique coloris Chlorophyll au « Wave Pack » de 2021 qui a révolutionné le mudguard de la AM1, chaque release Patta crée l'événement. Les coloris <strong>Monarch</strong>, <strong>Noise Aqua</strong>, <strong>Rush Maroon</strong> et <strong>Black</strong> sont devenus des grails instantanés.</p><p>Retrouvez toutes les sneakers Patta sur <strong>KP SHOES</strong>, 100% authentiques et vérifiées.</p>",
-    },
-    'nike-sb': {
-        'meta_title': 'Nike SB - Sneakers Nike Skateboarding pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Nike SB sur KP SHOES. SB Dunk Low, SB Dunk High... Sneakers de skate en édition limitée, 100% authentiques. Livraison rapide.",
-        'description': "<p>Créée en 2002, la division <strong>Nike SB</strong> (Skateboarding) a révolutionné le monde du skate et de la sneaker. En adaptant la Dunk de 1985 aux exigences du skateboard — semelle Zoom Air, languette rembourrée, renforts latéraux — Nike a donné naissance à certains des modèles les plus convoités de l'histoire.</p><p>Les collaborations Nike SB sont devenues légendaires : la <strong>SB Dunk Low Paris</strong> (200 paires), la <strong>Pigeon</strong> de Jeff Staple qui a provoqué des émeutes à New York, les éditions <strong>Supreme</strong>, <strong>Travis Scott</strong>, <strong>Ben &amp; Jerry's Chunky Dunky</strong>... Chaque drop SB est un événement pour les collectionneurs du monde entier.</p><p>Retrouvez toutes les Nike SB sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'new-balance-740': {
-        'meta_title': 'New Balance 740 - Sneakers NB 740 pour Homme et Femme | KP SHOES',
-        'meta_description': "Achetez votre New Balance 740 sur KP SHOES. Tous les coloris disponibles. Design trail rétro, 100% authentiques. Livraison rapide en France.",
-        'description': "<p>La <strong>New Balance 740</strong> est un modèle trail des années 2000 qui revient en force sur la scène streetwear. Sa silhouette robuste, ses superpositions en mesh et synthétique, et son amorti ABZORB en font une pièce technique au look outdoor recherché.</p><p>Adoptée par le mouvement gorpcore, la 740 séduit par son esthétique brute et ses coloris terreux. Retrouvez toutes les New Balance 740 sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'dior': {
-        'meta_title': 'Dior - Sneakers Dior B23 et Plus | KP SHOES',
-        'meta_description': "Sneakers Dior sur KP SHOES. B23 High, B23 Low... Luxe et streetwear réunis. 100% authentiques, livraison rapide en France.",
-        'description': "<p>Les sneakers <strong>Dior</strong> incarnent la fusion entre haute couture et culture sneakers. La <strong>B23</strong>, dessinée par Kim Jones, est devenue un symbole du luxe streetwear avec son upper en toile oblique Dior transparente et sa silhouette high-top inspirée du basketball.</p><p>Disponible en versions <strong>High</strong> et <strong>Low</strong>, dans les coloris <strong>Oblique</strong> noir et blanc, la B23 est une pièce de collection qui mêle savoir-faire artisanal et design contemporain. Retrouvez les sneakers Dior sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'bape': {
-        'meta_title': 'Bape - Sneakers Bape Sta pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Bape sur KP SHOES. Bape Sta, camo... Streetwear japonais iconique. 100% authentiques, livraison rapide en France.",
-        'description': "<p>Fondé en 1993 à Tokyo par Nigo, <strong>A Bathing Ape (Bape)</strong> est un pilier du streetwear japonais. La <strong>Bape Sta</strong>, inspirée de la silhouette des sneakers de basketball américaines, se distingue par son imprimé camouflage signature et son étoile filante sur le côté.</p><p>Adoptée par le hip-hop américain dans les années 2000 grâce à Pharrell Williams et Kanye West, la Bape Sta est devenue un symbole du streetwear premium. Retrouvez toutes les Bape sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
-    'patta': {
-        'meta_title': 'Patta - Sneakers Patta x Nike pour Homme et Femme | KP SHOES',
-        'meta_description': "Toutes les Patta sur KP SHOES. Air Max 1, Dunk, New Balance... Collaborations exclusives, 100% authentiques. Livraison rapide.",
-        'description': "<p><strong>Patta</strong>, fondée à Amsterdam en 2004, est l'un des magasins de sneakers les plus respectés d'Europe. Ses collaborations avec <strong>Nike</strong>, <strong>New Balance</strong> et <strong>ASICS</strong> se distinguent par des coloris audacieux et un sens du détail remarquable.</p><p>Les <strong>Air Max 1 Patta</strong> avec leurs vagues latérales sont devenues emblématiques. Chaque collaboration Patta est un événement dans le monde de la sneaker. Retrouvez toutes les Patta sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
-    },
+
     'autres-jordan': {
         'meta_title': 'Autres Jordan - Air Jordan 2, 3, 5, 6, 11, 12, 13... | KP SHOES',
-        'meta_description': "Toutes les Air Jordan sur KP SHOES. Jordan 2, 3, 5, 6, 11, 12, 13 et plus. 100% authentiques, livraison rapide en France.",
-        'description': "<p>Au-delà des modèles 1 et 4, <strong>Jordan Brand</strong> propose une gamme complète de silhouettes devenues cultes. De la <strong>Air Jordan 3</strong> et son célèbre imprimé éléphant signé Tinker Hatfield à la <strong>Air Jordan 11</strong> avec sa coque en patent leather portée par Michael Jordan lors du comeback de 1995.</p><p>Les <strong>Jordan 5</strong> avec leur semelle translucide, les <strong>Jordan 6</strong> du premier titre NBA, les <strong>Jordan 12</strong> du Flu Game et les <strong>Jordan 13</strong> inspirées de la panthère noire — chaque modèle porte un chapitre de l'histoire du basketball. Retrouvez tous les modèles Jordan sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
+        'meta_description': "Toutes les Air Jordan sur KP SHOES. Jordan 2, 3, 5, 6, 11, 12, 13 et plus. 100% authentiques.",
+        'description': f'{_S}{_H1}Autres modèles Air Jordan</h2>'
+            f'{_P}Au-delà des <a href="/collections/jordan-1-high">Jordan 1</a> et <a href="/collections/jordan-4">Jordan 4</a>, <strong>Jordan Brand</strong> compte des silhouettes devenues cultes. La <strong>Air Jordan 3</strong> et son imprimé éléphant, la <strong>Jordan 5</strong> avec sa semelle translucide, la <strong>Jordan 6</strong> du premier titre NBA, la <strong>Jordan 11</strong> et sa coque en patent leather, et la <strong>Jordan 13</strong> inspirée de la panthère noire.</p>'
+            f'{_H2}L\'héritage de chaque modèle</h2>'
+            f'{_P}Chaque numéro de Jordan correspond à une saison de Michael Jordan en NBA. La Jordan 3 (1988) introduit le logo Jumpman et sauve la collaboration Nike-Jordan. La Jordan 11 (1995) accompagne le retour de MJ après sa retraite, portée dans Space Jam. La Jordan 6 (1991) est celle du premier titre des Bulls. Ces modèles continuent de sortir en rééditions et collaborations sur <strong><a href="/collections/jordan-1">KP SHOES</a></strong>.</p>{_E}',
     },
+
+    # ══════════════════════════════════════════
+    # NIKE
+    # ══════════════════════════════════════════
+
+    'nike-1': {
+        'meta_title': 'Nike - Sneakers Nike pour Homme et Femme | KP SHOES',
+        'meta_description': "Toutes les sneakers Nike sur KP SHOES. Dunk, Air Force 1, Air Max, Vomero, NOCTA... 100% authentiques.",
+        'description': f'{_S}{_H1}Nike</h2>'
+            f'{_P}<strong>Nike</strong>, fondée en 1971 par Bill Bowerman et Phil Knight, est la marque de sneakers la plus influente au monde. Retrouvez tous les modèles Nike sur <strong>KP SHOES</strong> : <a href="/collections/nike-dunk">Dunk</a>, <a href="/collections/air-force-1">Air Force 1</a>, <a href="/collections/air-max">Air Max</a>, <a href="/collections/nike-vomero">Vomero</a>, <a href="/collections/nike-sb">SB</a> et <a href="/collections/autres-nike">bien d\'autres</a>.</p>'
+            f'{_H2}L\'histoire de Nike</h2>'
+            f'{_P}Tout commence sous le nom Blue Ribbon Sports en 1964. En 1971, ils lancent Nike — du nom de la déesse grecque de la victoire — avec le Swoosh dessiné par Carolyn Davidson pour 35 dollars. La révolution arrive en 1979 avec la technologie <strong>Air</strong>, puis en 1984 avec la signature de Michael Jordan. Depuis, Nike a signé les plus grands athlètes et artistes, de LeBron James à <a href="/collections/travis-scott">Travis Scott</a>, créant une culture sneakers sans égale.</p>{_E}',
+    },
+
+    'nike-dunk': {
+        'meta_title': 'Nike Dunk - Sneakers Dunk Low & High | KP SHOES',
+        'meta_description': "Achetez votre Nike Dunk sur KP SHOES. Dunk Low, High, SB... Panda, Off-White, Travis Scott. 100% authentiques.",
+        'description': f'{_S}{_H1}Nike Dunk</h2>'
+            f'{_P}La <strong>Nike Dunk</strong>, créée en 1985 pour le basketball universitaire, est devenue l\'une des sneakers les plus populaires de la planète. Des éditions OG aux collaborations avec <a href="/collections/off-white">Off-White</a>, <a href="/collections/travis-scott">Travis Scott</a> et <a href="/collections/supreme">Supreme</a>, la Dunk reste au cœur de la culture sneakers. Retrouvez aussi les <a href="/collections/nike-sb">Nike SB</a> pour les éditions skateboarding.</p>'
+            f'{_H2}L\'histoire de la Nike Dunk</h2>'
+            f'{_P}En 1985, Nike lance le programme « Be True To Your School » : des Dunk High aux couleurs des universités américaines — Syracuse, Kentucky, Michigan. La Dunk renaît en 2002 quand Nike crée la division <strong>SB</strong>, adaptant le modèle avec un amorti Zoom Air. Les collaborations avec Jeff Staple (Pigeon, 2005) et Supreme font exploser la cote. En 2020, le retour des coloris OG et la collection « The 50 » de Virgil Abloh propulsent la Dunk au sommet des tendances mondiales.</p>{_E}',
+    },
+
+    'air-force-1': {
+        'meta_title': 'Nike Air Force 1 - Sneakers AF1 pour Homme et Femme | KP SHOES',
+        'meta_description': "Toutes les Nike Air Force 1 sur KP SHOES. Triple White, Off-White, Travis Scott... 100% authentiques.",
+        'description': f'{_S}{_H1}Nike Air Force 1</h2>'
+            f'{_P}La <strong>Nike Air Force 1</strong>, sortie en 1982, est la première chaussure de basketball à intégrer la technologie Air. Du classique <strong>Triple White</strong> aux collaborations avec <a href="/collections/off-white">Off-White</a> et <a href="/collections/travis-scott">Travis Scott</a>, c\'est la sneaker la plus vendue de l\'histoire. Découvrez aussi les autres modèles <a href="/collections/nike-1">Nike</a>.</p>'
+            f'{_H2}L\'histoire de la Nike Air Force 1</h2>'
+            f'{_P}Bruce Kilgore conçoit la Air Force 1 en 1982, intégrant pour la première fois la capsule Air dans une chaussure de basketball. D\'abord discontinuée en 1984, elle est ressuscitée par la demande des boutiques de Baltimore, New York et Philadelphie. La communauté hip-hop de Harlem l\'adopte massivement dans les années 90, lui donnant le surnom d\'« Uptowns ». Depuis, la Air Force 1 n\'a jamais quitté le catalogue Nike, devenant la sneaker la plus vendue de tous les temps.</p>{_E}',
+    },
+
+    'air-max': {
+        'meta_title': 'Nike Air Max - Sneakers Air Max pour Homme et Femme | KP SHOES',
+        'meta_description': "Toutes les Nike Air Max sur KP SHOES. Air Max 1, 90, 95, 97, Plus TN, Dn... 100% authentiques.",
+        'description': f'{_S}{_H1}Nike Air Max</h2>'
+            f'{_P}La gamme <strong>Nike Air Max</strong> a révolutionné la sneaker en rendant visible la bulle d\'air Nike. De la <strong>Air Max 1</strong> à la <strong>Air Max 95</strong>, en passant par la <strong>97</strong>, <strong>Plus TN</strong> et <strong>Dn</strong>, chaque modèle incarne l\'innovation. Découvrez aussi nos <a href="/collections/nike-dunk">Nike Dunk</a> et <a href="/collections/air-force-1">Air Force 1</a>.</p>'
+            f'{_H2}L\'histoire de la Nike Air Max</h2>'
+            f'{_P}En 1987, Tinker Hatfield s\'inspire du Centre Pompidou à Paris pour créer la <strong>Air Max 1</strong>, première sneaker à rendre visible la bulle d\'air. Suivent la Air Max 90 (1990) avec ses couleurs Infrared, la Air Max 95 de Sergio Lozano inspirée de l\'anatomie humaine, et la Air Max 97 au design du Shinkansen japonais. La Air Max Plus TN, lancée en 1998, devient un phénomène culturel en France et en Australie.</p>{_E}',
+    },
+
+    'nike-vomero': {
+        'meta_title': 'Nike Vomero 5 - Sneakers Nike Vomero | KP SHOES',
+        'meta_description': "Achetez votre Nike Vomero 5 sur KP SHOES. Tous les coloris, 100% authentiques. Livraison rapide.",
+        'description': f'{_S}{_H1}Nike Vomero 5</h2>'
+            f'{_P}La <strong>Nike Vomero 5</strong>, conçue comme chaussure de running en 2004, est devenue une icône du style Y2K. Son design technique futuriste, ses superpositions en mesh et son amorti Zoom Air séduisent autant les runners que les amateurs de mode. Retrouvez aussi nos autres modèles <a href="/collections/nike-1">Nike</a>.</p>'
+            f'{_H2}L\'histoire de la Nike Vomero 5</h2>'
+            f'{_P}Lancée en 2004, la Vomero 5 passe inaperçue pendant plus de 15 ans. C\'est le retour du rétro-running et de l\'esthétique Y2K qui la propulsent vers 2022-2023. Son look technique, entre mesh respirant et superpositions argentées, correspond parfaitement à la vague gorpcore. Des coloris comme <strong>Photon Dust</strong> et <strong>Light Bone</strong> deviennent des best-sellers.</p>{_E}',
+    },
+
+    'nike-sacai': {
+        'meta_title': 'Nike x Sacai - Sneakers Nike Sacai | KP SHOES',
+        'meta_description': "Toutes les Nike x Sacai sur KP SHOES. LDWaffle, Vaporwaffle, Blazer... 100% authentiques.",
+        'description': f'{_S}{_H1}Nike x Sacai</h2>'
+            f'{_P}La collaboration entre <strong>Nike et Sacai</strong>, la maison japonaise fondée par Chitose Abe, a donné naissance à certaines des sneakers les plus innovantes de ces dernières années. Le concept : fusionner deux modèles en un seul, avec des doubles semelles, doubles Swoosh et doubles languettes.</p>'
+            f'{_H2}L\'histoire de la collaboration Nike x Sacai</h2>'
+            f'{_P}Chitose Abe collabore pour la première fois avec <a href="/collections/nike-1">Nike</a> en 2019 avec la <strong>LDWaffle</strong>, fusionnant la LDV et la Waffle Daybreak. Le résultat — deux Swoosh superposés, double semelle, double languette — est élu sneaker de l\'année 2019. Suivent la Vaporwaffle et les Blazer déstructurés, chacun poussant plus loin le concept de déconstruction.</p>{_E}',
+    },
+
+    'nike-sb': {
+        'meta_title': 'Nike SB - Sneakers Nike SB Dunk | KP SHOES',
+        'meta_description': "Toutes les Nike SB sur KP SHOES. Dunk Low SB, High SB, Travis Scott, Supreme... 100% authentiques.",
+        'description': f'{_S}{_H1}Nike SB</h2>'
+            f'{_P}Lancée en 2002, la ligne <strong>Nike SB</strong> (Skateboarding) est née de la volonté de <a href="/collections/nike-1">Nike</a> de conquérir la culture skate. Ses <a href="/collections/nike-dunk">Dunk</a> dotées d\'un amorti Zoom Air et d\'une languette épaisse ont séduit les skateurs et les collectionneurs avec des éditions mythiques.</p>'
+            f'{_H2}L\'histoire de Nike SB</h2>'
+            f'{_P}En 2002, Nike crée sa division Skateboarding après avoir observé que les skateurs détournaient les Dunk classiques. Les collaborations avec <a href="/collections/supreme">Supreme</a> (2002), Jeff Staple (Pigeon, 2005 — qui provoque des émeutes à New York) et Concepts (Lobster) créent une frénésie collector. Plus récemment, <a href="/collections/travis-scott">Travis Scott</a> a relancé l\'intérêt pour les SB.</p>{_E}',
+    },
+
     'autres-nike': {
-        'meta_title': 'Autres Nike - Blazer, Cortez, NOCTA, P-6000... | KP SHOES',
-        'meta_description': "Tous les modèles Nike sur KP SHOES. Blazer, Cortez, NOCTA, ACG, Mind... 100% authentiques, livraison rapide en France.",
-        'description': "<p>Au-delà des Dunk, Air Force 1 et Air Max, <strong>Nike</strong> propose un large éventail de silhouettes devenues incontournables. Des <strong>Blazer</strong> aux origines basketball aux <strong>Cortez</strong> légendaires, en passant par les <strong>NOCTA</strong> de Drake, les <strong>Mind</strong> et les <strong>ACG</strong> outdoor.</p><p>Chaque modèle Nike repousse les limites du design et de la performance. Retrouvez tous les autres modèles Nike sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
+        'meta_title': 'Autres Nike - Blazer, Cortez, NOCTA, Mind... | KP SHOES',
+        'meta_description': "Tous les modèles Nike sur KP SHOES. Blazer, Cortez, NOCTA, Mind, ACG... 100% authentiques.",
+        'description': f'{_S}{_H1}Autres modèles Nike</h2>'
+            f'{_P}Au-delà des <a href="/collections/nike-dunk">Dunk</a>, <a href="/collections/air-force-1">Air Force 1</a> et <a href="/collections/air-max">Air Max</a>, <strong>Nike</strong> propose des silhouettes incontournables : <strong>Blazer</strong>, <strong>Cortez</strong>, <strong>NOCTA</strong> de Drake, <strong>Nike Mind</strong> et <strong>ACG</strong> outdoor.</p>'
+            f'{_H2}Des silhouettes variées</h2>'
+            f'{_P}Le Blazer, créé en 1973 pour le basketball, est devenu un classique du streetwear. La Cortez, première chaussure de running Nike (1972), a été immortalisée dans Forrest Gump. La ligne NOCTA, créée avec Drake, mêle performance et style nocturne. Les Nike Mind 001, slides au design minimaliste, et la gamme ACG pour l\'outdoor complètent un catalogue qui couvre tous les styles.</p>{_E}',
     },
+
+    # ══════════════════════════════════════════
+    # ADIDAS
+    # ══════════════════════════════════════════
+
+    'adidas-1': {
+        'meta_title': 'Adidas - Sneakers Adidas pour Homme et Femme | KP SHOES',
+        'meta_description': "Toutes les sneakers Adidas sur KP SHOES. Samba, Campus, Gazelle, Spezial, Forum, Superstar... 100% authentiques.",
+        'description': f'{_S}{_H1}Adidas</h2>'
+            f'{_P}<strong>Adidas</strong>, fondée en 1949 par Adi Dassler en Bavière, est un pilier de la culture sneakers mondiale. Des terrains de sport aux podiums, les trois bandes sont synonymes de style. Retrouvez sur KP SHOES : <a href="/collections/adidas-samba">Samba</a>, <a href="/collections/adidas-campus">Campus</a>, <a href="/collections/adidas-gazelle">Gazelle</a>, <a href="/collections/adidas-spezial">Spezial</a>, <a href="/collections/adidas-forum">Forum</a>, <a href="/collections/adidas-superstar">Superstar</a> et <a href="/collections/autres-adidas">bien d\'autres</a>.</p>'
+            f'{_H2}L\'histoire d\'Adidas</h2>'
+            f'{_P}Adolf « Adi » Dassler fabrique ses premières chaussures dans la buanderie familiale en 1920. Après la séparation avec son frère Rudolf (qui fondera <a href="/collections/puma-1">Puma</a>), il crée Adidas en 1949. Les trois bandes deviennent le logo le plus reconnaissable du sport. Dans les années 80, le hip-hop new-yorkais adopte les Superstar et les Stan Smith, tandis que les casuals anglais s\'approprient les Gazelle et Samba. Aujourd\'hui, Adidas domine les tendances avec le revival de ses classiques.</p>{_E}',
+    },
+
+    'adidas-samba': {
+        'meta_title': 'Adidas Samba - Sneakers Samba OG | KP SHOES',
+        'meta_description': "Achetez votre Adidas Samba sur KP SHOES. OG, Decon, éditions limitées... Tous les coloris, 100% authentiques.",
+        'description': f'{_S}{_H1}Adidas Samba</h2>'
+            f'{_P}Née en 1950 pour le football en salle, l\'<strong>Adidas Samba</strong> est l\'une des sneakers les plus iconiques de tous les temps. Sa tige en cuir lisse, son T-toe en daim et sa semelle en gomme lui confèrent un look rétro intemporel. Déclinée en <strong>OG</strong>, <strong>Decon</strong> et collaborations exclusives. Découvrez aussi les <a href="/collections/adidas-gazelle">Gazelle</a> et <a href="/collections/adidas-spezial">Spezial</a>.</p>'
+            f'{_H2}L\'histoire de la Adidas Samba</h2>'
+            f'{_P}<a href="/collections/adidas-1">Adidas</a> crée la Samba en 1950 pour permettre aux footballeurs de s\'entraîner sur des terrains gelés. Son T-toe en daim protège des abrasions lors des frappes. Dans les années 80, les supporters de football anglais — les « casuals » — l\'adoptent comme pièce signature. Après des décennies de présence discrète, la Samba connaît un revival spectaculaire à partir de 2022, portée par les tendances « quiet luxury » et « terrace style ». Elle est aujourd\'hui l\'une des sneakers les plus vendues au monde.</p>{_E}',
+    },
+
+    'adidas-campus': {
+        'meta_title': 'Adidas Campus 00s - Sneakers Campus | KP SHOES',
+        'meta_description': "Toutes les Adidas Campus sur KP SHOES. Campus 00s, Core Black, Grey... 100% authentiques.",
+        'description': f'{_S}{_H1}Adidas Campus</h2>'
+            f'{_P}L\'<strong>Adidas Campus</strong>, apparue dans les années 70, est une icône du style décontracté. Sa tige en daim souple et ses trois bandes contrastées en font une pièce incontournable. Remise au goût du jour avec la <strong>Campus 00s</strong>. Retrouvez aussi les <a href="/collections/adidas-samba">Samba</a> et les <a href="/collections/adidas-gazelle">Gazelle</a>.</p>'
+            f'{_H2}L\'histoire de la Adidas Campus</h2>'
+            f'{_P}Conçue dans les années 70 pour les terrains de basket universitaires américains, la Campus est adoptée par la scène hip-hop new-yorkaise — les Beastie Boys la portent sur scène. En 2023, <a href="/collections/adidas-1">Adidas</a> lance la <strong>Campus 00s</strong>, version modernisée avec une semelle légèrement vieillie. Le succès est immédiat : les coloris Core Black et Grey s\'arrachent en quelques heures.</p>{_E}',
+    },
+
+    'adidas-gazelle': {
+        'meta_title': 'Adidas Gazelle - Sneakers Gazelle OG, Bold, Indoor | KP SHOES',
+        'meta_description': "Achetez votre Adidas Gazelle sur KP SHOES. OG, Bold, Indoor... Tous les coloris, 100% authentiques.",
+        'description': f'{_S}{_H1}Adidas Gazelle</h2>'
+            f'{_P}L\'<strong>Adidas Gazelle</strong>, lancée en 1966, est l\'une des sneakers les plus anciennes du catalogue <a href="/collections/adidas-1">Adidas</a>. Son upper en daim, son profil fin et ses trois bandes en zigzag incarnent l\'élégance. Déclinée en <strong>Bold</strong> (plateforme), <strong>Indoor</strong> et OG. Découvrez aussi les <a href="/collections/adidas-samba">Samba</a> et <a href="/collections/adidas-spezial">Spezial</a>.</p>'
+            f'{_H2}L\'histoire de la Adidas Gazelle</h2>'
+            f'{_P}Créée en 1966 pour le football, la Gazelle traverse les sous-cultures : le britpop des années 90 (Oasis, Blur), le skate, le terrace style. En 2023, la <strong>Gazelle Bold</strong> avec sa semelle plateforme conquiert le marché féminin, tandis que la <strong>Gazelle Indoor</strong> au look rétro sport cartonne chez les amateurs de vintage.</p>{_E}',
+    },
+
+    'adidas-spezial': {
+        'meta_title': 'Adidas Spezial - Sneakers Handball Spezial | KP SHOES',
+        'meta_description': "Toutes les Adidas Spezial sur KP SHOES. Handball Spezial, terrace style... 100% authentiques.",
+        'description': f'{_S}{_H1}Adidas Spezial</h2>'
+            f'{_P}L\'<strong>Adidas Handball Spezial</strong>, née sur les terrains de handball dans les années 70, est un symbole de la culture terrace. Son daim premium, sa semelle en gomme translucide et son profil épuré en font l\'une des paires les plus demandées. Découvrez aussi les <a href="/collections/adidas-samba">Samba</a> et <a href="/collections/adidas-gazelle">Gazelle</a>.</p>'
+            f'{_H2}L\'histoire de la Adidas Spezial</h2>'
+            f'{_P}Conçue dans les années 70 pour le handball, la Spezial est adoptée par les supporters de football anglais dans les années 80 — la culture « casual ». Sa silhouette basse et son daim qualitatif deviennent les codes du style terrace. Après des décennies de culte confidentiel, la Spezial explose auprès du grand public en 2023-2024. Les coloris Light Blue, Shadow Brown et Night Indigo s\'écoulent en quelques minutes.</p>{_E}',
+    },
+
+    'adidas-forum': {
+        'meta_title': 'Adidas Forum - Sneakers Forum Low & Mid | KP SHOES',
+        'meta_description': "Achetez votre Adidas Forum sur KP SHOES. Forum Low, Mid, 84... 100% authentiques.",
+        'description': f'{_S}{_H1}Adidas Forum</h2>'
+            f'{_P}L\'<strong>Adidas Forum</strong>, sortie en 1984, se distingue par sa sangle en X sur la cheville. Passée des parquets NBA à la rue, elle a été adoptée par la culture hip-hop. Déclinée en <strong>Low</strong>, <strong>Mid</strong> et <strong>84</strong>. Retrouvez tous les modèles <a href="/collections/adidas-1">Adidas</a>.</p>'
+            f'{_H2}L\'histoire de la Adidas Forum</h2>'
+            f'{_P}En 1984, Adidas lance la Forum comme sa chaussure de basketball premium — la plus chère du marché. Sa sangle distinctive assure un maintien parfait. Run-DMC et d\'autres artistes new-yorkais la portent hors des terrains, lançant la tendance sneakers dans le hip-hop. Elle revient régulièrement avec des collaborations et coloris contemporains.</p>{_E}',
+    },
+
+    'adidas-superstar': {
+        'meta_title': 'Adidas Superstar - Sneakers Superstar OG | KP SHOES',
+        'meta_description': "Achetez votre Adidas Superstar sur KP SHOES. OG, XLG, BAPE... 100% authentiques.",
+        'description': f'{_S}{_H1}Adidas Superstar</h2>'
+            f'{_P}L\'<strong>Adidas Superstar</strong>, avec sa coque en caoutchouc emblématique (shell toe) et ses trois bandes, est l\'une des silhouettes les plus reconnaissables au monde. Déclinée en <strong>OG</strong>, <strong>XLG</strong> et collaborations avec <a href="/collections/bape">BAPE</a> et Pharrell. Découvrez aussi les <a href="/collections/adidas-samba">Samba</a> et <a href="/collections/adidas-forum">Forum</a>.</p>'
+            f'{_H2}L\'histoire de la Adidas Superstar</h2>'
+            f'{_P}Lancée en 1969 pour le basketball, la Superstar est la première chaussure de basket entièrement en cuir. En 1986, <strong>Run-DMC</strong> sort « My Adidas » et porte les Superstar sans lacets — créant le premier partenariat sneaker-musique de l\'histoire. <a href="/collections/adidas-1">Adidas</a> signe un contrat d\'un million de dollars avec le groupe. Plus de 50 ans après, la Superstar reste l\'une des sneakers les plus vendues.</p>{_E}',
+    },
+
     'autres-adidas': {
-        'meta_title': 'Autres Adidas - Superstar, SL 72, Stan Smith... | KP SHOES',
-        'meta_description': "Tous les modèles Adidas sur KP SHOES. Superstar, SL 72, Stan Smith, Adilette... 100% authentiques, livraison rapide en France.",
-        'description': "<p>Au-delà des Samba, Campus, Gazelle et Spezial, <strong>Adidas</strong> propose des silhouettes variées qui ont marqué l'histoire de la sneaker. Des <strong>Superstar</strong> et leur coque en caoutchouc aux <strong>SL 72</strong> au style running vintage, en passant par les <strong>Stan Smith</strong> et les <strong>Adilette</strong>.</p><p>L'univers Adidas ne cesse de surprendre avec des collaborations et des rééditions qui séduisent toutes les générations. Retrouvez tous les autres modèles Adidas sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
+        'meta_title': 'Autres Adidas - SL 72, Stan Smith, Adilette... | KP SHOES',
+        'meta_description': "Tous les modèles Adidas sur KP SHOES. SL 72, Stan Smith, Adilette... 100% authentiques.",
+        'description': f'{_S}{_H1}Autres modèles Adidas</h2>'
+            f'{_P}Au-delà des <a href="/collections/adidas-samba">Samba</a>, <a href="/collections/adidas-campus">Campus</a>, <a href="/collections/adidas-gazelle">Gazelle</a> et <a href="/collections/adidas-spezial">Spezial</a>, <strong>Adidas</strong> propose des silhouettes variées : <strong>SL 72</strong>, <strong>Stan Smith</strong>, <strong>Adilette</strong> et bien d\'autres.</p>'
+            f'{_H2}Un catalogue riche</h2>'
+            f'{_P}La Stan Smith, créée en 1963, est la sneaker blanche minimaliste par excellence — plus de 50 millions de paires vendues. La SL 72, sortie pour les JO de Munich en 1972, revient avec la tendance rétro-running. Les Adilette, créées en 1972, sont les slides les plus iconiques. Tout est disponible sur <a href="/collections/adidas-1">KP SHOES</a>.</p>{_E}',
     },
+
+    # ══════════════════════════════════════════
+    # YEEZY
+    # ══════════════════════════════════════════
+
+    'yeezy-1': {
+        'meta_title': 'Yeezy - Sneakers Yeezy pour Homme et Femme | KP SHOES',
+        'meta_description': "Toutes les Yeezy sur KP SHOES. 350, 500, 700, Slide, Foam Runner... 100% authentiques.",
+        'description': f'{_S}{_H1}Yeezy</h2>'
+            f'{_P}Née de la collaboration entre <strong>Kanye West</strong> et Adidas en 2015, la gamme <strong>Yeezy</strong> a bouleversé l\'industrie de la sneaker. Retrouvez sur KP SHOES : <a href="/collections/yeezy-350">Yeezy 350</a>, <a href="/collections/yeezy-700">700</a>, <a href="/collections/yeezy-slide">Slide</a> et <a href="/collections/autres-yeezy">tous les autres modèles</a>.</p>'
+            f'{_H2}L\'histoire de Yeezy</h2>'
+            f'{_P}Après une première collaboration avec Nike (Air Yeezy 1 et 2), Kanye West signe avec Adidas en 2013. La Yeezy Boost 750 sort en février 2015, suivie de la Yeezy Boost 350 qui s\'écoule en quelques minutes et redéfinit le concept de « hype ». Le modèle 350 V2 avec sa bande SPLY-350 devient le sneaker le plus convoité au monde. Kanye pousse ensuite le design avec la 700 Wave Runner, la Foam Runner en mousse et la Yeezy Slide minimaliste.</p>{_E}',
+    },
+
+    'yeezy-slide': {
+        'meta_title': 'Yeezy Slide - Slides Yeezy | KP SHOES',
+        'meta_description': "Achetez votre Yeezy Slide sur KP SHOES. Onyx, Bone, Granite... 100% authentiques.",
+        'description': f'{_S}{_H1}Yeezy Slide</h2>'
+            f'{_P}La <strong>Yeezy Slide</strong>, avec son design minimaliste monobloc en mousse EVA, est l\'une des slides les plus recherchées au monde. Ultra légère et confortable, elle se décline dans des coloris neutres comme <strong>Onyx</strong>, <strong>Bone</strong>, <strong>Granite</strong> et <strong>Pure</strong>. Retrouvez aussi les <a href="/collections/yeezy-350">Yeezy 350</a> et <a href="/collections/yeezy-700">700</a>.</p>'
+            f'{_H2}L\'histoire de la Yeezy Slide</h2>'
+            f'{_P}Lancée en 2019, la <a href="/collections/yeezy-1">Yeezy</a> Slide pousse le minimalisme à l\'extrême : une seule pièce de mousse EVA injectée, sans couture, sans logo visible. D\'abord moquée pour sa simplicité, elle devient l\'une des pièces les plus convoitées de la gamme. Les coloris s\'écoulent en quelques secondes à chaque drop et le marché de la revente explose.</p>{_E}',
+    },
+
+    'yeezy-350': {
+        'meta_title': 'Yeezy 350 V2 - Sneakers Yeezy Boost 350 | KP SHOES',
+        'meta_description': "Achetez votre Yeezy 350 V2 sur KP SHOES. Zebra, Beluga, Bred... 100% authentiques.",
+        'description': f'{_S}{_H1}Yeezy Boost 350 V2</h2>'
+            f'{_P}La <strong>Yeezy Boost 350 V2</strong> est le modèle le plus emblématique de <a href="/collections/yeezy-1">Yeezy</a>. Sa tige en Primeknit, sa semelle Boost et sa bande SPLY-350 ont défini le style sneaker des années 2010. Les coloris <strong>Zebra</strong>, <strong>Beluga</strong>, <strong>Bred</strong> et <strong>Cream White</strong> restent parmi les plus convoités. Découvrez aussi les <a href="/collections/yeezy-700">Yeezy 700</a> et <a href="/collections/yeezy-slide">Slide</a>.</p>'
+            f'{_H2}L\'histoire de la Yeezy 350</h2>'
+            f'{_P}La première Yeezy 350 sort en juin 2015 en coloris « Turtle Dove » et crée une hystérie mondiale. En 2016, la V2 arrive avec la bande SPLY-350. Le Beluga (gris/orange), le Zebra (blanc/rouge) et le Bred (noir/rouge) deviennent des grails absolus. La technologie Boost d\'Adidas assure un confort exceptionnel, tandis que le Primeknit offre un maintien souple comme une chaussette.</p>{_E}',
+    },
+
+    'yeezy-700': {
+        'meta_title': 'Yeezy 700 - Sneakers Yeezy 700 Wave Runner | KP SHOES',
+        'meta_description': "Toutes les Yeezy 700 sur KP SHOES. Wave Runner, V2, V3... 100% authentiques.",
+        'description': f'{_S}{_H1}Yeezy 700</h2>'
+            f'{_P}La <strong>Yeezy 700</strong>, surnommée « Wave Runner », a popularisé la tendance dad shoe avec son design chunky. Dotée d\'un amorti Boost et d\'une tige mêlant cuir, daim et mesh, elle existe en <strong>V1</strong>, <strong>V2</strong> et <strong>V3</strong>. Retrouvez aussi les <a href="/collections/yeezy-350">350</a> et <a href="/collections/yeezy-slide">Slide</a>.</p>'
+            f'{_H2}L\'histoire de la Yeezy 700</h2>'
+            f'{_P}Présentée au défilé <a href="/collections/yeezy-1">Yeezy</a> Season 5 en 2017, la 700 « Wave Runner » choque par son design chunky et multicolore. Kanye West anticipe la tendance dad shoe. Le coloris OG avec ses touches de bleu, orange et gris devient un classique instantané. La V2 (2018) simplifie le design, la V3 (2019) abandonne le Boost pour un look plus futuriste, et la MNVN propose une version en nylon épuré.</p>{_E}',
+    },
+
     'autres-yeezy': {
         'meta_title': 'Autres Yeezy - 500, Foam Runner, Knit Runner... | KP SHOES',
-        'meta_description': "Tous les modèles Yeezy sur KP SHOES. Yeezy 500, Foam Runner, Knit Runner... 100% authentiques, livraison rapide en France.",
-        'description': "<p>Au-delà des 350, 700 et Slide, la gamme <strong>Yeezy</strong> propose des modèles audacieux. La <strong>Yeezy 500</strong> avec sa semelle adiPRENE et son design chunky, la <strong>Foam Runner</strong> en mousse injectée au look futuriste et la <strong>Yeezy Knit Runner</strong> au design organique.</p><p>Chaque silhouette repousse les limites du design sneaker conventionnel. Retrouvez tous les modèles Yeezy sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
+        'meta_description': "Tous les modèles Yeezy sur KP SHOES. 500, Foam Runner... 100% authentiques.",
+        'description': f'{_S}{_H1}Autres modèles Yeezy</h2>'
+            f'{_P}Au-delà des <a href="/collections/yeezy-350">350</a>, <a href="/collections/yeezy-700">700</a> et <a href="/collections/yeezy-slide">Slide</a>, la gamme <a href="/collections/yeezy-1">Yeezy</a> propose la <strong>Yeezy 500</strong>, la <strong>Foam Runner</strong> et la <strong>Yeezy Knit Runner</strong>.</p>'
+            f'{_H2}Des modèles avant-gardistes</h2>'
+            f'{_P}La Yeezy 500 (2017) avec son amorti adiPRENE et son design organique. La Foam Runner (2020), entièrement moulée en mousse d\'algue, avec son design qui divise autant qu\'il fascine — avant de devenir un must-have. La Knit Runner au look alien et les 450 avec leur semelle tentaculaire complètent une gamme qui ne ressemble à aucune autre.</p>{_E}',
     },
+
+    # ══════════════════════════════════════════
+    # NEW BALANCE
+    # ══════════════════════════════════════════
+
+    'new-balance-1': {
+        'meta_title': 'New Balance - Sneakers New Balance | KP SHOES',
+        'meta_description': "Toutes les New Balance sur KP SHOES. 550, 530, 2002R, 9060, 990... 100% authentiques.",
+        'description': f'{_S}{_H1}New Balance</h2>'
+            f'{_P}<strong>New Balance</strong>, fondée en 1906 à Boston, est réputée pour son savoir-faire artisanal et son confort inégalé. Retrouvez sur KP SHOES : <a href="/collections/new-balance-550">550</a>, <a href="/collections/new-balance-530">530</a>, <a href="/collections/new-balance-2002r">2002R</a>, <a href="/collections/new-balance-9060">9060</a>, <a href="/collections/new-balance-740">740</a> et <a href="/collections/autres-new-balance">bien d\'autres</a>.</p>'
+            f'{_H2}L\'histoire de New Balance</h2>'
+            f'{_P}Fondée en 1906 par William J. Riley, New Balance commence par fabriquer des semelles orthopédiques. En 1982, la 990 devient la première sneaker vendue à 100 dollars, positionnant New Balance dans le segment premium. Le choix de maintenir une fabrication Made in USA et Made in England forge la réputation qui attire aujourd\'hui des collaborateurs comme <strong>Aimé Leon Dore</strong>, <strong>Joe Freshgoods</strong> et <strong>JJJJound</strong>.</p>{_E}',
+    },
+
+    'new-balance-550': {
+        'meta_title': 'New Balance 550 - Sneakers NB 550 | KP SHOES',
+        'meta_description': "Achetez votre New Balance 550 sur KP SHOES. Tous coloris, 100% authentiques.",
+        'description': f'{_S}{_H1}New Balance 550</h2>'
+            f'{_P}La <strong>New Balance 550</strong>, sortie en 1989 pour le basketball, a connu un retour fracassant grâce à <strong>Aimé Leon Dore</strong>. Sa tige en cuir, son logo N proéminent et son look rétro sport en font l\'une des sneakers les plus tendances. Retrouvez aussi les <a href="/collections/new-balance-530">530</a> et <a href="/collections/new-balance-2002r">2002R</a>.</p>'
+            f'{_H2}L\'histoire de la New Balance 550</h2>'
+            f'{_P}Lancée en 1989 sous le nom P550, cette chaussure de basketball disparaît rapidement. En 2020, Teddy Santis d\'Aimé Leon Dore la ressuscite avec une collaboration qui fait sensation. Le look rétro-basketball correspond parfaitement à l\'esthétique « quiet luxury ». Le succès est tel que <a href="/collections/new-balance-1">New Balance</a> lance des dizaines de coloris et que la 550 devient l\'une de ses meilleures ventes.</p>{_E}',
+    },
+
+    'new-balance-530': {
+        'meta_title': 'New Balance 530 - Sneakers NB 530 | KP SHOES',
+        'meta_description': "Toutes les New Balance 530 sur KP SHOES. 100% authentiques, livraison rapide.",
+        'description': f'{_S}{_H1}New Balance 530</h2>'
+            f'{_P}La <strong>New Balance 530</strong>, issue du running des années 90, séduit par son design technique et son amorti ABZORB. Ses lignes fluides et son allure chunky incarnent la tendance rétro-running. Découvrez aussi les <a href="/collections/new-balance-550">550</a> et <a href="/collections/new-balance-9060">9060</a>.</p>'
+            f'{_H2}L\'histoire de la New Balance 530</h2>'
+            f'{_P}Sortie dans les années 90 comme chaussure de running, la 530 combine la technologie ABZORB avec un design fluide et technique. Revenue avec la vague rétro-running des années 2020, son profil chunky et ses matériaux mixtes en font une paire idéale pour le quotidien. Les coloris Silver et White sont devenus des classiques de <a href="/collections/new-balance-1">New Balance</a>.</p>{_E}',
+    },
+
+    'new-balance-2002r': {
+        'meta_title': 'New Balance 2002R - Sneakers NB 2002R | KP SHOES',
+        'meta_description': "Achetez votre New Balance 2002R sur KP SHOES. Protection Pack... 100% authentiques.",
+        'description': f'{_S}{_H1}New Balance 2002R</h2>'
+            f'{_P}La <strong>New Balance 2002R</strong> combine l\'héritage running avec un confort moderne grâce à sa semelle N-ERGY. Les éditions <strong>Protection Pack</strong> avec leur aspect vieilli sont parmi les plus demandées. Retrouvez aussi les <a href="/collections/new-balance-550">550</a> et <a href="/collections/new-balance-9060">9060</a>.</p>'
+            f'{_H2}L\'histoire de la New Balance 2002R</h2>'
+            f'{_P}La 2002 originale sort en 2010 comme chaussure de running premium. La version 2002R (R pour Refined) arrive en 2020 avec la technologie N-ERGY. C\'est le <strong>Protection Pack</strong> de 2022 — avec ses finitions volontairement usées — qui fait exploser la popularité du modèle. La 2002R s\'impose comme le modèle <a href="/collections/new-balance-1">New Balance</a> préféré des amateurs de streetwear.</p>{_E}',
+    },
+
+    'new-balance-9060': {
+        'meta_title': 'New Balance 9060 - Sneakers NB 9060 | KP SHOES',
+        'meta_description': "Toutes les New Balance 9060 sur KP SHOES. Joe Freshgoods... 100% authentiques.",
+        'description': f'{_S}{_H1}New Balance 9060</h2>'
+            f'{_P}La <strong>New Balance 9060</strong>, née de la collaboration avec <strong>Joe Freshgoods</strong>, réinterprète les silhouettes running des années 2000. Son design organique et son amorti SBS en font l\'un des modèles les plus innovants de <a href="/collections/new-balance-1">New Balance</a>.</p>'
+            f'{_H2}L\'histoire de la New Balance 9060</h2>'
+            f'{_P}Joe Freshgoods, designer de Chicago, imagine la 9060 en fusionnant des éléments de plusieurs modèles vintage. Le premier coloris « Inside Voices » (2022) crée un buzz immédiat avec ses tons lavande. La silhouette se distingue par ses pods SBS en semelle et son design qui semble venir du futur tout en rappelant le passé. Retrouvez aussi les <a href="/collections/new-balance-550">550</a> et <a href="/collections/new-balance-2002r">2002R</a>.</p>{_E}',
+    },
+
+    'new-balance-740': {
+        'meta_title': 'New Balance 740 - Sneakers NB 740 | KP SHOES',
+        'meta_description': "Toutes les New Balance 740 sur KP SHOES. 100% authentiques.",
+        'description': f'{_S}{_H1}New Balance 740</h2>'
+            f'{_P}La <strong>New Balance 740</strong> est un modèle running rétro qui incarne le savoir-faire technique de <a href="/collections/new-balance-1">New Balance</a>. Sa construction robuste et son amorti performant séduisent les amateurs de silhouettes chunky et de style vintage.</p>'
+            f'{_H2}L\'histoire de la New Balance 740</h2>'
+            f'{_P}Issue de la gamme running, la 740 fait partie de ces modèles techniques redécouverts par le streetwear. Sa silhouette chunky et ses matériaux premium — mesh, daim et cuir — lui donnent un look Y2K très recherché. Comme les <a href="/collections/new-balance-530">530</a> et <a href="/collections/new-balance-2002r">2002R</a>, elle bénéficie de l\'engouement pour les sneakers rétro-running.</p>{_E}',
+    },
+
     'autres-new-balance': {
         'meta_title': 'Autres New Balance - 990, 992, 993, 1906R... | KP SHOES',
-        'meta_description': "Tous les modèles New Balance sur KP SHOES. 990, 992, 993, 1906R, Made in USA... 100% authentiques, livraison rapide en France.",
-        'description': "<p>Au-delà des 550, 530, 2002R et 9060, <strong>New Balance</strong> propose des modèles variés comme les <strong>990</strong>, <strong>992</strong>, <strong>993</strong> Made in USA et les <strong>1906R</strong>. Chaque paire bénéficie du savoir-faire artisanal qui fait la réputation de la marque depuis plus d'un siècle.</p><p>Avec des matériaux premium et un confort inégalé, les New Balance sont devenues des incontournables du streetwear. Retrouvez tous les modèles New Balance sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
+        'meta_description': "Tous les modèles New Balance sur KP SHOES. 990, 992, 993, 1906R... 100% authentiques.",
+        'description': f'{_S}{_H1}Autres modèles New Balance</h2>'
+            f'{_P}Au-delà des <a href="/collections/new-balance-550">550</a>, <a href="/collections/new-balance-530">530</a>, <a href="/collections/new-balance-2002r">2002R</a> et <a href="/collections/new-balance-9060">9060</a>, <strong>New Balance</strong> propose les <strong>990</strong>, <strong>992</strong>, <strong>993</strong> Made in USA et les <strong>1906R</strong>.</p>'
+            f'{_H2}Des modèles d\'exception</h2>'
+            f'{_P}La gamme 990 est le fleuron de <a href="/collections/new-balance-1">New Balance</a> — fabriquée aux USA depuis 1982, c\'est la sneaker préférée de Steve Jobs. Les 992 et 993, également Made in USA, offrent un confort inégalé. La 1906R revisite la 1906 avec des matériaux modernes et un look technique.</p>{_E}',
     },
+
+    # ══════════════════════════════════════════
+    # ASICS
+    # ══════════════════════════════════════════
+
+    'asics-1': {
+        'meta_title': 'ASICS - Sneakers ASICS pour Homme et Femme | KP SHOES',
+        'meta_description': "Toutes les ASICS sur KP SHOES. Gel-1130, Gel-Kayano 14, Gel-NYC... 100% authentiques.",
+        'description': f'{_S}{_H1}ASICS</h2>'
+            f'{_P}<strong>ASICS</strong>, fondée au Japon en 1949, signifie « Anima Sana In Corpore Sano ». Reconnue pour son amorti GEL légendaire, la marque s\'est imposée dans le streetwear. Retrouvez sur KP SHOES : <a href="/collections/asics-gel-1130">Gel-1130</a>, <a href="/collections/asics-gel-kayano">Gel-Kayano 14</a>, <a href="/collections/asics-gel-nyc">Gel-NYC</a> et <a href="/collections/autres-asics">bien d\'autres</a>.</p>'
+            f'{_H2}L\'histoire d\'ASICS</h2>'
+            f'{_P}En 1949, Kihachiro Onitsuka fabrique des chaussures de basketball à Kobe. Sa marque Onitsuka Tiger gagne en notoriété aux Olympiques de 1964. En 1977, la fusion donne naissance à ASICS. La technologie GEL, introduite en 1986, révolutionne l\'amorti running. Aujourd\'hui, les modèles rétro des années 2000 connaissent un revival spectaculaire dans le streetwear.</p>{_E}',
+    },
+
+    'asics-gel-1130': {
+        'meta_title': 'ASICS Gel-1130 - Sneakers ASICS Gel-1130 | KP SHOES',
+        'meta_description': "Achetez votre ASICS Gel-1130 sur KP SHOES. White/Clay Canyon, Black/Pure Silver... 100% authentiques.",
+        'description': f'{_S}{_H1}ASICS Gel-1130</h2>'
+            f'{_P}La <strong>ASICS Gel-1130</strong>, héritière de la gamme running des années 2000, est devenue la sneaker tendance du moment. Son design technique, ses superpositions en mesh et cuir synthétique et son amorti GEL en font une paire idéale. Retrouvez aussi les <a href="/collections/asics-gel-kayano">Gel-Kayano 14</a> et <a href="/collections/asics-gel-nyc">Gel-NYC</a>.</p>'
+            f'{_H2}L\'histoire de la ASICS Gel-1130</h2>'
+            f'{_P}Sortie au début des années 2000 comme chaussure de running, la Gel-1130 passe inaperçue pendant près de 20 ans. C\'est la tendance rétro-running et l\'esthétique Y2K qui la propulsent. Son look technique — mesh respirant, superpositions argentées, amorti GEL visible — correspond parfaitement aux codes du moment. Les coloris White/Clay Canyon et Black/Pure Silver deviennent des best-sellers d\'<a href="/collections/asics-1">ASICS</a>.</p>{_E}',
+    },
+
+    'asics-gel-kayano': {
+        'meta_title': 'ASICS Gel-Kayano 14 - Sneakers ASICS Kayano | KP SHOES',
+        'meta_description': "Toutes les ASICS Gel-Kayano 14 sur KP SHOES. 100% authentiques, livraison rapide.",
+        'description': f'{_S}{_H1}ASICS Gel-Kayano 14</h2>'
+            f'{_P}Classique de chez <strong><a href="/collections/asics-1">ASICS</a></strong>, la <strong>Gel-Kayano 14</strong> est une sneaker iconique qui allie confort, performance et style rétro. Conçue initialement pour la course à pied, elle se distingue par son amorti GEL emblématique et sa structure robuste. Avec son design inspiré des modèles running des années 2000, elle séduit autant les amateurs de sneakers que les sportifs. Un incontournable tant chez les <a href="/collections/tout-nos-modeles">sneakers pour homme</a> que les <a href="/collections/tout-nos-modeles">sneakers pour femme</a> !</p>'
+            f'{_H2}L\'histoire de la sneakers Gel-Kayano 14</h2>'
+            f'{_P}Lancée en 2008, la Gel-Kayano 14 marque une évolution majeure dans la gamme Kayano, avec un design revisité qui améliore la légèreté et la flexibilité du modèle. Conçue pour offrir un maximum de stabilité aux coureurs longue distance, cette version introduit des innovations comme la semelle intermédiaire en <strong>Solyte</strong> et le système <strong>TRUSSTIC</strong> pour un meilleur contrôle du mouvement. Après avoir conquis les athlètes, elle revient aujourd\'hui sur le devant de la scène grâce aux collaborations avec <strong>JJJJound</strong> et aux coloris lifestyle comme White/Midnight et Cream/Pure Silver. Retrouvez aussi les <a href="/collections/asics-gel-1130">Gel-1130</a> et <a href="/collections/asics-gel-nyc">Gel-NYC</a>.</p>{_E}',
+    },
+
+    'asics-gel-nyc': {
+        'meta_title': 'ASICS Gel-NYC - Sneakers ASICS Gel-NYC | KP SHOES',
+        'meta_description': "Achetez votre ASICS Gel-NYC sur KP SHOES. 100% authentiques.",
+        'description': f'{_S}{_H1}ASICS Gel-NYC</h2>'
+            f'{_P}La <strong>ASICS Gel-NYC</strong> fusionne deux modèles classiques — la Gel-Nimbus 3 et la MC Plus V — pour créer une silhouette hybride moderne. Sa tige en mesh et daim, son amorti GEL et son design chunky représentent la nouvelle vague <a href="/collections/asics-1">ASICS</a>.</p>'
+            f'{_H2}L\'histoire de la ASICS Gel-NYC</h2>'
+            f'{_P}Lancée en 2023, la Gel-NYC est le premier modèle hybride d\'ASICS. Inspirée par New York, elle incarne l\'énergie de la ville avec ses superpositions de textures et ses coloris sophistiqués. Le succès est immédiat : le coloris Cream/Steel Grey s\'écoule en quelques jours. Retrouvez aussi les <a href="/collections/asics-gel-1130">Gel-1130</a> et <a href="/collections/asics-gel-kayano">Gel-Kayano 14</a>.</p>{_E}',
+    },
+
     'autres-asics': {
         'meta_title': 'Autres ASICS - Gel-Lyte III, Gel-Venture, Gel-Nimbus... | KP SHOES',
-        'meta_description': "Tous les modèles ASICS sur KP SHOES. Gel-Lyte III, Gel-Venture, Gel-Nimbus... 100% authentiques, livraison rapide en France.",
-        'description': "<p>Au-delà des Gel-1130, Gel-Kayano et Gel-NYC, <strong>ASICS</strong> propose des modèles comme les <strong>Gel-Lyte III</strong> avec leur tongue split signature, les <strong>Gel-Venture</strong> outdoor et les <strong>Gel-Nimbus</strong> running. Les collaborations avec <strong>Story mfg</strong> et <strong>Kiko Kostadinov</strong> ont renforcé le statut mode de la marque.</p><p>Chaque paire bénéficie du savoir-faire japonais et de l'amorti GEL signature. Retrouvez tous les modèles ASICS sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
+        'meta_description': "Tous les modèles ASICS sur KP SHOES. Gel-Lyte III, Gel-Venture... 100% authentiques.",
+        'description': f'{_S}{_H1}Autres modèles ASICS</h2>'
+            f'{_P}Au-delà des <a href="/collections/asics-gel-1130">Gel-1130</a>, <a href="/collections/asics-gel-kayano">Gel-Kayano</a> et <a href="/collections/asics-gel-nyc">Gel-NYC</a>, <strong>ASICS</strong> propose les <strong>Gel-Lyte III</strong>, <strong>Gel-Venture</strong>, <strong>Gel-Nimbus</strong> et les collaborations avec Story mfg et Kiko Kostadinov.</p>'
+            f'{_H2}Un catalogue riche</h2>'
+            f'{_P}La Gel-Lyte III, créée en 1990 par Shigeyuki Mitsui, introduit la tongue split. Les Gel-Venture apportent un look trail outdoor très recherché. Les collaborations positionnent <a href="/collections/asics-1">ASICS</a> dans la mode avant-gardiste. Chaque paire bénéficie du savoir-faire japonais et de l\'amorti GEL signature.</p>{_E}',
     },
+
+    # ══════════════════════════════════════════
+    # UGG
+    # ══════════════════════════════════════════
+
+    'ugg-1': {
+        'meta_title': 'UGG - Chaussons et Bottes UGG | KP SHOES',
+        'meta_description': "Tous les modèles UGG sur KP SHOES. Tasman, Tazz, Ultra Mini... 100% authentiques.",
+        'description': f'{_S}{_H1}UGG</h2>'
+            f'{_P}<strong>UGG</strong>, née en Californie en 1978, est synonyme de confort. Retrouvez sur KP SHOES : <a href="/collections/ugg-tasman">Tasman</a>, <a href="/collections/ugg-tazz">Tazz</a>, <a href="/collections/ugg-ultra-mini">Ultra Mini</a>, <a href="/collections/ugg-classic-mini">Classic Mini</a>, <a href="/collections/ugg-lowmel">Lowmel</a> et <a href="/collections/autres-ugg">bien d\'autres</a>.</p>'
+            f'{_H2}L\'histoire de UGG</h2>'
+            f'{_P}Brian Smith, surfeur australien en Californie, lance UGG en 1978 en important des bottes en peau de mouton. Les surfeurs les adoptent pour se réchauffer après les sessions. Dans les années 2000, les UGG deviennent un phénomène mondial. Depuis 2022, le retour de la tendance « comfort first » a propulsé les Tasman et Tazz au rang de must-have streetwear.</p>{_E}',
+    },
+
+    'ugg-tasman': {
+        'meta_title': 'UGG Tasman - Chaussons UGG Tasman | KP SHOES',
+        'meta_description': "Achetez votre UGG Tasman sur KP SHOES. Chestnut, Black, Sand... 100% authentiques.",
+        'description': f'{_S}{_H1}UGG Tasman</h2>'
+            f'{_P}La <strong>UGG Tasman</strong>, avec sa tige en daim doublée de laine et son bandeau tressé signature, est devenue le chausson le plus tendance. Portée en intérieur comme en extérieur. Les coloris <strong>Chestnut</strong>, <strong>Black</strong> et <strong>Sand</strong> sont les plus recherchés. Retrouvez aussi la <a href="/collections/ugg-tazz">Tazz</a> en version plateforme.</p>'
+            f'{_H2}L\'histoire de la UGG Tasman</h2>'
+            f'{_P}La Tasman existe depuis les années 90 comme chausson d\'intérieur de <a href="/collections/ugg-1">UGG</a>. Le tournant arrive en 2022 quand les réseaux sociaux s\'en emparent comme pièce streetwear — portée avec des jeans, des survêtements ou des robes. Les coloris Chestnut, Black et Sand s\'écoulent à chaque restock.</p>{_E}',
+    },
+
+    'ugg-tazz': {
+        'meta_title': 'UGG Tazz - Chaussons UGG Tazz Plateforme | KP SHOES',
+        'meta_description': "Achetez votre UGG Tazz sur KP SHOES. 100% authentiques.",
+        'description': f'{_S}{_H1}UGG Tazz</h2>'
+            f'{_P}La <strong>UGG Tazz</strong> reprend le design de la <a href="/collections/ugg-tasman">Tasman</a> avec une semelle plateforme qui lui donne une allure moderne. Doublée de laine de mouton et ornée du bandeau tressé, elle offre le confort <a href="/collections/ugg-1">UGG</a> avec un twist streetwear.</p>'
+            f'{_H2}L\'histoire de la UGG Tazz</h2>'
+            f'{_P}Lancée pour répondre à la demande de silhouettes plateforme, la Tazz reprend le design iconique de la Tasman en ajoutant une semelle surélevée de 3 cm. Ce simple changement transforme un chausson cosy en pièce mode. Portée par des influenceuses et des célébrités, la Tazz est devenue l\'un des modèles les plus convoités, avec des coloris Chestnut, Sand et Black qui s\'écoulent en quelques heures.</p>{_E}',
+    },
+
+    'ugg-ultra-mini': {
+        'meta_title': 'UGG Ultra Mini - Bottes UGG Ultra Mini | KP SHOES',
+        'meta_description': "Achetez votre UGG Ultra Mini sur KP SHOES. 100% authentiques.",
+        'description': f'{_S}{_H1}UGG Classic Ultra Mini</h2>'
+            f'{_P}La <strong>UGG Classic Ultra Mini</strong> est la version raccourcie de la botte <a href="/collections/ugg-1">UGG</a> classique. Sa tige basse en daim, sa doublure en laine de mouton et sa semelle Treadlite légère offrent chaleur et confort dans un format compact. Découvrez aussi la <a href="/collections/ugg-classic-mini">Classic Mini</a>.</p>'
+            f'{_H2}L\'histoire de la UGG Ultra Mini</h2>'
+            f'{_P}Née de la volonté de moderniser la botte UGG classique, la Ultra Mini raccourcit la tige au maximum et utilise la semelle Treadlite plus légère. Le format mini séduit une clientèle plus jeune et urbaine. Les coloris Chestnut, Black et Mustard Seed sont les plus populaires.</p>{_E}',
+    },
+
+    'ugg-classic-mini': {
+        'meta_title': 'UGG Classic Mini - Bottes UGG Classic Mini | KP SHOES',
+        'meta_description': "Achetez votre UGG Classic Mini sur KP SHOES. 100% authentiques.",
+        'description': f'{_S}{_H1}UGG Classic Mini</h2>'
+            f'{_P}La <strong>UGG Classic Mini</strong>, version basse de la botte <a href="/collections/ugg-1">UGG</a> originale, est un classique intemporel. Sa tige en daim Twin-face, sa doublure en laine naturelle et sa semelle EVA légère en font la paire parfaite pour les saisons fraîches.</p>'
+            f'{_H2}L\'histoire de la UGG Classic Mini</h2>'
+            f'{_P}Déclinaison raccourcie de la Classic Short, la Classic Mini conserve le savoir-faire UGG dans un format plus urbain. La tige mi-haute en peau de mouton Twin-face assure chaleur et respirabilité. Elle est restée un best-seller constant depuis les années 2000. Découvrez aussi la <a href="/collections/ugg-ultra-mini">Ultra Mini</a> et la <a href="/collections/ugg-tasman">Tasman</a>.</p>{_E}',
+    },
+
+    'ugg-lowmel': {
+        'meta_title': 'UGG Lowmel - Mocassins UGG Lowmel | KP SHOES',
+        'meta_description': "Achetez votre UGG Lowmel sur KP SHOES. 100% authentiques.",
+        'description': f'{_S}{_H1}UGG Lowmel</h2>'
+            f'{_P}La <strong>UGG Lowmel</strong> est un mocassin moderne qui mêle l\'ADN confort de <a href="/collections/ugg-1">UGG</a> à une silhouette basse et épurée. Sa tige en daim premium et sa doublure douillette apportent une touche de raffinement décontracté.</p>'
+            f'{_H2}Un nouveau classique UGG</h2>'
+            f'{_P}Le Lowmel représente l\'évolution de UGG vers des modèles plus lifestyle. Avec son design de mocassin bas, il s\'intègre facilement dans une garde-robe quotidienne tout en conservant le confort qui a fait la réputation de la marque. Retrouvez aussi la <a href="/collections/ugg-tasman">Tasman</a> et la <a href="/collections/ugg-tazz">Tazz</a>.</p>{_E}',
+    },
+
     'autres-ugg': {
         'meta_title': 'Autres UGG - Classic Short, Neumel, Disquette... | KP SHOES',
-        'meta_description': "Tous les modèles UGG sur KP SHOES. Classic Short, Neumel, Disquette... 100% authentiques, livraison rapide en France.",
-        'description': "<p>Au-delà des Tasman, Tazz et Ultra Mini, <strong>UGG</strong> propose des modèles variés comme les <strong>Classic Short</strong>, <strong>Neumel</strong>, <strong>Disquette</strong> et de nombreuses collaborations. Chaque paire offre le confort en laine de mouton qui a fait la renommée de la marque depuis plus de 45 ans.</p><p>Du style cosy au streetwear, UGG s'adapte à toutes les saisons. Retrouvez tous les modèles UGG sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
+        'meta_description': "Tous les modèles UGG sur KP SHOES. Classic Short, Neumel... 100% authentiques.",
+        'description': f'{_S}{_H1}Autres modèles UGG</h2>'
+            f'{_P}Au-delà des <a href="/collections/ugg-tasman">Tasman</a>, <a href="/collections/ugg-tazz">Tazz</a> et <a href="/collections/ugg-ultra-mini">Ultra Mini</a>, <strong>UGG</strong> propose les <strong>Classic Short</strong>, <strong>Neumel</strong>, <strong>Disquette</strong> et de nombreuses collaborations.</p>'
+            f'{_H2}Le confort UGG dans tous les styles</h2>'
+            f'{_P}La Classic Short est la botte <a href="/collections/ugg-1">UGG</a> originale. Le Neumel est un chukka boot en peau de mouton. La Disquette est une slide plateforme au look audacieux. Chaque modèle offre la doublure en laine de mouton qui a fait la renommée de UGG depuis plus de 45 ans.</p>{_E}',
     },
+
+    # ══════════════════════════════════════════
+    # AUTRES MARQUES
+    # ══════════════════════════════════════════
+
+    'puma-1': {
+        'meta_title': 'Puma - Sneakers Puma | KP SHOES',
+        'meta_description': "Toutes les Puma sur KP SHOES. Speedcat, Suede... 100% authentiques.",
+        'description': f'{_S}{_H1}Puma</h2>'
+            f'{_P}<strong>Puma</strong>, fondée en 1948 par Rudolf Dassler (frère du fondateur d\'<a href="/collections/adidas-1">Adidas</a>), mêle héritage sportif et innovation. Des Suede classiques aux Speedcat inspirées du motorsport, Puma apporte une touche audacieuse au streetwear.</p>'
+            f'{_H2}L\'histoire de Puma</h2>'
+            f'{_P}Rudolf Dassler crée Puma après sa séparation avec son frère Adi en 1948. Pelé porte des Puma King en Coupe du monde 1970, Usain Bolt bat des records en Puma. La Suede (1968) devient un symbole du hip-hop. La Speedcat, inspirée des chaussures de pilotes F1, connaît un revival spectaculaire en 2024.</p>{_E}',
+    },
+
+    'birkenstock-1': {
+        'meta_title': 'Birkenstock - Sandales Birkenstock | KP SHOES',
+        'meta_description': "Toutes les Birkenstock sur KP SHOES. Boston, Arizona... 100% authentiques.",
+        'description': f'{_S}{_H1}Birkenstock</h2>'
+            f'{_P}<strong>Birkenstock</strong>, marque allemande fondée en 1774, est reconnue pour ses sandales au pied anatomique en liège et latex. De la <strong>Boston</strong> au <strong>Arizona</strong>, chaque modèle offre un confort inégalé et un style devenu symbole du luxe décontracté.</p>'
+            f'{_H2}L\'histoire de Birkenstock</h2>'
+            f'{_P}La famille Birkenstock fabrique des chaussures depuis 1774. En 1896, Konrad Birkenstock invente la première semelle de soutien de voûte. Le modèle Arizona naît en 1973, suivi du Boston. Longtemps associées à un style « granola », les Birkenstock sont propulsées dans le luxe par des collaborations avec Dior et l\'acquisition par LVMH en 2021.</p>{_E}',
+    },
+
+    'crocs': {
+        'meta_title': 'Crocs - Sabots et Slides Crocs | KP SHOES',
+        'meta_description': "Toutes les Crocs sur KP SHOES. Classic Clog, Echo... 100% authentiques.",
+        'description': f'{_S}{_H1}Crocs</h2>'
+            f'{_P}<strong>Crocs</strong>, née en 2002, a transformé un simple sabot en mousse Croslite en phénomène mondial. Personnalisables grâce aux Jibbitz et déclinées en collaborations avec <strong>Salehe Bembury</strong> et <strong>Balenciaga</strong>, les Crocs sont passées de chaussure utilitaire à icône de mode.</p>'
+            f'{_H2}L\'histoire de Crocs</h2>'
+            f'{_P}Créées en 2002 au Colorado comme chaussures nautiques, les Crocs sont moquées pendant des années. Le designer Salehe Bembury crée la Pollex Clog en 2020, version organique qui fait sensation. La collaboration Balenciaga avec des Crocs à plateforme de 10 cm parachève la transformation en objet de mode. Aujourd\'hui, Crocs vend plus de 100 millions de paires par an.</p>{_E}',
+    },
+
+    'converse': {
+        'meta_title': 'Converse - Sneakers Chuck Taylor | KP SHOES',
+        'meta_description': "Toutes les Converse sur KP SHOES. Chuck 70, CDG... 100% authentiques.",
+        'description': f'{_S}{_H1}Converse</h2>'
+            f'{_P}<strong>Converse</strong>, fondée en 1908, est l\'une des marques les plus iconiques. La <strong>Chuck Taylor All Star</strong>, créée en 1917, est un symbole de la culture rock, punk et streetwear. Les collaborations avec <strong>Comme des Garçons</strong> et <strong>Rick Owens</strong> renforcent son statut culte.</p>'
+            f'{_H2}L\'histoire de Converse</h2>'
+            f'{_P}Marquis Mills Converse fonde la marque en 1908. En 1917, la All Star est créée pour le basketball. Chuck Taylor y appose son nom en 1932. La Chuck Taylor devient la chaussure du rock (Ramones), du punk (Kurt Cobain) et du streetwear. Rachetée par <a href="/collections/nike-1">Nike</a> en 2003, Converse continue d\'innover avec la Chuck 70 et les collaborations CDG et Off-White.</p>{_E}',
+    },
+
+    'salomon': {
+        'meta_title': 'Salomon - Sneakers Salomon XT-6, XT-4 | KP SHOES',
+        'meta_description': "Toutes les Salomon sur KP SHOES. XT-6, XT-4, ACS Pro... 100% authentiques.",
+        'description': f'{_S}{_H1}Salomon</h2>'
+            f'{_P}<strong>Salomon</strong>, marque française fondée en 1947 à Annecy, est spécialisée dans les chaussures outdoor et trail. Les <strong>XT-6</strong>, <strong>XT-4</strong> et <strong>ACS Pro</strong> ont conquis le streetwear par leur esthétique technique et fonctionnelle.</p>'
+            f'{_H2}L\'histoire de Salomon dans le streetwear</h2>'
+            f'{_P}Salomon fabrique des équipements de ski et trail depuis 1947 dans les Alpes françaises. Le tournant arrive quand des designers comme Boris Bidjan Saberi et Comme des Garçons collaborent avec la marque. La XT-6, conçue pour les ultra-trails, séduit par son look technique. La tendance « gorpcore » propulse Salomon au rang de marque de mode à part entière.</p>{_E}',
+    },
+
+    'timberland': {
+        'meta_title': 'Timberland - Boots Timberland 6-Inch | KP SHOES',
+        'meta_description': "Toutes les Timberland sur KP SHOES. 6-Inch, collaborations... 100% authentiques.",
+        'description': f'{_S}{_H1}Timberland</h2>'
+            f'{_P}<strong>Timberland</strong>, fondée en 1973, est célèbre pour sa <strong>6-Inch Premium Boot</strong> jaune miel devenue un symbole du hip-hop et du streetwear new-yorkais. Robuste et imperméable, la « Timb » traverse les saisons et les modes.</p>'
+            f'{_H2}L\'histoire de Timberland</h2>'
+            f'{_P}Sidney Swartz lance Timberland en 1973 avec une botte imperméable innovante. La 6-Inch Boot jaune est adoptée dans les années 90 par Notorious B.I.G., Nas et Jay-Z dans les rues de Brooklyn et du Queens. La « Timb » devient un symbole de résilience urbaine et un classique intemporel.</p>{_E}',
+    },
+
+    # ══════════════════════════════════════════
+    # COLLABORATIONS
+    # ══════════════════════════════════════════
+
+    'travis-scott': {
+        'meta_title': 'Travis Scott - Sneakers Cactus Jack | KP SHOES',
+        'meta_description': "Toutes les Travis Scott sur KP SHOES. Jordan 1, Jordan 4, Dunk, Air Max... 100% authentiques.",
+        'description': f'{_S}{_H1}Travis Scott x Nike</h2>'
+            f'{_P}Les sneakers <strong>Travis Scott</strong> sont parmi les plus convoitées au monde. Le rappeur de Houston et fondateur de <strong>Cactus Jack</strong> collabore avec <a href="/collections/nike-1">Nike</a> et <a href="/collections/jordan-1">Jordan Brand</a> pour créer des éditions qui se vendent en quelques secondes. Son <strong>Swoosh inversé</strong> est devenu un signe distinctif reconnaissable entre tous.</p>'
+            f'{_H2}L\'histoire des collaborations Travis Scott</h2>'
+            f'{_P}La première collaboration majeure, la <a href="/collections/jordan-4">Air Jordan 4</a> « Cactus Jack » (2018), fait sensation. Mais c\'est la <a href="/collections/jordan-1-high">Jordan 1 High</a> avec son Swoosh inversé (2019) qui change la donne. Suivent les <a href="/collections/nike-dunk">Dunk Low</a>, les <a href="/collections/air-max">Air Max 1</a> « Baroque Brown », la Jordan 1 Low « Reverse Mocha » et la Jordan 4 « Olive ». Chaque sortie provoque une frénésie mondiale.</p>{_E}',
+    },
+
+    'off-white': {
+        'meta_title': 'Off-White x Nike - Sneakers Off-White | KP SHOES',
+        'meta_description': "Toutes les Off-White x Nike sur KP SHOES. Jordan 1, Dunk, Air Max, Presto... 100% authentiques.",
+        'description': f'{_S}{_H1}Off-White x Nike</h2>'
+            f'{_P}Les collaborations <strong>Off-White x <a href="/collections/nike-1">Nike</a></strong>, initiées par Virgil Abloh avec « The Ten » en 2017, ont redéfini la sneaker contemporaine. Le style déconstruit, les zip-ties, les guillemets et le texte imprimé sont devenus la signature d\'Off-White.</p>'
+            f'{_H2}L\'histoire de Off-White x Nike</h2>'
+            f'{_P}En 2017, Virgil Abloh présente « The Ten » : dix modèles Nike iconiques réinterprétés — coutures visibles, texte imprimé, Swoosh déplacé. La <a href="/collections/jordan-1-high">Jordan 1 Chicago</a> et la Presto deviennent des grails. La collection est divisée en « Revealed » et « Ghosted ». Après le décès de Virgil Abloh en 2021, les dernières sorties comme les <a href="/collections/nike-dunk">Dunk</a> « Dear Summer » deviennent des hommages collector.</p>{_E}',
+    },
+
+    'supreme': {
+        'meta_title': 'Supreme - Sneakers Supreme x Nike | KP SHOES',
+        'meta_description': "Toutes les Supreme sur KP SHOES. Dunk, Air Force 1, Jordan... 100% authentiques.",
+        'description': f'{_S}{_H1}Supreme</h2>'
+            f'{_P}<strong>Supreme</strong>, fondée à New York en 1994, est la marque de streetwear la plus influente de sa génération. Ses collaborations avec <a href="/collections/nike-1">Nike</a>, <a href="/collections/jordan-1">Jordan Brand</a> et Vans créent des pièces ultra limitées qui s\'arrachent instantanément.</p>'
+            f'{_H2}L\'histoire de Supreme</h2>'
+            f'{_P}James Jebbia ouvre le premier Supreme sur Lafayette Street à Manhattan en 1994. Le modèle du drop hebdomadaire crée une culture de la rareté. Les collaborations sneakers commencent avec les <a href="/collections/nike-sb">Dunk SB</a> en 2002, suivies des <a href="/collections/air-force-1">Air Force 1</a> et des Jordan 5. Le box logo rouge et blanc devient l\'un des symboles les plus reconnaissables de la mode urbaine.</p>{_E}',
+    },
+
+    'bape': {
+        'meta_title': 'BAPE - Sneakers BAPE Sta | KP SHOES',
+        'meta_description': "Toutes les BAPE sur KP SHOES. BAPE Sta, collaborations Adidas... 100% authentiques.",
+        'description': f'{_S}{_H1}BAPE</h2>'
+            f'{_P}<strong>A Bathing Ape (BAPE)</strong>, fondée à Tokyo en 1993 par Nigo, est pionnière du streetwear japonais. Son camouflage distinctif et les <strong>BAPE Sta</strong> sont très recherchées. Les collaborations avec <a href="/collections/adidas-1">Adidas</a> (<a href="/collections/adidas-superstar">Superstar</a>, Campus) perpétuent l\'héritage.</p>'
+            f'{_H2}L\'histoire de BAPE</h2>'
+            f'{_P}Nigo lance BAPE en 1993 à Harajuku, Tokyo, avec une philosophie de rareté absolue. Le camouflage BAPE et la BAPE Sta — sneaker avec une étoile filante — deviennent des icônes. Pharrell Williams et Kanye West popularisent la marque aux États-Unis dans les années 2000.</p>{_E}',
+    },
+
+    'dior': {
+        'meta_title': 'Dior - Sneakers Dior B23 et Jordan x Dior | KP SHOES',
+        'meta_description': "Sneakers Dior sur KP SHOES. B23, Jordan x Dior... 100% authentiques.",
+        'description': f'{_S}{_H1}Dior</h2>'
+            f'{_P}Les sneakers <strong>Dior</strong> incarnent la fusion entre haute couture et culture sneakers. La collaboration <strong>Dior x <a href="/collections/jordan-1-high">Air Jordan 1</a></strong> reste l\'une des sneakers les plus exclusives jamais produites. La <strong>B23</strong> avec son monogramme Oblique est devenue un symbole du luxe streetwear.</p>'
+            f'{_H2}L\'histoire des sneakers Dior</h2>'
+            f'{_P}Kim Jones orchestre la collaboration Dior x Air Jordan 1 en 2020 : 13 000 paires pour 5 millions de demandes. La Jordan 1 en cuir italien avec le monogramme Oblique sur le Swoosh devient instantanément l\'une des sneakers les plus chères. La B23, high-top en toile Oblique, s\'impose comme le modèle phare de la maison.</p>{_E}',
+    },
+
+    'patta': {
+        'meta_title': 'Patta - Sneakers Patta x Nike | KP SHOES',
+        'meta_description': "Toutes les Patta sur KP SHOES. Air Max 1, Dunk... 100% authentiques.",
+        'description': f'{_S}{_H1}Patta</h2>'
+            f'{_P}<strong>Patta</strong>, fondée à Amsterdam en 2004, est l\'un des magasins de sneakers les plus respectés d\'Europe. Ses collaborations avec <a href="/collections/nike-1">Nike</a>, <a href="/collections/new-balance-1">New Balance</a> et <a href="/collections/asics-1">ASICS</a> se distinguent par des coloris audacieux et un sens du détail remarquable.</p>'
+            f'{_H2}L\'histoire de Patta</h2>'
+            f'{_P}Edson Sabajo et Guillaume Schmidt ouvrent Patta en 2004 dans un sous-sol d\'Amsterdam. Leur première collaboration Nike — une <a href="/collections/air-max">Air Max 1</a> « Lucky Green » — établit leur réputation. Les Air Max 1 Patta avec leurs vagues latérales deviennent emblématiques, déclinées en Monarch, Aqua et Chlorophyll.</p>{_E}',
+    },
+
+    'maison-mihara': {
+        'meta_title': 'Maison Mihara Yasuhiro - Sneakers MMY | KP SHOES',
+        'meta_description': "Achetez vos Maison Mihara Yasuhiro sur KP SHOES. Peterson, Wayne, Blakey... 100% authentiques.",
+        'description': f'{_S}{_H1}Maison Mihara Yasuhiro</h2>'
+            f'{_P}<strong>Maison Mihara Yasuhiro (MMY)</strong>, fondée en 1997 par le designer japonais éponyme, repousse les limites du design sneaker. Chaque paire est pensée comme une œuvre d\'art, mêlant déconstruction, matériaux inattendus et silhouettes sculpturales.</p>'
+            f'{_H2}L\'histoire de Maison Mihara Yasuhiro</h2>'
+            f'{_P}Mihara Yasuhiro étudie le design de chaussures à l\'université de Tama à Tokyo avant de lancer sa marque en 1997. La <strong>Peterson</strong>, avec sa semelle qui semble fondre, devient sa signature. Les modèles Wayne, Hank et Blakey explorent d\'autres déformations — semelles ondulées, structures déconstruites. Fabriquées au Japon avec un soin artisanal, les MMY séduisent les amateurs de pièces uniques.</p>{_E}',
+    },
+
+    # ══════════════════════════════════════════
+    # COLLECTIONS UTILITAIRES
+    # ══════════════════════════════════════════
+
+    'autre-marques': {
+        'meta_title': 'Autres Marques - Sneakers | KP SHOES',
+        'meta_description': "Découvrez d\'autres marques de sneakers sur KP SHOES. 100% authentiques.",
+        'description': f'{_S}{_H1}Autres marques</h2>'
+            f'{_P}Réunissant des labels au style unique, cette sélection met en avant des sneakers qui se distinguent par leur originalité et leur design innovant. Des marques émergentes aux labels établis, découvrez des paires qui sortent des sentiers battus sur <strong>KP SHOES</strong>.</p>{_E}',
+    },
+
+    'best-seller': {
+        'meta_title': 'Meilleures Ventes Sneakers - Best Sellers | KP SHOES',
+        'meta_description': "Les sneakers les plus populaires sur KP SHOES. Nos best-sellers du moment, 100% authentiques.",
+        'description': f'{_S}{_H1}Nos meilleures ventes</h2>'
+            f'{_P}Découvrez les sneakers les plus populaires du moment sur <strong>KP SHOES</strong>. Cette sélection regroupe les paires les plus demandées — des classiques intemporels aux dernières sorties. Toutes 100% authentiques et vérifiées par nos experts.</p>{_E}',
+    },
+
+    'moins-de-150': {
+        'meta_title': 'Sneakers à moins de 150€ | KP SHOES',
+        'meta_description': "Des sneakers tendance à moins de 150€ sur KP SHOES. 100% authentiques.",
+        'description': f'{_S}{_H1}Sneakers à moins de 150€</h2>'
+            f'{_P}Des sneakers authentiques et tendance sans se ruiner. <a href="/collections/nike-dunk">Nike Dunk</a>, <a href="/collections/adidas-samba">Adidas Samba</a>, <a href="/collections/new-balance-1">New Balance</a>, <a href="/collections/asics-1">ASICS</a>... Les modèles les plus populaires à prix accessibles, tous vérifiés et authentiques sur <strong>KP SHOES</strong>.</p>{_E}',
+    },
+
+    'livraison-48h': {
+        'meta_title': 'Livraison 48h - Sneakers Express | KP SHOES',
+        'meta_description': "Recevez vos sneakers en 48h avec KP SHOES. Sélection en stock, 100% authentiques.",
+        'description': f'{_S}{_H1}Livraison en 48h</h2>'
+            f'{_P}Besoin de vos sneakers rapidement ? Cette sélection regroupe les paires en stock et expédiées sous 48h. <strong>KP SHOES</strong> vous garantit une livraison rapide sans compromis sur l\'authenticité.</p>{_E}',
+    },
+
+    'pour-enfants': {
+        'meta_title': 'Sneakers Enfant - Jordan, Nike, Adidas, UGG | KP SHOES',
+        'meta_description': "Sneakers pour enfants sur KP SHOES. Jordan, Nike, Adidas, UGG... 100% authentiques.",
+        'description': f'{_S}{_H1}Sneakers pour enfants</h2>'
+            f'{_P}Les plus belles sneakers existent aussi en tailles enfant. <a href="/collections/jordan-1">Air Jordan</a>, <a href="/collections/nike-dunk">Nike Dunk</a>, <a href="/collections/adidas-campus">Adidas Campus</a>, <a href="/collections/ugg-tazz">UGG Tazz</a>... En versions PS (Preschool), GS (Grade School) et TD (Toddler). Toutes 100% authentiques sur <strong>KP SHOES</strong>.</p>{_E}',
+    },
+
+    'sport': {
+        'meta_title': 'Sneakers Sport - Performance et Style | KP SHOES',
+        'meta_description': "Sneakers sport sur KP SHOES. Performance, confort et style réunis. 100% authentiques.",
+        'description': f'{_S}{_H1}Sneakers sport</h2>'
+            f'{_P}Performance, confort et style réunis. Cette sélection regroupe des sneakers adaptées à l\'entraînement et au sport, avec les technologies les plus avancées de <a href="/collections/nike-1">Nike</a>, <a href="/collections/adidas-1">Adidas</a>, <a href="/collections/asics-1">ASICS</a> et <a href="/collections/new-balance-1">New Balance</a>.</p>{_E}',
+    },
+
+    'nouveautes': {
+        'meta_title': 'Nouveautés Sneakers - Dernières Sorties | KP SHOES',
+        'meta_description': "Les dernières nouveautés sneakers sur KP SHOES. Sorties récentes, éditions limitées. 100% authentiques.",
+        'description': f'{_S}{_H1}Nouveautés</h2>'
+            f'{_P}Les dernières sorties et nouveautés sneakers sur <strong>KP SHOES</strong>. Éditions limitées, collaborations exclusives et coloris fraîchement sortis — soyez parmi les premiers à porter les paires du moment.</p>{_E}',
+    },
+
+    'tout-nos-modeles': {
+        'meta_title': 'Tous nos modèles - Sneakers Authentiques | KP SHOES',
+        'meta_description': "Parcourez tous les modèles sur KP SHOES. Sneakers authentiques, livraison rapide.",
+        'description': f'{_S}{_H1}Tous nos modèles</h2>'
+            f'{_P}Parcourez l\'ensemble de notre catalogue : plus de 2 800 sneakers authentiques des plus grandes marques. <a href="/collections/nike-1">Nike</a>, <a href="/collections/jordan-1">Jordan</a>, <a href="/collections/adidas-1">Adidas</a>, <a href="/collections/new-balance-1">New Balance</a>, <a href="/collections/asics-1">ASICS</a>, <a href="/collections/ugg-1">UGG</a>, <a href="/collections/yeezy-1">Yeezy</a> et bien d\'autres. Chaque paire est vérifiée par nos experts. <strong>KP SHOES</strong>, la référence française des sneakers authentiques.</p>{_E}',
+    },
+
+    'tous-nos-vetements': {
+        'meta_title': 'Vêtements Streetwear - Hoodies, T-shirts, Joggers | KP SHOES',
+        'meta_description': "Vêtements streetwear sur KP SHOES. Essentials, Denim Tears, hoodies, t-shirts... 100% authentiques.",
+        'description': f'{_S}{_H1}Vêtements streetwear</h2>'
+            f'{_P}Complétez votre look avec notre sélection de vêtements streetwear premium. <strong>Fear of God Essentials</strong>, <strong>Denim Tears</strong>, <strong>Stüssy</strong> et bien d\'autres — hoodies, t-shirts, joggers et vestes des marques les plus convoitées. Tous 100% authentiques et vérifiés sur <strong>KP SHOES</strong>.</p>{_E}',
+    },
+
+    'stock-x-sneakers': {
+        'meta_title': 'Sneakers Authentifiées | KP SHOES',
+        'meta_description': "Sneakers authentifiées sur KP SHOES. Vérifiées par nos experts. Livraison rapide.",
+        'description': f'{_S}{_H1}Sneakers authentifiées</h2>'
+            f'{_P}Toutes les sneakers sur <strong>KP SHOES</strong> sont authentifiées et vérifiées par nos experts avant expédition. Achetez en toute confiance parmi notre catalogue de <a href="/collections/tout-nos-modeles">plus de 2 800 modèles</a>.</p>{_E}',
+    },
+
 }
