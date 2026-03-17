@@ -22,6 +22,7 @@ BRAND_COLLECTIONS = {
     'yeezy-1': ['yeezy', 'foam runner'], 'new-balance-1': ['new balance'], 'asics-1': ['asics'],
     'ugg-1': ['ugg'], 'puma-1': ['puma'], 'crocs': ['crocs'], 'birkenstock-1': ['birkenstock'],
     'converse': ['converse'], 'salomon': ['salomon'], 'timberland': ['timberland'],
+    'maison-mihara': ['mihara', 'mmy', 'maison mihara'],
 }
 
 EXCLUDED = ['tout-nos-modeles', 'best-seller', 'moins-de-150', 'livraison-48h', 'pour-enfants', 'sport', 'autre-marques']
