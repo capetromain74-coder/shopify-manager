@@ -230,7 +230,7 @@ function applyFromDetail(){
 
 function applyAll(){
     var ready=[];
-    for(var i=0;i<cols.length;i++){if(cols[i].has_seo_def && cols[i].score<100)ready.push(cols[i])}
+    for(var i=0;i<cols.length;i++){if(cols[i].has_seo_def)ready.push(cols[i])}
     if(!ready.length){showMsg("Toutes les collections sont \u00e0 100% !","ok");return}
     if(!confirm("Appliquer le SEO \u00e0 "+ready.length+" collections ?"))return;
     document.getElementById("batchProg").style.display="block";
