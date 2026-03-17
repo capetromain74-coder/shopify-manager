@@ -231,22 +231,37 @@ function applyFromDetail(){
 function applyAll(){
     var ready=[];
     for(var i=0;i<cols.length;i++){if(cols[i].has_seo_def)ready.push(cols[i])}
-    if(!ready.length){showMsg("Toutes les collections sont \u00e0 100% !","ok");return}
-    if(!confirm("Appliquer le SEO \u00e0 "+ready.length+" collections ?"))return;
+    if(!ready.length){showMsg("Aucune collection avec SEO d\u00e9fini","err");return}
+    if(!confirm("Appliquer le SEO \u00e0 "+ready.length+" collections ?\n(~3s par collection, soit ~"+Math.round(ready.length*3/60)+" min)"))return;
     document.getElementById("batchProg").style.display="block";
-    var done=0;
+    var done=0,ok=0,fail=0,errors=[];
     function next(){
         if(done>=ready.length){
             document.getElementById("batchBar").style.width="100%";
-            document.getElementById("batchTxt").textContent="Termin\u00e9 ! "+done+" collections mises \u00e0 jour";
-            showMsg(done+" collections mises \u00e0 jour !","ok");
-            setTimeout(function(){loadCols()},2000);
+            var txt="Termin\u00e9 ! "+ok+" r\u00e9ussies, "+fail+" \u00e9chou\u00e9es";
+            document.getElementById("batchTxt").innerHTML=txt;
+            if(fail>0){
+                document.getElementById("batchTxt").innerHTML+=
+                    "<br><span style='color:#ff4757;font-size:11px'>Erreurs: "+errors.join(", ")+"</span>";
+                showMsg(ok+" OK, "+fail+" erreurs. Relance pour les rat\u00e9es.","err");
+            }else{
+                showMsg(ok+" collections mises \u00e0 jour !","ok");
+            }
             return;
         }
         var c=ready[done];
         document.getElementById("batchTxt").textContent=c.title+" ("+(done+1)+"/"+ready.length+")";
         document.getElementById("batchBar").style.width=Math.round((done+1)/ready.length*100)+"%";
-        fetch("/api/collections/"+c.id+"/seo",{method:"POST",headers:{"Content-Type":"application/json"}}).then(function(){done++;setTimeout(next,500)}).catch(function(){done++;setTimeout(next,500)});
+        fetch("/api/collections/"+c.id+"/seo",{method:"POST",headers:{"Content-Type":"application/json"}})
+            .then(function(r){return r.json()})
+            .then(function(d){
+                if(d.success){ok++}else{fail++;errors.push(c.title)}
+                done++;setTimeout(next,1500);
+            })
+            .catch(function(){
+                fail++;errors.push(c.title);
+                done++;setTimeout(next,2000);
+            });
     }
     next();
 }
