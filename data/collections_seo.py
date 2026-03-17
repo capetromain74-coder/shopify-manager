@@ -74,6 +74,11 @@ COLLECTION_SEO = {
         'meta_description': "Achetez votre Adidas Forum sur KP SHOES. Forum Low, Mid, 84... Tous les coloris, 100% authentiques. Livraison rapide en France.",
         'description': "<p>Sortie en 1984, l'<strong>Adidas Forum</strong> était la chaussure de basketball la plus chère de l'époque. Son strap à boucle distinctif, son upper en cuir et sa silhouette imposante en ont fait un favori du hip-hop dès les années 80.</p><p>Déclinée en versions <strong>Low</strong>, <strong>Mid</strong> et <strong>84</strong>, la Forum revient en force avec des collaborations remarquées et des coloris contemporains. Le strap signature reste son signe distinctif.</p><p>Retrouvez toutes les Adidas Forum sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
     },
+    'adidas-superstar': {
+        'meta_title': 'Adidas Superstar - Sneakers Adidas pour Homme et Femme | KP SHOES',
+        'meta_description': "Achetez votre Adidas Superstar sur KP SHOES. OG, XLG, collaborations BAPE... Tous les coloris, 100% authentiques. Livraison rapide en France.",
+        'description': "<p>Lancée en 1969 pour le basketball, l'<strong>Adidas Superstar</strong> est devenue une icône culturelle grâce au groupe Run-DMC qui l'a adoptée dans les années 80, en faisant le premier sponsoring sneaker du hip-hop. Sa coque en caoutchouc emblématique (shell toe), son upper en cuir lisse et ses trois bandes latérales en font l'une des silhouettes les plus reconnaissables au monde.</p><p>Déclinée en versions <strong>OG</strong>, <strong>XLG</strong> (plateforme) et à travers des collaborations avec <strong>BAPE</strong>, <strong>Pharrell</strong> et bien d'autres, la Superstar reste un classique intemporel du streetwear. Du blanc immaculé aux éditions les plus audacieuses, elle s'adapte à tous les styles.</p><p>Retrouvez toutes les Adidas Superstar sur <strong>KP SHOES</strong>, 100% authentiques.</p>",
+    },
     'yeezy-slide': {
         'meta_title': 'Yeezy Slide - Slides Yeezy pour Homme et Femme | KP SHOES',
         'meta_description': "Achetez vos Yeezy Slide sur KP SHOES. Onyx, Bone, Pure... Tous les coloris disponibles, 100% authentiques. Livraison rapide en France.",
