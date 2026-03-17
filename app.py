@@ -59,7 +59,84 @@ def create_app():
 # Instance au niveau module pour Render (gunicorn app:app fonctionne directement)
 app = create_app()
 
+# ══════════════════════════════════════════════════════════════
+# IMAGE SCANNER - Détection de nouvelles images GOAT
+# Ajouter ce code dans app.py, avant le if __name__ == '__main__'
+# ══════════════════════════════════════════════════════════════
 
+@app.route('/image-scanner')
+def image_scanner_page():
+    return open('templates/image_scanner.html').read()
+
+
+@app.route('/api/products/single-image')
+def api_products_single_image():
+    """Récupère tous les produits avec 1 seule image."""
+    since_id = 0
+    single_image_products = []
+    total_scanned = 0
+
+    while True:
+        r = shopify_request(f'products.json?limit=250&since_id={since_id}&fields=id,title,handle,images,variants')
+        if not r or not r.get('products'):
+            break
+        products = r['products']
+        total_scanned += len(products)
+
+        for p in products:
+            img_count = len(p.get('images', []))
+            if img_count == 1:
+                sku = p['variants'][0].get('sku', '') if p.get('variants') else ''
+                single_image_products.append({
+                    'id': p['id'],
+                    'title': p['title'],
+                    'handle': p.get('handle', ''),
+                    'sku': sku,
+                    'image_url': p['images'][0]['src'] if p.get('images') else '',
+                })
+
+        if len(products) < 250:
+            break
+        since_id = products[-1]['id']
+        time.sleep(0.5)
+
+    log.info(f"[Image Scanner] Scanned {total_scanned} products, found {len(single_image_products)} with 1 image")
+    return jsonify({
+        'products': single_image_products,
+        'count': len(single_image_products),
+        'total_scanned': total_scanned
+    })
+
+
+@app.route('/api/goat/check-new-images')
+def api_goat_check_new_images():
+    """Vérifie si GOAT a plus d'images disponibles pour un SKU donné."""
+    sku = request.args.get('sku', '').strip()
+    title = request.args.get('title', '').strip()
+    if not sku:
+        return jsonify({'error': 'SKU requis'}), 400
+
+    sku_clean = re.sub(r':\d+$', '', sku)
+    result = get_goat_images(sku_clean)
+
+    if not result or not result.get('images'):
+        return jsonify({
+            'sku': sku,
+            'goat_found': False,
+            'goat_images': 0,
+            'images': []
+        })
+
+    images = result.get('images', [])
+    return jsonify({
+        'sku': sku,
+        'goat_found': True,
+        'goat_name': result.get('name', ''),
+        'goat_images': len(images),
+        'images': images,
+        'has_new': len(images) > 1
+    })
+    
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
