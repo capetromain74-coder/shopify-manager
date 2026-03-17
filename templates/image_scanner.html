@@ -22,13 +22,9 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 .prog-fill{width:0%;height:100%;background:linear-gradient(90deg,#00ff88,#00cc6a);transition:width .3s}
 .spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid #333;border-top-color:#00ff88;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* Steps */
 .step{background:#1a1a2e;border-radius:12px;padding:20px;margin-bottom:15px}
 .step h3{font-size:15px;margin-bottom:12px;color:#fff}
 .step p{font-size:13px;color:#888;margin-bottom:12px}
-
-/* Product grid */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:15px}
 .card{background:#111;border:1px solid #222;border-radius:10px;overflow:hidden;position:relative}
 .card img{width:100%;height:160px;object-fit:contain;background:#0a0a0f}
@@ -48,8 +44,6 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 .btn-sm{padding:5px 12px;font-size:11px;border:none;border-radius:6px;cursor:pointer;font-weight:600}
 .btn-apply-img{background:#00ff88;color:#000}
 .btn-apply-img:hover{background:#00cc6a}
-
-/* Results summary */
 .results-bar{display:flex;gap:10px;align-items:center;padding:12px 16px;background:#111;border-radius:8px;margin-top:15px;flex-wrap:wrap}
 </style>
 </head>
@@ -58,29 +52,28 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <a href="/" class="logo">&larr; KP SHOES</a>
 <span style="color:#aaa;font-size:13px">Scanner d'images</span>
 </header>
-
 <div class="stats">
 <div class="st"><div class="v" style="color:#fff" id="totalSingle">-</div><div class="l">1 SEULE IMAGE</div></div>
 <div class="st"><div class="v" style="color:#6c5ce7" id="scannedCount">-</div><div class="l">SCANN&Eacute;S</div></div>
 <div class="st"><div class="v" style="color:#00ff88" id="newCount">-</div><div class="l">NOUVELLES IMAGES</div></div>
 <div class="st"><div class="v" style="color:#666" id="sameCount">-</div><div class="l">INCHANG&Eacute;S</div></div>
 </div>
-
 <main class="main">
 <div class="msg" id="msg"></div>
 
-<!-- Étape 1: Charger les produits -->
 <div class="step" id="step1">
 <h3>&#x1F50D; &Eacute;tape 1 : Trouver les produits avec 1 seule image</h3>
-<p>Le bot va parcourir tous vos produits Shopify et lister ceux qui n'ont qu'une seule photo.</p>
+<p>Le bot parcourt tous vos produits Shopify page par page et liste ceux qui n'ont qu'une seule photo.</p>
 <button class="btn" style="background:#6c5ce7;color:#fff" id="btnLoad" onclick="loadSingleImage()">Charger les produits</button>
 <span id="loadStatus" style="margin-left:10px;font-size:12px;color:#888"></span>
+<div id="loadProg" style="display:none">
+<div class="prog-bar"><div class="prog-fill" id="loadBar"></div></div>
+</div>
 </div>
 
-<!-- Étape 2: Scanner GOAT -->
 <div class="step" id="step2" style="display:none">
 <h3>&#x1F4F7; &Eacute;tape 2 : Scanner GOAT pour de nouvelles images</h3>
-<p>Le bot va vérifier sur GOAT si de nouvelles images sont disponibles pour chaque produit.</p>
+<p>Le bot v&eacute;rifie sur GOAT si de nouvelles images sont disponibles pour chaque produit.</p>
 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
 <button class="btn" style="background:#00ff88;color:#000" id="btnScan" onclick="startScan()">&#128640; Lancer le scan</button>
 <button class="btn" style="background:#ff9f43;color:#000;display:none" id="btnStop" onclick="stopScan()">&#9724; Stopper</button>
@@ -92,85 +85,93 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 </div>
 </div>
 
-<!-- Résultats -->
 <div id="resultsBar" class="results-bar" style="display:none">
 <span style="font-size:13px;color:#fff;font-weight:600">R&eacute;sultats :</span>
 <span id="summaryTxt" style="font-size:12px;color:#aaa"></span>
 </div>
-
 <div class="grid" id="productGrid"></div>
 </main>
 
 <script>
 var products=[];
-var scanning=false;
 var scanStopped=false;
 var scanned=0,withNew=0,unchanged=0,errors=0;
 
-function showMsg(txt,type){
-    var el=document.getElementById("msg");
-    el.textContent=txt;el.className="msg on "+(type||"ok");
-    setTimeout(function(){el.className="msg"},5000);
+function showMsg(t,type){var e=document.getElementById("msg");e.textContent=t;e.className="msg on "+(type||"ok");setTimeout(function(){e.className="msg"},5000)}
+function updateStats(){
+    document.getElementById("totalSingle").textContent=products.length;
+    document.getElementById("scannedCount").textContent=scanned;
+    document.getElementById("newCount").textContent=withNew;
+    document.getElementById("sameCount").textContent=unchanged;
 }
 
 function loadSingleImage(){
     var btn=document.getElementById("btnLoad");
     btn.disabled=true;
     btn.innerHTML="<span class='spinner-sm'></span> Chargement...";
-    document.getElementById("loadStatus").textContent="Analyse de tous les produits Shopify...";
+    document.getElementById("loadProg").style.display="block";
+    products=[];
+    var totalScanned=0;
+    var sinceId="0";
 
-    fetch("/api/products/single-image")
-        .then(function(r){return r.json()})
-        .then(function(d){
-            products=d.products||[];
-            document.getElementById("totalSingle").textContent=products.length;
-            document.getElementById("loadStatus").textContent=d.total_scanned+" produits scannés";
-            btn.innerHTML="\u2713 "+products.length+" produits trouvés";
-            btn.style.background="#333";btn.style.color="#00ff88";
+    function loadPage(){
+        document.getElementById("loadStatus").textContent="Page en cours... "+totalScanned+" produits analysés, "+products.length+" avec 1 image";
+        document.getElementById("loadBar").style.width=Math.min(90,totalScanned/28)+"%" ;
 
-            if(products.length===0){
-                showMsg("Aucun produit avec 1 seule image !","ok");
-                return;
-            }
+        fetch("/api/products/single-image-page?since_id="+sinceId)
+            .then(function(r){return r.json()})
+            .then(function(d){
+                totalScanned+=d.page_total;
+                for(var i=0;i<d.products.length;i++) products.push(d.products[i]);
+                updateStats();
 
-            // Afficher les produits
-            var html="";
-            for(var i=0;i<products.length;i++){
-                var p=products[i];
-                html+="<div class='card' id='card-"+p.id+"'>";
-                html+="<span class='card-badge badge-wait'>En attente</span>";
-                html+="<img src='"+p.image_url+"' alt='"+p.title+"'>";
-                html+="<div class='card-body'>";
-                html+="<div class='card-title'>"+p.title+"</div>";
-                html+="<div class='card-sku'>"+p.sku+"</div>";
-                html+="<div class='new-count' id='info-"+p.id+"'></div>";
-                html+="</div>";
-                html+="<div class='card-actions'>";
-                html+="<button class='btn-sm btn-apply-img' onclick='applyOne("+p.id+")'>Appliquer</button>";
-                html+="</div>";
-                html+="</div>";
-            }
-            document.getElementById("productGrid").innerHTML=html;
+                if(d.has_more){
+                    sinceId=d.next_since_id;
+                    setTimeout(loadPage,300);
+                }else{
+                    // Terminé
+                    document.getElementById("loadBar").style.width="100%";
+                    document.getElementById("loadStatus").textContent=totalScanned+" produits analysés";
+                    btn.innerHTML="\u2713 "+products.length+" produits trouvés";
+                    btn.style.background="#333";btn.style.color="#00ff88";
 
-            // Montrer étape 2
-            document.getElementById("step2").style.display="block";
-
-            updateStats();
-        })
-        .catch(function(e){
-            btn.innerHTML="Erreur";btn.style.background="#ff4757";
-            showMsg("Erreur: "+e.message,"err");
-        });
+                    if(products.length===0){
+                        showMsg("Aucun produit avec 1 seule image !","ok");
+                        return;
+                    }
+                    renderGrid();
+                    document.getElementById("step2").style.display="block";
+                }
+            })
+            .catch(function(e){
+                btn.innerHTML="Erreur";btn.style.background="#ff4757";
+                showMsg("Erreur: "+e.message,"err");
+            });
+    }
+    loadPage();
 }
 
-function updateStats(){
-    document.getElementById("scannedCount").textContent=scanned;
-    document.getElementById("newCount").textContent=withNew;
-    document.getElementById("sameCount").textContent=unchanged;
+function renderGrid(){
+    var html="";
+    for(var i=0;i<products.length;i++){
+        var p=products[i];
+        html+="<div class='card' id='card-"+p.id+"'>";
+        html+="<span class='card-badge badge-wait'>En attente</span>";
+        html+="<img src='"+p.image_url+"' alt='"+p.title+"'>";
+        html+="<div class='card-body'>";
+        html+="<div class='card-title'>"+p.title+"</div>";
+        html+="<div class='card-sku'>"+p.sku+"</div>";
+        html+="<div class='new-count' id='info-"+p.id+"'></div>";
+        html+="</div>";
+        html+="<div class='card-actions'>";
+        html+="<button class='btn-sm btn-apply-img' onclick='applyOne("+p.id+")'>Appliquer</button>";
+        html+="</div>";
+        html+="</div>";
+    }
+    document.getElementById("productGrid").innerHTML=html;
 }
 
 function startScan(){
-    scanning=true;
     scanStopped=false;
     scanned=0;withNew=0;unchanged=0;errors=0;
     document.getElementById("btnScan").style.display="none";
@@ -182,32 +183,28 @@ function startScan(){
 
 function stopScan(){
     scanStopped=true;
-    scanning=false;
     document.getElementById("btnStop").style.display="none";
     document.getElementById("btnScan").style.display="inline-block";
-    document.getElementById("btnScan").textContent="\u25b6 Reprendre";
+    document.getElementById("btnScan").textContent="\u25b6 Reprendre le scan";
+    document.getElementById("btnScan").onclick=function(){scanStopped=false;document.getElementById("btnScan").style.display="none";document.getElementById("btnStop").style.display="inline-block";scanNext(scanned)};
     showMsg("Scan stoppé à "+scanned+"/"+products.length,"err");
     if(withNew>0) document.getElementById("btnApplyAll").style.display="inline-block";
 }
 
 function scanNext(idx){
-    if(scanStopped || idx>=products.length){
-        // Terminé
-        scanning=false;
+    if(scanStopped||idx>=products.length){
         document.getElementById("btnStop").style.display="none";
         document.getElementById("btnScan").style.display="inline-block";
         document.getElementById("btnScan").textContent="\u2713 Scan terminé";
         document.getElementById("btnScan").disabled=true;
         document.getElementById("scanBar").style.width="100%";
-        document.getElementById("scanTxt").textContent="Terminé ! "+withNew+" produits avec nouvelles images, "+unchanged+" inchangés, "+errors+" erreurs";
-
+        document.getElementById("scanTxt").textContent="Terminé ! "+withNew+" avec nouvelles images, "+unchanged+" inchangés, "+errors+" erreurs";
         document.getElementById("resultsBar").style.display="flex";
         document.getElementById("summaryTxt").textContent=withNew+" nouvelles images disponibles sur "+scanned+" produits scannés";
-
         if(withNew>0){
             document.getElementById("btnApplyAll").style.display="inline-block";
-            showMsg(withNew+" produits ont de nouvelles images disponibles !","ok");
-        }else{
+            showMsg(withNew+" produits ont de nouvelles images !","ok");
+        }else if(!scanStopped){
             showMsg("Aucune nouvelle image trouvée.","err");
         }
         return;
@@ -218,7 +215,6 @@ function scanNext(idx){
     document.getElementById("scanBar").style.width=pct+"%";
     document.getElementById("scanTxt").textContent=p.title.substring(0,40)+"... ("+(idx+1)+"/"+products.length+")";
 
-    // Mettre badge scanning
     var badge=document.querySelector("#card-"+p.id+" .card-badge");
     if(badge){badge.className="card-badge badge-scan";badge.textContent="Scan...";}
 
@@ -232,21 +228,17 @@ function scanNext(idx){
             if(d.has_new && d.goat_images>1){
                 withNew++;
                 if(badge){badge.className="card-badge badge-new";badge.textContent=d.goat_images+" photos";}
-                if(info) info.textContent="\u2705 "+d.goat_images+" images disponibles (vs 1 actuelle)";
+                if(info) info.textContent="\u2705 "+d.goat_images+" images disponibles";
                 if(card) card.className="card has-new";
-                // Stocker les images pour l'apply
                 p._goat_images=d.images;
                 p._goat_name=d.goat_name||"";
             }else if(d.goat_found){
                 unchanged++;
                 if(badge){badge.className="card-badge badge-same";badge.textContent="1 seule";}
-                if(info) info.textContent="Toujours 1 image sur GOAT";
             }else{
                 unchanged++;
                 if(badge){badge.className="card-badge badge-err";badge.textContent="Pas sur GOAT";}
-                if(info) info.textContent="Produit non trouvé sur GOAT";
             }
-
             updateStats();
             setTimeout(function(){scanNext(idx+1)},1200);
         })
@@ -258,48 +250,33 @@ function scanNext(idx){
         });
 }
 
-function applyOne(productId){
+function applyOne(pid){
     var p=null;
-    for(var i=0;i<products.length;i++){if(products[i].id===productId){p=products[i];break;}}
-    if(!p || !p._goat_images){showMsg("Pas d'images à appliquer","err");return;}
-
-    var btn=document.querySelector("#card-"+productId+" .btn-apply-img");
+    for(var i=0;i<products.length;i++){if(products[i].id===pid){p=products[i];break;}}
+    if(!p||!p._goat_images){showMsg("Pas d'images","err");return;}
+    var btn=document.querySelector("#card-"+pid+" .btn-apply-img");
     if(btn){btn.textContent="...";btn.disabled=true;}
-
-    fetch("/api/goat/apply",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({product_id:productId,images:p._goat_images})
-    })
-    .then(function(r){return r.json()})
-    .then(function(d){
-        if(d.success){
-            if(btn){btn.textContent="\u2713 OK";btn.style.background="#333";btn.style.color="#00ff88";}
-            var badge=document.querySelector("#card-"+productId+" .card-badge");
-            if(badge){badge.textContent="\u2713 Appliqué";badge.className="card-badge badge-new";}
-        }else{
-            if(btn){btn.textContent="Erreur";btn.style.background="#ff4757";btn.disabled=false;}
-        }
-    })
-    .catch(function(){
-        if(btn){btn.textContent="Erreur";btn.style.background="#ff4757";btn.disabled=false;}
-    });
+    fetch("/api/goat/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid,images:p._goat_images})})
+        .then(function(r){return r.json()})
+        .then(function(d){
+            if(d.success){
+                if(btn){btn.textContent="\u2713 OK";btn.style.background="#333";btn.style.color="#00ff88";}
+                var badge=document.querySelector("#card-"+pid+" .card-badge");
+                if(badge){badge.textContent="\u2713 Appliqué";}
+            }else{
+                if(btn){btn.textContent="Erreur";btn.style.background="#ff4757";btn.disabled=false;}
+            }
+        })
+        .catch(function(){if(btn){btn.textContent="Erreur";btn.style.background="#ff4757";btn.disabled=false;}});
 }
 
 function applyAllNew(){
     var toApply=[];
-    for(var i=0;i<products.length;i++){
-        if(products[i]._goat_images && products[i]._goat_images.length>1){
-            toApply.push(products[i]);
-        }
-    }
-    if(!toApply.length){showMsg("Aucun produit à mettre à jour","err");return;}
+    for(var i=0;i<products.length;i++){if(products[i]._goat_images&&products[i]._goat_images.length>1)toApply.push(products[i]);}
+    if(!toApply.length){showMsg("Rien à appliquer","err");return;}
     if(!confirm("Appliquer les nouvelles images à "+toApply.length+" produits ?"))return;
-
     var btn=document.getElementById("btnApplyAll");
     btn.disabled=true;
-    btn.textContent="Application en cours...";
-
     var done=0,ok=0,fail=0;
     function next(){
         if(done>=toApply.length){
@@ -309,24 +286,14 @@ function applyAllNew(){
         }
         var p=toApply[done];
         btn.textContent="Application... ("+(done+1)+"/"+toApply.length+")";
-
-        fetch("/api/goat/apply",{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({product_id:p.id,images:p._goat_images})
-        })
-        .then(function(r){return r.json()})
-        .then(function(d){
-            if(d.success){
-                ok++;
-                var badge=document.querySelector("#card-"+p.id+" .card-badge");
-                if(badge){badge.textContent="\u2713 Appliqué";badge.className="card-badge badge-new";}
-                var abtn=document.querySelector("#card-"+p.id+" .btn-apply-img");
-                if(abtn){abtn.textContent="\u2713 OK";abtn.disabled=true;abtn.style.background="#333";abtn.style.color="#00ff88";}
-            }else{fail++;}
-            done++;setTimeout(next,1500);
-        })
-        .catch(function(){fail++;done++;setTimeout(next,1500)});
+        fetch("/api/goat/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:p.id,images:p._goat_images})})
+            .then(function(r){return r.json()})
+            .then(function(d){
+                if(d.success){ok++;var b=document.querySelector("#card-"+p.id+" .card-badge");if(b)b.textContent="\u2713 Appliqué";var ab=document.querySelector("#card-"+p.id+" .btn-apply-img");if(ab){ab.textContent="\u2713 OK";ab.disabled=true;ab.style.background="#333";ab.style.color="#00ff88";}}
+                else fail++;
+                done++;setTimeout(next,1500);
+            })
+            .catch(function(){fail++;done++;setTimeout(next,1500)});
     }
     next();
 }
