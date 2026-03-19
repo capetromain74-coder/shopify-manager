@@ -76,6 +76,10 @@ def title_to_filename(title):
 def find_collection(title, collections):
     if not title or not collections: return None
     t = title.lower()
+    # Les vêtements vont toujours dans la collection streetwear
+    if is_clothing(title):
+        col = next((c for c in collections if c['handle'] == 'tous-nos-vetements'), None)
+        if col: return {'handle': col['handle'], 'title': col['title'], 'url': f"https://{SITE_DOMAIN}/collections/{col['handle']}", 'type': 'model'}
     available = [c['handle'] for c in collections if c['handle'] not in EXCLUDED]
     for handle, keywords in MODEL_COLLECTIONS.items():
         if handle in available:
