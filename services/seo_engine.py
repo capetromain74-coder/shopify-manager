@@ -64,7 +64,6 @@ def translate_to_french(text):
 
 def title_to_filename(title):
     """Convertit un titre produit en nom de fichier safe: 'Air Jordan 4 Rétro (2025)' -> 'Air_Jordan_4_Retro_2025'"""
-    # Enlever les accents : è→e, é→e, à→a, etc.
     fn = unicodedata.normalize('NFD', title)
     fn = ''.join(c for c in fn if unicodedata.category(c) != 'Mn')
     fn = fn.replace(' ', '_')
@@ -76,7 +75,6 @@ def title_to_filename(title):
 def find_collection(title, collections):
     if not title or not collections: return None
     t = title.lower()
-    # Les vêtements vont toujours dans la collection streetwear
     if is_clothing(title):
         col = next((c for c in collections if c['handle'] == 'tous-nos-vetements'), None)
         if col: return {'handle': col['handle'], 'title': col['title'], 'url': f"https://{SITE_DOMAIN}/collections/{col['handle']}", 'type': 'model'}
@@ -145,12 +143,10 @@ def analyze_seo(product, meta_title, meta_description):
     
     check1 = {'name': 'Meta Title', 'points': 0, 'max': 20, 'status': 'error', 'message': 'Absent'}
     if meta_title:
-        if SITE_NAME in meta_title and len(meta_title) <= 60:
+        if len(meta_title) <= 60:
             check1 = {'name': 'Meta Title', 'points': 20, 'max': 20, 'status': 'success', 'message': 'OK (' + str(len(meta_title)) + ' car.)'}
-        elif len(meta_title) > 60:
-            check1 = {'name': 'Meta Title', 'points': 8, 'max': 20, 'status': 'warning', 'message': 'Trop long'}
         else:
-            check1 = {'name': 'Meta Title', 'points': 12, 'max': 20, 'status': 'warning', 'message': 'Manque KP SHOES'}
+            check1 = {'name': 'Meta Title', 'points': 8, 'max': 20, 'status': 'warning', 'message': 'Trop long (' + str(len(meta_title)) + ' car.)'}
     results['checks'].append(check1)
     results['score'] += check1['points']
     
@@ -184,7 +180,6 @@ def analyze_seo(product, meta_title, meta_description):
     results['checks'].append(check4)
     results['score'] += check4['points']
     
-    # Check Images : alt text + filename
     images = product.get('images', [])
     title = product.get('title', '')
     title_for_filename = title_to_filename(title)
@@ -294,7 +289,6 @@ MODEL_DESCRIPTIONS = {
     'sb dunk high': "La Nike SB Dunk High combine l'ADN basketball de 1985 avec les exigences du skate : col rembourré, semelle Zoom Air et grip optimisé. Un modèle culte de la culture skateboard.",
     'bad bunny': "Les collaborations Bad Bunny x Adidas allient l'univers créatif du superstar portoricain avec le savoir-faire sportif d'Adidas. Des pièces audacieuses aux détails uniques qui reflètent l'esthétique avant-gardiste de l'artiste.",
     'pharrell': "Les collaborations Pharrell Williams x Adidas repoussent les limites du design avec des silhouettes innovantes et des coloris audacieux. L'expression de la vision créative sans frontières du producteur et entrepreneur.",
-    # ── NIKE (modèles additionnels) ──
     'shox': "La Nike Shox, lancée en 2000, a révolutionné l'amorti avec ses colonnes mécaniques en mousse au talon. Son design futuriste et son système de ressort visible en ont fait un symbole du Y2K et de l'innovation Nike.",
     'kobe 4': "La Nike Kobe 4 Protro, signature shoe de Kobe Bryant sortie en 2009, a inauguré l'ère des chaussures de basketball basses. Son upper léger et son profil bas ont changé le jeu pour toujours.",
     'kobe 5': "La Nike Kobe 5, sortie en 2009, poursuit la révolution low-top de Kobe Bryant avec une tige en Flywire ultra-légère et un amorti Zoom Air. Un modèle technique au design agressif inspiré par la Mamba Mentality.",
@@ -320,9 +314,7 @@ MODEL_DESCRIPTIONS = {
     'nikecraft': "Les Nike NikeCraft, collaboration avec l'artiste Tom Sachs, proposent des chaussures utilitaires au design brut et fonctionnel. La General Purpose Shoe incarne une philosophie de simplicité et d'usure assumée.",
     'astro grabber': "La Nike Astro Grabber, modèle vintage de football américain, a été réinventée par la collaboration Bode avec des matériaux artisanaux et un esprit rétro-bohème unique.",
     'air humara': "La Nike Air Humara, modèle trail des années 2000, fait son retour avec son design outdoor technique. Sa semelle crantée et son upper en mesh/cuir séduisent les amateurs de gorpcore.",
-    # ── ADIDAS (modèles additionnels) ──
     'bw army': "L'Adidas BW Army (Bundeswehr Army), issue de l'armée allemande, est un modèle militaire réapproprié par le streetwear. Son cuir épuré, sa semelle en gomme et son profil bas en font un classique discret et élégant.",
-    # ── NEW BALANCE (modèles additionnels) ──
     'new balance 991': "La New Balance 991, fabriquée en Angleterre (Made in UK), combine technologies ABZORB et Encap pour un confort premium. Son upper en daim et mesh avec des finitions artisanales en fait un modèle haut de gamme.",
     'new balance 993': "La New Balance 993, dernière de la lignée 99X Made in USA, est devenue un symbole de l'élite discrète. Son amorti ABZORB DTS et son cuir premium en font la sneaker de ceux qui savent.",
     'new balance 574': "La New Balance 574, sortie en 1988, est le modèle le plus populaire de New Balance. Son design running rétro en daim et mesh avec technologie Encap offre un confort quotidien intemporel.",
@@ -332,28 +324,23 @@ MODEL_DESCRIPTIONS = {
     'new balance 740': "La New Balance 740, modèle running rétro-technique, revient sur le devant de la scène avec un design Y2K et des technologies d'amorti modernes. Une silhouette qui séduit la nouvelle génération.",
     'new balance 204': "La New Balance 204L est un modèle technique qui allie innovation et esthétique contemporaine. Son design distinctif et ses matériaux premium en font une pièce remarquée du catalogue New Balance.",
     'abzorb 2000': "La New Balance Abzorb 2000 tire son nom de la technologie d'amorti ABZORB signature de la marque. Son design technique des années 2000 et son profil chunky en font un modèle streetwear recherché.",
-    # ── ASICS (modèles additionnels) ──
     'gel-cumulus': "L'Asics Gel-Cumulus, modèle running neutre depuis 1997, offre un amorti Gel confortable et un upper respirant. Sa silhouette technique retro séduit aussi bien les coureurs que les amateurs de streetwear.",
     'gel-lyte iii': "L'Asics Gel-Lyte III, conçue par Shigeyuki Mitsui en 1990, a introduit la languette fendue split-tongue devenue iconique. Son amorti Gel et son design coloré en font un classique du running rétro.",
     'gel-lyte': "L'Asics Gel-Lyte, lancée en 1987, a été la première chaussure à intégrer la technologie d'amorti Gel. Son design running vintage et ses lignes épurées en font un pilier du streetwear japonais.",
     'gt-2160': "L'Asics GT-2160, modèle running stabilisant sorti en 2009, impressionne par son design ultra-technique. Sa technologie Gel et son upper structuré en font un favori du style gorpcore et technique.",
     'gel-nimbus': "L'Asics Gel-Nimbus, référence de l'amorti neutre depuis 1999, offre un confort maximal grâce à ses unités Gel avant-pied et talon. Son design technique et moderne en fait un modèle polyvalent.",
     'gel-quantum': "L'Asics Gel-Quantum 360 enveloppe le pied dans une semelle Gel à 360 degrés pour un amorti intégral. Son design futuriste et son confort maximal en font un modèle unique dans la gamme Asics.",
-    # ── UGG (modèles additionnels) ──
     'classic mini': "La UGG Classic Mini, version courte du classique boot UGG, offre la même doublure en peau de mouton et la même semelle Treadlite dans un format compact et polyvalent, parfait pour toutes les saisons.",
     'disquette': "La UGG Disquette, slipper plateforme au design audacieux, combine la peau de mouton UGG avec une semelle surélevée en sucre canne. Un modèle statement qui a conquis les réseaux sociaux.",
     'goldenstar': "La UGG Goldenstar Clog revisite le sabot classique avec la peau de mouton signature UGG et une semelle plateforme. Un modèle confort-first devenu incontournable du style casual.",
     'lowmel': "La UGG Lowmel est une mule plateforme moderne qui combine la doublure en peau de mouton UGG avec un design contemporain. Un modèle facile à enfiler pour un confort instantané.",
-    # ── PUMA ──
     'speedcat': "La Puma Speedcat, inspirée des chaussures de pilotes de Formule 1, se distingue par son profil ultra-bas et sa semelle fine. Son design racing minimaliste en fait un modèle tendance du moment.",
     'puma suede': "La Puma Suede, née en 1968 sur les podiums olympiques de Mexico, est un classique du streetwear et du hip-hop. Son upper en daim, sa forme basse et ses coloris variés traversent les décennies.",
     'lamelo': "Les Puma LaMelo Ball, signature shoe du prodige NBA, combinent design avant-gardiste et technologies de performance. L'expression du style flamboyant et du jeu spectaculaire de Melo.",
-    # ── AUTRES ──
     'fear of god': "Fear of God, marque fondée par Jerry Lorenzo en 2013, fusionne luxe et streetwear dans des pièces essentielles. La ligne Essentials propose des basiques premium au design minimaliste et intemporel.",
     'dior b23': "La Dior B23, sneaker haute couture de la maison Dior, arbore le motif Oblique signature sur une toile technique. Un modèle de luxe qui incarne la fusion entre mode et culture sneaker.",
     'mschf': "MSCHF, collectif artistique new-yorkais, crée des sneakers provocatrices qui remettent en question les codes du marché. La Big Red Boot, devenue virale, illustre leur approche disruptive du design.",
     'adifom': "L'Adidas adiFOM réinvente des silhouettes classiques avec un matériau mousse monobloc futuriste. Un design minimaliste et organique qui transforme les icônes Adidas en pièces d'art contemporain.",
-
 }
 
 DEFAULT_DESC = "Un modèle premium qui allie qualité de fabrication et design soigné, pensé pour ceux qui recherchent style et confort au quotidien."
@@ -363,13 +350,11 @@ DEFAULT_DESC = "Un modèle premium qui allie qualité de fabrication et design s
 
 def get_model_description(title):
     t = title.lower()
-    # Vérifier les clés les plus longues (spécifiques) d'abord
     sorted_keys = sorted(MODEL_DESCRIPTIONS.keys(), key=len, reverse=True)
     for key in sorted_keys:
         if key in t:
             return MODEL_DESCRIPTIONS[key]
     
-    # Matching avancé pour les Jordan (titres Shopify: "Air Jordan X Retro High/Low/Mid OG ...")
     if 'jordan 1' in t:
         if 'high' in t: return MODEL_DESCRIPTIONS.get('jordan 1 high', DEFAULT_DESC)
         if 'low' in t: return MODEL_DESCRIPTIONS.get('jordan 1 low', DEFAULT_DESC)
@@ -384,7 +369,6 @@ def get_model_description(title):
     if 'jordan 12' in t: return MODEL_DESCRIPTIONS.get('jordan 12', DEFAULT_DESC)
     if 'jordan 13' in t: return MODEL_DESCRIPTIONS.get('jordan 13', DEFAULT_DESC)
     
-    # Matching par mots-clés larges
     broad = {
         'dunk': 'dunk', 'air force': 'air force 1', 'air max': 'air max',
         'samba': 'samba', 'campus': 'campus', 'gazelle': 'gazelle',
@@ -404,10 +388,9 @@ def get_model_description(title):
 
 def generate_meta_title(product):
     title = product.get('title', '')
-    meta_title = title + ' | ' + SITE_NAME
-    if len(meta_title) > 60:
-        meta_title = title[:47] + '... | ' + SITE_NAME
-    return meta_title
+    if len(title) > 60:
+        title = title[:57] + '...'
+    return title
 
 
 def generate_meta_description(product, goat_slug=''):
@@ -421,7 +404,6 @@ def generate_meta_description(product, goat_slug=''):
         clothing_type = get_clothing_type(title)
         color = extract_clothing_color(title)
         
-        # Essayer GOAT + IA pour une meta description riche
         goat_details = None
         if sku or goat_slug:
             goat_details = _fetch_goat_details(sku, goat_slug=goat_slug)
@@ -445,7 +427,6 @@ def generate_meta_description(product, goat_slug=''):
                 ai_desc = ai_desc[:152].rsplit(' ', 1)[0] + '...'
             return ai_desc
         
-        # Fallback sans IA
         if color:
             desc = 'La ' + title + ' en coloris ' + color + '. Piece streetwear premium disponible sur ' + SITE_NAME + '. Authenticite garantie, livraison rapide.'
         else:
@@ -454,13 +435,12 @@ def generate_meta_description(product, goat_slug=''):
             desc = desc[:152].rsplit(' ', 1)[0] + '...'
         return desc
 
-    # -- SNEAKERS : essayer GOAT puis IA pour une meta description specifique --
+    # -- SNEAKERS --
     goat_desc = None
     goat_details = None
     if sku or goat_slug:
         goat_details = _fetch_goat_details(sku, goat_slug=goat_slug)
         if goat_details:
-            # Option 1 : GOAT a une story - la traduire et tronquer
             story = goat_details.get('story', '')
             if story and len(story) > 40:
                 story_fr = translate_to_french(story.strip())
@@ -478,11 +458,9 @@ def generate_meta_description(product, goat_slug=''):
                                 story_fr = story_fr[:max_len].rsplit(' ', 1)[0] + '...'
                     goat_desc = story_fr
 
-            # Option 2 : pas de story GOAT - generer via IA
             if not goat_desc:
                 ai_story = generate_story_ai(title, brand, colorway, '', goat_data=goat_details)
                 if ai_story:
-                    # Tronquer la story IA pour la meta description
                     max_len = 140 - len(SITE_NAME)
                     if len(ai_story) > max_len:
                         cut = ai_story[:max_len].rfind('.')
@@ -503,7 +481,6 @@ def generate_meta_description(product, goat_slug=''):
             goat_desc = goat_desc[:152].rsplit(' ', 1)[0] + '...'
         return goat_desc
 
-    # -- Fallback sans GOAT ni IA --
     collabs = ['Travis Scott', 'Off-White', 'Fragment', 'Union LA', 'Undefeated', 'A Ma Maniere',
                'Sacai', 'CLOT', 'Stussy', 'Patta', 'Supreme', 'BAPE', 'Kith', 'Bad Bunny',
                'Pharrell', 'Drake', 'NOCTA', 'The Simpsons', 'Mercedes AMG', 'Jacquemus', 'Nigo']
@@ -526,16 +503,13 @@ def generate_meta_description(product, goat_slug=''):
 def extract_colorway(title):
     """Extrait le coloris/version spécifique du titre produit"""
     t = title
-    # Enlever la marque
     brands = ['Nike', 'Adidas', 'New Balance', 'Asics', 'Puma', 'Reebok', 'UGG', 'Crocs', 'Salomon', 'Birkenstock', 'Vans', 'Converse']
     for b in brands:
         if t.startswith(b + ' '):
             t = t[len(b)+1:]
             break
     
-    # Enlever le modèle pour garder le coloris
     models = [
-        # Jordan (du plus spécifique au moins spécifique)
         'Air Jordan 4 Retro OG SP', 'Air Jordan 4 Retro SE', 'Air Jordan 4 Retro Premium', 'Air Jordan 4 Retro',
         'Air Jordan 1 Retro High OG SP', 'Air Jordan 1 Retro High OG', 'Air Jordan 1 Retro High',
         'Air Jordan 1 Retro Low OG SP', 'Air Jordan 1 Retro Low OG', 'Air Jordan 1 Low SE', 'Air Jordan 1 Low',
@@ -543,42 +517,35 @@ def extract_colorway(title):
         'Air Jordan 2 Retro', 'Air Jordan 3 Retro', 'Air Jordan 5 Retro', 'Air Jordan 6 Retro',
         'Air Jordan 7 Retro', 'Air Jordan 8 Retro', 'Air Jordan 9 Retro',
         'Air Jordan 11 Retro Low', 'Air Jordan 11 Retro', 'Air Jordan 12 Retro', 'Air Jordan 13 Retro',
-        # Nike
         'Dunk Low Retro SP', 'Dunk Low Retro', 'Dunk Low SE', 'Dunk Low', 'Dunk High Retro', 'Dunk High',
         'Air Force 1 Low Retro', 'Air Force 1 Low', 'Air Force 1 High', 'Air Force 1 Mid', 'Air Force 1',
         'Air Max 1', 'Air Max 90', 'Air Max 95', 'Air Max 97', 'Air Max Plus', 'Air Max TN',
         'Vomero 5', 'Vomero', 'P-6000', 'Blazer Mid', 'Blazer Low', 'Blazer',
-        # Adidas
         'Samba OG', 'Samba Decon', 'Samba', 'Campus 00s', 'Campus', 'Gazelle Bold', 'Gazelle Indoor', 'Gazelle',
         'Handball Spezial', 'Spezial', 'Forum Low', 'Forum Mid', 'Forum 84 Low', 'Forum',
         'SL 72 OG', 'SL 72', 'Adilette 22', 'Adilette',
-        # Yeezy
         'Yeezy Slide', 'Yeezy Boost 350 V2', 'Yeezy 350 V2', 'Yeezy 350', 'Yeezy 700 V3', 'Yeezy 700',
         'Yeezy Foam Runner', 'Yeezy 500',
-        # New Balance
         '550', '530', '2002R', '9060', '1906R', '990v6', '990v5', '990v4', '990v3', '990',
         '993', '2002', '327', '574', '480',
-        # Asics
         'Gel-1130', 'Gel-Kayano 14', 'Gel-Kayano', 'Gel-NYC', 'Gel-Nimbus 9', 'GT-2160',
-        # UGG
         'Tasman Slipper', 'Tasman', 'Tazz Slipper', 'Tazz Platform', 'Tazz',
         'Ultra Mini Platform', 'Ultra Mini', 'Classic Mini II Boot', 'Classic Mini II', 'Classic Mini',
         'Classic Short II Boot', 'Classic Short II', 'Classic Short',
         'Disquette Slipper', 'Disquette', 'Goldenstar Clog', 'Goldenstar',
         'Lowmel', 'Scuffette II',
-        # Autres
-        'SB Dunk Low', 'SB Dunk High',  # Nike SB
-        'NOCTA Glide', 'NOCTA Hot Step',  # NOCTA
-        'AE 1', 'AE1',  # Adidas AE
-        'Bermuda', 'Superstar', 'Stan Smith',  # Adidas
-        'adiFOM Superstar',  # Adidas
-        'Yeezy 500', 'Yeezy Boost 380',  # Yeezy
-        'Adiracer GT', 'Adistar Jellyfish',  # Adidas collab
-        'Adizero SL 72',  # Adidas
-        'Classic Clog', 'Classic Slide',  # Crocs
-        'Old Skool', 'Sk8-Hi', 'Era', 'Authentic',  # Vans
-        'Chuck Taylor', 'Chuck 70',  # Converse
-        'XT-6', 'XT-4', 'ACS Pro',  # Salomon
+        'SB Dunk Low', 'SB Dunk High',
+        'NOCTA Glide', 'NOCTA Hot Step',
+        'AE 1', 'AE1',
+        'Bermuda', 'Superstar', 'Stan Smith',
+        'adiFOM Superstar',
+        'Yeezy 500', 'Yeezy Boost 380',
+        'Adiracer GT', 'Adistar Jellyfish',
+        'Adizero SL 72',
+        'Classic Clog', 'Classic Slide',
+        'Old Skool', 'Sk8-Hi', 'Era', 'Authentic',
+        'Chuck Taylor', 'Chuck 70',
+        'XT-6', 'XT-4', 'ACS Pro',
     ]
     
     colorway = t
@@ -600,7 +567,6 @@ def generate_story_ai(title, brand, colorway, model_desc, goat_data=None):
     """Utilise Claude pour generer une description complete (story) enrichie.
     Utilise les donnees GOAT si disponibles pour ne pas inventer.
     Cache le resultat par titre pour eviter les appels doubles."""
-    # Verifier le cache
     cache_key = title.strip().lower()
     if cache_key in _ai_story_cache:
         log.info(f"[AI Story] Cache hit for {title}")
@@ -610,10 +576,8 @@ def generate_story_ai(title, brand, colorway, model_desc, goat_data=None):
         import os, ssl, json as _json
         from urllib.request import Request, urlopen
 
-        # Detecter si c'est un vetement
         is_clothing_product = is_clothing(title) or (goat_data and goat_data.get('productCategory') == 'clothing')
 
-        # Construire le contexte GOAT si dispo
         goat_context = ""
         if goat_data:
             parts = []
@@ -710,7 +674,6 @@ def generate_story_ai(title, brand, colorway, model_desc, goat_data=None):
                         _ai_story_cache[cache_key] = story
                         return story
         except Exception as http_err:
-            # Lire le body d'erreur pour debug
             if hasattr(http_err, 'read'):
                 err_body = http_err.read().decode('utf-8', 'replace')
                 log.error(f"[AI Story] HTTP Error: {http_err} - Body: {err_body[:500]}")
@@ -764,7 +727,6 @@ Marque : {brand}
             result = json.loads(r.read().decode('utf-8'))
             if result.get('content') and result['content'][0].get('text'):
                 sentence = result['content'][0]['text'].strip()
-                # Déterminer le type via le fallback logic
                 _, cw_type = generate_color_sentence_fallback(title, colorway)
                 return sentence, cw_type
     except Exception as e:
@@ -792,7 +754,6 @@ def generate_color_sentence_fallback(title, colorway):
             sentence = f'Fruit de la collaboration exclusive avec {collab}, cette édition se distingue par un design unique et des détails soignés qui en font une pièce très convoitée.'
             return sentence, 'collab'
     
-    # Coloris iconiques avec descriptions spécifiques
     iconic = {
         'chicago': "Habillée du légendaire coloris Chicago — rouge, blanc et noir — cette paire rend hommage à la ville qui a vu naître la dynastie Jordan et la culture sneaker.",
         'bred': "Le coloris Bred (Black/Red), indissociable de Michael Jordan et de la marque Jordan, reste l'un des duos de couleurs les plus emblématiques de l'histoire des sneakers.",
@@ -819,7 +780,6 @@ def generate_color_sentence_fallback(title, colorway):
         if key in cl:
             return desc, 'color'
     
-    # Détecter si c'est un vrai nom de couleur
     color_keywords = [
         'black', 'white', 'red', 'blue', 'green', 'grey', 'gray', 'pink', 'purple',
         'orange', 'yellow', 'brown', 'beige', 'cream', 'navy', 'olive', 'gold', 'silver',
@@ -840,7 +800,6 @@ def generate_color_sentence_fallback(title, colorway):
         sentence = f'Proposée dans le coloris "{colorway}", cette paire affirme son identité avec une combinaison de teintes et de matières qui lui est propre.'
         return sentence, 'color'
     
-    # Pas de couleur détectée et pas de collab → édition spéciale
     sentence = f'Cette édition "{colorway}" se démarque par son identité visuelle unique et ses finitions soignées.'
     return sentence, 'edition'
 
@@ -875,7 +834,6 @@ def get_clothing_type(title):
 def extract_clothing_color(title):
     """Extrait la couleur d'un vêtement depuis le titre"""
     t = title
-    # Supprimer les patterns de marque connus pour garder la couleur à la fin
     brand_patterns = [
         'Fear Of God Fear of God Essentials ', 'Fear Of God ', 'Fear of God Essentials ',
         'Denim Tears ', 'Stussy ', 'Palm Angels ', 'Rhude ', 'Gallery Dept ',
@@ -883,9 +841,7 @@ def extract_clothing_color(title):
     ]
     for remove in brand_patterns:
         t = t.replace(remove, '')
-    # Le dernier mot/groupe est généralement la couleur
     parts = t.strip().split()
-    # Trouver où commence la couleur (après le type de vêtement)
     clothing_words = ['Classic', 'Fleece', 'Essential', 'Jersey', 'Crewneck', 'Core', 'Collection',
                       'Heavy', 'S/S', 'SS', 'NBA', 'Relaxed', 'Hoodie', 'Sweatpant', 'Sweatshort',
                       'Sweatshorts', 'Sweatshirt', 'Sweater', 'Tee', 'T-Shirt', 'Jacket', 'Vest',
@@ -940,14 +896,13 @@ def _translate_colors(color_str):
     for p in parts:
         p_lower = p.strip().lower()
         found = False
-        # Essayer les clés multi-mots d'abord (ex: "off white", "light blue")
         for en, fr in sorted(_COLOR_FR.items(), key=lambda x: -len(x[0])):
             if en in p_lower:
                 translated.append(fr)
                 found = True
                 break
         if not found and p.strip():
-            translated.append(p.strip())  # Garder tel quel si pas de traduction
+            translated.append(p.strip())
     return ', '.join(translated) if translated else ''
 
 
@@ -957,7 +912,6 @@ def _translate_materials(material_str):
         return ''
     m_lower = material_str.lower()
     found_materials = []
-    # Chercher les matières connues (multi-mots d'abord)
     for en, fr in sorted(_MATERIAL_FR.items(), key=lambda x: -len(x[0])):
         if en in m_lower:
             if fr not in found_materials:
@@ -985,8 +939,7 @@ def _fetch_goat_details(sku, goat_slug=''):
 
 
 def build_goat_description(goat_details, title, colorway):
-    """Construit une description produit spécifique à partir des données GOAT.
-    Retourne (description_str, type_str) ou (None, None) si données insuffisantes."""
+    """Construit une description produit spécifique à partir des données GOAT."""
     if not goat_details:
         return None, None
 
@@ -997,12 +950,9 @@ def build_goat_description(goat_details, title, colorway):
     details = goat_details.get('details', '')
     nickname = goat_details.get('nickname', '')
 
-    # ── Option 1 : GOAT a une story textuelle — l'utiliser directement ──
     if story and len(story) > 60:
-        # Nettoyer et tronquer si trop long
         story_clean = story.strip()
         if len(story_clean) > 400:
-            # Couper à la dernière phrase complète avant 400 chars
             cut = story_clean[:400].rfind('.')
             if cut > 200:
                 story_clean = story_clean[:cut + 1]
@@ -1011,14 +961,12 @@ def build_goat_description(goat_details, title, colorway):
         story_fr = translate_to_french(story_clean)
         return story_fr, 'goat_story'
 
-    # ── Option 2 : Construire à partir des matières + couleurs ──
     colors_fr = _translate_colors(color_raw)
     materials_fr = _translate_materials(materials)
     midsole_fr = _translate_materials(midsole) if midsole else ''
 
     parts = []
 
-    # Phrase principale sur les matières et couleurs
     if materials_fr and colors_fr:
         parts.append(f'Habillée d\'une tige en {materials_fr} dans les tons {colors_fr}')
     elif materials_fr:
@@ -1026,7 +974,6 @@ def build_goat_description(goat_details, title, colorway):
     elif colors_fr:
         parts.append(f'Proposée dans les tons {colors_fr}')
 
-    # Semelle
     if midsole_fr:
         parts.append(f'une semelle en {midsole_fr}')
     elif midsole and 'gum' in midsole.lower():
@@ -1034,9 +981,7 @@ def build_goat_description(goat_details, title, colorway):
     elif midsole and 'air' in midsole.lower():
         parts.append('une semelle Air pour un amorti optimal')
 
-    # Détails supplémentaires
     if details and len(details) > 30:
-        # Extraire des infos utiles des détails GOAT
         d_lower = details.lower()
         extras = []
         if 'gum' in d_lower and 'gomme' not in ' '.join(parts):
@@ -1063,13 +1008,11 @@ def build_goat_description(goat_details, title, colorway):
     if not parts:
         return None, None
 
-    # Assembler la phrase
     if len(parts) == 1:
         sentence = parts[0] + ', cette paire affirme un style distinctif.'
     else:
         sentence = parts[0] + ', cette édition arbore ' + ', '.join(parts[1:]) + '.'
 
-    # Première lettre en majuscule
     sentence = sentence[0].upper() + sentence[1:]
 
     log.info(f"[SEO] Built GOAT description: {sentence[:80]}...")
@@ -1087,24 +1030,20 @@ def generate_body_html(product, collections, goat_slug=''):
         clothing_type = get_clothing_type(title)
         color = extract_clothing_color(title)
         
-        # Chercher les données GOAT pour les vêtements aussi
         goat_details = None
         if sku or goat_slug:
             goat_details = _fetch_goat_details(sku, goat_slug=goat_slug)
         
         lines = []
-        # Paragraphe 1: Introduction avec lien collection
         if collection:
             lines.append(f'<p>Découvrez le <strong>{title}</strong> disponible sur {SITE_NAME}. Retrouvez cette pièce et bien d\'autres dans notre collection <a href="{collection["url"]}">{collection["title"]}</a>.</p>')
         else:
             lines.append(f'<p>Découvrez le <strong>{title}</strong> disponible sur {SITE_NAME}.</p>')
         
-        # Paragraphe 2: Description IA enrichie (marque + pièce)
         ai_clothing_desc = generate_story_ai(title, brand, color or '', '', goat_data=goat_details)
         if ai_clothing_desc:
             lines.append(f'<p>{ai_clothing_desc}</p>')
         else:
-            # Fallback: description générique par type
             type_descs = {
                 'hoodie': 'Ce hoodie en molleton offre un confort enveloppant avec sa capuche doublée et ses finitions côtelées. Une pièce essentielle de toute garde-robe streetwear.',
                 'jogging': 'Ce jogging en molleton premium allie confort et style avec sa coupe décontractée et ses finitions côtelées aux chevilles.',
@@ -1115,7 +1054,6 @@ def generate_body_html(product, collections, goat_slug=''):
             desc = type_descs.get(clothing_type, 'Cette pièce incarne l\'esthétique streetwear avec des matériaux de haute qualité et une coupe contemporaine.')
             lines.append(f'<p>{desc}</p>')
         
-        # Paragraphe 3: Caractéristiques techniques
         tech_items = []
         if sku:
             tech_items.append(f'<li><strong>Référence :</strong> {sku}</li>')
@@ -1129,7 +1067,6 @@ def generate_body_html(product, collections, goat_slug=''):
             tech_items.append(f'<li><strong>Coloris :</strong> {color}</li>')
         lines.append('<ul style="list-style:none;padding-left:0;">' + ''.join(tech_items) + '</ul>')
         
-        # Paragraphe 4: Garanties
         lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque article. Tous nos produits sont vérifiés par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
         
         return ''.join(lines)
@@ -1138,7 +1075,6 @@ def generate_body_html(product, collections, goat_slug=''):
     model_desc = get_model_description(title)
     colorway = extract_colorway(title)
 
-    # ── Essayer GOAT en priorité pour une description spécifique ──
     goat_details = None
     goat_sentence = None
     cw_type = 'color'
@@ -1150,7 +1086,6 @@ def generate_body_html(product, collections, goat_slug=''):
                 cw_type = goat_type
                 log.info(f"[SEO] Using GOAT description for {title}")
 
-    # Si GOAT n'a pas de story mais a des données basiques, enrichir via IA
     if not goat_sentence or (goat_details and not goat_details.get('story') and cw_type == 'goat_details'):
         ai_story = generate_story_ai(title, brand, colorway, model_desc, goat_data=goat_details)
         if ai_story:
@@ -1158,7 +1093,6 @@ def generate_body_html(product, collections, goat_slug=''):
             cw_type = 'ai_story'
             log.info(f"[SEO] Using AI story for {title}")
 
-    # Fallback : description IA coloris ou générique
     color_sentence = goat_sentence
     if not color_sentence and colorway:
         color_sentence, cw_type = generate_color_description_ai(title, colorway, brand, model_desc)
@@ -1166,21 +1100,17 @@ def generate_body_html(product, collections, goat_slug=''):
         color_sentence, cw_type = '', 'color'
     lines = []
     
-    # Paragraphe 1: Introduction avec lien collection
     if collection:
         lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}. Retrouvez ce modèle et bien d\'autres dans notre collection <a href="{collection["url"]}">{collection["title"]}</a>.</p>')
     else:
         lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}.</p>')
     
-    # Paragraphe 2: Description du modèle (skip si GOAT ou AI fournit une description)
     if not goat_sentence and cw_type != 'ai_story':
         lines.append(f'<p>{model_desc}</p>')
     
-    # Paragraphe 3: Description spécifique (GOAT traduit ou fallback)
     if color_sentence:
         lines.append(f'<p>{color_sentence}</p>')
     
-    # Paragraphe 4: Caractéristiques techniques
     tech_items = []
     if sku:
         tech_items.append(f'<li><strong>Référence :</strong> {sku}</li>')
@@ -1192,7 +1122,6 @@ def generate_body_html(product, collections, goat_slug=''):
             tech_items.append(f'<li><strong>Coloris :</strong> {colorway}</li>')
     lines.append('<ul style="list-style:none;padding-left:0;">' + ''.join(tech_items) + '</ul>')
     
-    # Paragraphe 5: Garanties KP SHOES
     lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque paire. Toutes nos sneakers sont vérifiées par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
     
     return ''.join(lines)
