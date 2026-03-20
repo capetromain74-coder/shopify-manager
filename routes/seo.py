@@ -98,6 +98,124 @@ def api_fix_titles():
                           message=f"Termine! {updated} mis a jour, {skipped} erreurs")
     Thread(target=run, daemon=True).start()
     return jsonify({"ok": True, "message": "Fix titles demarre en arriere-plan"})
+@seo_bp.route("/api/seo/fix-single-title", methods=["POST"])
+def api_fix_single_title():
+    """Corrige le titre d'un seul produit + regenere tout le SEO (meta title, meta desc, body html)."""
+    data = request.json or {}
+    pid = data.get("product_id")
+    new_title = data.get("new_title", "").strip()
+    regen_seo = data.get("regen_seo", True)
+    if not pid or not new_title:
+        return jsonify({"error": "product_id et new_title requis"}), 400
+    try:
+        # 1. Update product title on Shopify
+        shopify_request(f'products/{pid}.json', 'PUT', {
+            'product': {'id': pid, 'title': new_title}
+        })
+        time.sleep(0.3)
+        # 2. Update meta title (juste le nom, pas de | KP SHOES)
+        new_meta = new_title if len(new_title) <= 60 else new_title[:57] + '...'
+        update_seo_field(pid, "meta_title", new_meta)
+        time.sleep(0.3)
+        # 3. Regenerer meta description + body html avec le nouveau titre
+        if regen_seo:
+            r = shopify_request(f"products/{pid}.json")
+            if r and "product" in r:
+                p = r["product"]
+                cols = get_collections()
+                update_seo_field(pid, "meta_description", generate_meta_description(p))
+                time.sleep(0.3)
+                update_seo_field(pid, "body_html", generate_body_html(p, cols))
+        return jsonify({"success": True, "new_title": new_title})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+@seo_bp.route("/api/seo/fix-brand-case", methods=["POST"])
+def api_fix_brand_case():
+    """Corrige la casse d'une marque dans les titres produits + meta title.
+    Ex: ASICS -> Asics, remplace dans le titre Shopify et re-genere le meta title.
+    Body: {"find": "ASICS", "replace": "Asics", "product_ids": [123, 456, ...]}
+    Si product_ids est vide, scanne tous les produits."""
+    data = request.json or {}
+    find_str = data.get("find", "").strip()
+    replace_str = data.get("replace", "").strip()
+    product_ids = data.get("product_ids", [])
+    if not find_str or not replace_str:
+        return jsonify({"error": "find et replace requis"}), 400
+    def run():
+        set_task_progress(running=True, current=0, total=0, message="Chargement des produits...")
+        # Charger les produits cibles
+        targets = []
+        if product_ids:
+            for pid in product_ids:
+                r = shopify_request(f"products/{pid}.json?fields=id,title")
+                if r and "product" in r:
+                    p = r["product"]
+                    if find_str in p.get("title", ""):
+                        targets.append(p)
+                time.sleep(0.2)
+        else:
+            since_id = 0
+            while True:
+                r = shopify_request(f"products.json?limit=250&since_id={since_id}&fields=id,title")
+                if not r or not r.get("products"):
+                    break
+                for p in r["products"]:
+                    if find_str in p.get("title", ""):
+                        targets.append(p)
+                since_id = r["products"][-1]["id"]
+                set_task_progress(message=f"Scan... {len(targets)} produits avec '{find_str}'")
+                time.sleep(0.3)
+                if len(r["products"]) < 250:
+                    break
+        set_task_progress(total=len(targets), message=f"{len(targets)} produits a corriger")
+        updated = 0
+        errors = 0
+        for i, p in enumerate(targets):
+            set_task_progress(current=i + 1, message=p.get("title", "")[:40])
+            old_title = p["title"]
+            new_title = old_title.replace(find_str, replace_str)
+            if new_title == old_title:
+                continue
+            try:
+                # 1. Corriger le titre produit sur Shopify
+                shopify_request(f'products/{p["id"]}.json', 'PUT', {
+                    'product': {'id': p['id'], 'title': new_title}
+                })
+                time.sleep(0.3)
+                # 2. Re-generer le meta title avec le nouveau titre
+                new_meta = new_title if len(new_title) <= 60 else new_title[:57] + '...'
+                update_seo_field(p["id"], "meta_title", new_meta)
+                updated += 1
+            except Exception:
+                errors += 1
+            time.sleep(0.4)
+        set_task_progress(running=False, current=len(targets), total=len(targets),
+                          message=f"Termine! {updated} corriges, {errors} erreurs")
+    Thread(target=run, daemon=True).start()
+    return jsonify({"ok": True, "message": f"Fix brand case demarre en arriere-plan"})
+@seo_bp.route("/api/seo/preview-brand-case")
+def api_preview_brand_case():
+    """Preview: liste les produits qui contiennent une string dans leur titre.
+    Usage: ?find=ASICS"""
+    find_str = request.args.get("find", "").strip()
+    if not find_str:
+        return jsonify({"error": "?find= requis"}), 400
+    matches = []
+    since_id = 0
+    while True:
+        r = shopify_request(f"products.json?limit=250&since_id={since_id}&fields=id,title,images,variants")
+        if not r or not r.get("products"):
+            break
+        for p in r["products"]:
+            if find_str in p.get("title", ""):
+                sku = p["variants"][0].get("sku", "") if p.get("variants") else ""
+                img = p["images"][0]["src"] if p.get("images") else ""
+                matches.append({"id": p["id"], "title": p["title"], "sku": sku, "image": img})
+        since_id = r["products"][-1]["id"]
+        if len(r["products"]) < 250:
+            break
+        time.sleep(0.3)
+    return jsonify({"find": find_str, "count": len(matches), "products": matches})
 @seo_bp.route("/api/progress")
 def api_progress():
     return jsonify(get_task_progress())
