@@ -48,3 +48,7 @@ def product_detail(product_id):
     html = html.replace('PRODUCT_ID_PLACEHOLDER', str(product_id))
     html = html.replace('SHOP_PLACEHOLDER', SHOP)
     return html
+
+@pages_bp.route('/fix-brand-case')
+def fix_brand_case_page():
+    return _read_template('fix_brand_case.html')
