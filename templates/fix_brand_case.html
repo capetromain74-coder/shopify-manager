@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Corriger Casse Marque - KP SHOES</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
+.hd{background:#111;padding:15px 20px;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:20px;font-weight:bold;color:#00ff88;text-decoration:none}
+.main{max-width:1000px;margin:0 auto;padding:20px}
+.section{background:#111;border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid #222}
+.section h2{font-size:16px;margin-bottom:15px;color:#fff}
+.form-row{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:15px}
+.form-group{flex:1;min-width:150px}
+.form-group label{display:block;font-size:11px;color:#888;margin-bottom:5px}
+.form-group input{width:100%;padding:10px 12px;background:#1a1a2e;border:1px solid #333;border-radius:6px;color:#fff;font-size:14px}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.btn-scan{background:#6c5ce7;color:#fff}
+.btn-fix{background:#00ff88;color:#000}
+.btn-fix:hover:not(:disabled){background:#00cc6a}
+.btn-sel{background:#333;color:#fff;font-size:11px;padding:6px 14px}
+.msg{padding:12px 20px;border-radius:8px;margin-bottom:15px;font-size:13px;display:none}
+.msg.on{display:block}.msg.ok{background:#00ff8815;color:#00ff88}.msg.err{background:#ff475715;color:#ff4757}
+.stats{display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap}
+.st{background:#1a1a2e;padding:12px 20px;border-radius:8px;text-align:center;min-width:100px}
+.st .v{font-size:24px;font-weight:bold}
+.st .l{font-size:10px;color:#666;margin-top:3px}
+.preview-box{background:#1a1a2e;border-radius:8px;padding:12px;margin-bottom:10px;font-size:13px}
+.preview-box .old{color:#ff4757;text-decoration:line-through}
+.preview-box .new{color:#00ff88;font-weight:600}
+.preview-box .arrow{color:#666;margin:0 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:15px}
+.card{background:#1a1a2e;border:1px solid #333;border-radius:10px;overflow:hidden;position:relative}
+.card.selected{border-color:#00ff88}
+.card img{width:100%;height:140px;object-fit:contain;background:#0a0a0f}
+.card-body{padding:10px}
+.card-title{font-size:12px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-sku{font-size:10px;color:#666;font-family:monospace}
+.card-check{position:absolute;top:8px;left:8px;width:22px;height:22px;cursor:pointer;accent-color:#00ff88}
+.card-badge{position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600}
+.badge-done{background:#00ff8833;color:#00ff88}
+.badge-err{background:#ff475733;color:#ff4757}
+.prog-bar{background:#333;border-radius:6px;overflow:hidden;height:8px;margin:15px 0}
+.prog-fill{width:0%;height:100%;background:linear-gradient(90deg,#00ff88,#00cc6a);transition:width .3s}
+.spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid #333;border-top-color:#00ff88;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:15px}
+</style>
+</head>
+<body>
+<header class="hd">
+<a href="/" class="logo">&larr; KP SHOES</a>
+<span style="color:#aaa;font-size:13px">Corriger Casse Marque</span>
+</header>
+<main class="main">
+<div class="msg" id="msg"></div>
+
+<div class="section">
+<h2>&#128295; Corriger la casse d'une marque dans les titres</h2>
+<p style="color:#888;font-size:13px;margin-bottom:15px">Remplace une string dans les titres produits Shopify. Ex : "ASICS" → "Asics". Met aussi à jour le meta title.</p>
+<div class="form-row">
+<div class="form-group">
+<label>Chercher (exactement)</label>
+<input type="text" id="findStr" value="ASICS" placeholder="ASICS">
+</div>
+<div class="form-group">
+<label>Remplacer par</label>
+<input type="text" id="replaceStr" value="Asics" placeholder="Asics">
+</div>
+<button class="btn btn-scan" id="btnScan" onclick="scanProducts()">&#128270; Scanner les produits</button>
+</div>
+</div>
+
+<div id="resultsSection" style="display:none">
+<div class="stats">
+<div class="st"><div class="v" style="color:#fff" id="totalFound">0</div><div class="l">TROUV&Eacute;S</div></div>
+<div class="st"><div class="v" style="color:#6c5ce7" id="selectedCount">0</div><div class="l">S&Eacute;LECTIONN&Eacute;S</div></div>
+<div class="st"><div class="v" style="color:#00ff88" id="fixedCount">0</div><div class="l">CORRIG&Eacute;S</div></div>
+</div>
+
+<div class="section">
+<h2>Aper&ccedil;u du changement</h2>
+<div id="previewBox" class="preview-box"></div>
+</div>
+
+<div class="toolbar">
+<button class="btn btn-sel" onclick="selectAllCards()">Tout cocher</button>
+<button class="btn btn-sel" onclick="deselectAllCards()">Tout d&eacute;cocher</button>
+<button class="btn btn-fix" id="btnFix" onclick="startFix()" disabled>&#128640; Corriger la s&eacute;lection (<span id="fixCountBtn">0</span>)</button>
+</div>
+
+<div id="fixProg" style="display:none">
+<div class="prog-bar"><div class="prog-fill" id="fixBar"></div></div>
+<div id="fixTxt" style="text-align:center;font-size:12px;color:#aaa;margin-top:6px"></div>
+</div>
+
+<div class="grid" id="productGrid"></div>
+</div>
+</main>
+
+<script>
+var products = [];
+var selectedIds = [];
+var fixed = 0;
+
+function showMsg(t, type) {
+    var e = document.getElementById("msg");
+    e.textContent = t;
+    e.className = "msg on " + (type || "ok");
+    setTimeout(function() { e.className = "msg"; }, 5000);
+}
+
+function scanProducts() {
+    var find = document.getElementById("findStr").value.trim();
+    if (!find) { showMsg("Entrez une valeur à chercher", "err"); return; }
+
+    var btn = document.getElementById("btnScan");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-sm"></span> Scan en cours...';
+
+    products = [];
+    selectedIds = [];
+    fixed = 0;
+    var sinceId = 0;
+
+    function loadPage() {
+        fetch("/api/products?since_id=" + sinceId + "&limit=250")
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var batch = d.products || [];
+                for (var i = 0; i < batch.length; i++) {
+                    var p = batch[i];
+                    if (p.title && p.title.indexOf(find) >= 0) {
+                        var sku = (p.variants && p.variants[0]) ? p.variants[0].sku || "" : "";
+                        var img = (p.images && p.images[0]) ? p.images[0].src : "";
+                        products.push({ id: p.id, title: p.title, sku: sku, image: img });
+                    }
+                }
+
+                if (batch.length >= 250) {
+                    sinceId = batch[batch.length - 1].id;
+                    btn.innerHTML = '<span class="spinner-sm"></span> ' + products.length + ' trouvés...';
+                    setTimeout(loadPage, 100);
+                } else {
+                    // Done
+                    btn.disabled = false;
+                    btn.innerHTML = "&#128270; Scanner les produits";
+
+                    if (products.length === 0) {
+                        showMsg('Aucun produit avec "' + find + '" dans le titre', "err");
+                        return;
+                    }
+
+                    // Select all by default
+                    selectedIds = products.map(function(p) { return p.id; });
+
+                    document.getElementById("resultsSection").style.display = "block";
+                    document.getElementById("totalFound").textContent = products.length;
+                    updateSelection();
+                    renderPreview();
+                    renderGrid();
+                }
+            })
+            .catch(function(e) {
+                btn.disabled = false;
+                btn.innerHTML = "&#128270; Scanner les produits";
+                showMsg("Erreur: " + e.message, "err");
+            });
+    }
+    loadPage();
+}
+
+function renderPreview() {
+    var find = document.getElementById("findStr").value.trim();
+    var replace = document.getElementById("replaceStr").value.trim();
+    if (!products.length) return;
+    var example = products[0].title;
+    var newTitle = example.replace(new RegExp(escRegex(find), "g"), replace);
+    document.getElementById("previewBox").innerHTML =
+        '<span class="old">' + esc(example) + '</span>' +
+        '<span class="arrow">&rarr;</span>' +
+        '<span class="new">' + esc(newTitle) + '</span>';
+}
+
+function renderGrid() {
+    var html = "";
+    for (var i = 0; i < products.length; i++) {
+        var p = products[i];
+        var checked = selectedIds.indexOf(p.id) >= 0 ? " checked" : "";
+        var sel = selectedIds.indexOf(p.id) >= 0 ? " selected" : "";
+        html += '<div class="card' + sel + '" id="card-' + p.id + '">';
+        html += '<input type="checkbox" class="card-check"' + checked + ' onchange="toggleCard(' + p.id + ')">';
+        if (p.image) html += '<img src="' + p.image + '">';
+        html += '<div class="card-body">';
+        html += '<div class="card-title">' + esc(p.title) + '</div>';
+        html += '<div class="card-sku">' + p.sku + '</div>';
+        html += '</div></div>';
+    }
+    document.getElementById("productGrid").innerHTML = html;
+}
+
+function toggleCard(pid) {
+    var idx = selectedIds.indexOf(pid);
+    if (idx >= 0) selectedIds.splice(idx, 1);
+    else selectedIds.push(pid);
+    var card = document.getElementById("card-" + pid);
+    if (card) card.className = selectedIds.indexOf(pid) >= 0 ? "card selected" : "card";
+    updateSelection();
+}
+
+function selectAllCards() {
+    selectedIds = products.map(function(p) { return p.id; });
+    renderGrid();
+    updateSelection();
+}
+
+function deselectAllCards() {
+    selectedIds = [];
+    renderGrid();
+    updateSelection();
+}
+
+function updateSelection() {
+    document.getElementById("selectedCount").textContent = selectedIds.length;
+    document.getElementById("fixCountBtn").textContent = selectedIds.length;
+    document.getElementById("btnFix").disabled = selectedIds.length === 0;
+}
+
+function startFix() {
+    if (!selectedIds.length) return;
+    var find = document.getElementById("findStr").value.trim();
+    var replace = document.getElementById("replaceStr").value.trim();
+    if (!find || !replace) { showMsg("Remplissez les deux champs", "err"); return; }
+    if (!confirm("Corriger " + selectedIds.length + ' produits ?\n\n"' + find + '" → "' + replace + '"')) return;
+
+    var btn = document.getElementById("btnFix");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-sm"></span> Correction en cours...';
+    document.getElementById("fixProg").style.display = "block";
+
+    var done = 0, ok = 0, errors = 0;
+    var total = selectedIds.length;
+
+    function fixNext() {
+        if (done >= total) {
+            document.getElementById("fixBar").style.width = "100%";
+            document.getElementById("fixTxt").textContent = "Terminé ! " + ok + " corrigés, " + errors + " erreurs";
+            document.getElementById("fixedCount").textContent = ok;
+            btn.innerHTML = "&#9989; Terminé !";
+            btn.style.background = "#333";
+            btn.style.color = "#00ff88";
+            showMsg(ok + " produits corrigés !", "ok");
+            return;
+        }
+
+        var pid = selectedIds[done];
+        var p = null;
+        for (var i = 0; i < products.length; i++) {
+            if (products[i].id === pid) { p = products[i]; break; }
+        }
+
+        document.getElementById("fixBar").style.width = Math.round((done + 1) / total * 100) + "%";
+        document.getElementById("fixTxt").textContent = (p ? p.title.substring(0, 40) : "") + "... (" + (done + 1) + "/" + total + ") — titre + meta + description";
+
+        if (!p) { done++; fixNext(); return; }
+
+        var newTitle = p.title.replace(new RegExp(escRegex(find), "g"), replace);
+
+        // Fix title + regenerate all SEO (meta title, meta desc, body html)
+        fetch("/api/seo/fix-single-title", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ product_id: pid, new_title: newTitle, regen_seo: true })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.success) {
+                ok++;
+                var card = document.getElementById("card-" + pid);
+                if (card) {
+                    var badge = document.createElement("span");
+                    badge.className = "card-badge badge-done";
+                    badge.textContent = "✓ OK";
+                    card.appendChild(badge);
+                }
+            } else {
+                errors++;
+                var card = document.getElementById("card-" + pid);
+                if (card) {
+                    var badge = document.createElement("span");
+                    badge.className = "card-badge badge-err";
+                    badge.textContent = "✗ Erreur";
+                    card.appendChild(badge);
+                }
+            }
+            document.getElementById("fixedCount").textContent = ok;
+            done++;
+            setTimeout(fixNext, 2000);
+        })
+        .catch(function() {
+            errors++;
+            done++;
+            setTimeout(fixNext, 2000);
+        });
+    }
+    fixNext();
+}
+
+function esc(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function escRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+</script>
+</body>
+</html>
