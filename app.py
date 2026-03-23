@@ -20,6 +20,7 @@ Structure:
         images.py       - API images (fix alt/filename)
         collections.py  - API collections
         blog.py         - API blog
+        competitor.py   - API competitor scanning
     data/           - Donnees statiques
         descriptions.py     - Descriptions modeles/colorways
         collections_seo.py  - SEO des collections
@@ -44,6 +45,7 @@ def create_app():
     from routes.images import images_bp
     from routes.collections import collections_bp
     from routes.blog import blog_bp
+    from routes.competitor import competitor_bp
 
     app.register_blueprint(pages_bp)
     app.register_blueprint(products_bp)
@@ -52,6 +54,7 @@ def create_app():
     app.register_blueprint(images_bp)
     app.register_blueprint(collections_bp)
     app.register_blueprint(blog_bp)
+    app.register_blueprint(competitor_bp)
 
     return app
 
@@ -61,8 +64,6 @@ app = create_app()
 
 # ══════════════════════════════════════════════════════════════
 # IMAGE SCANNER - Détection de nouvelles images GOAT
-# À coller dans app.py après app = create_app()
-# et avant if __name__ == '__main__'
 # ══════════════════════════════════════════════════════════════
 
 import time, re, logging
@@ -76,6 +77,16 @@ log = logging.getLogger("kpshoes.image_scanner")
 @app.route('/image-scanner')
 def image_scanner_page():
     return open('templates/image_scanner.html').read()
+
+
+@app.route('/product-finder')
+def product_finder_page():
+    return open('templates/product_finder.html').read()
+
+
+@app.route('/fix-brand-case')
+def fix_brand_case_page():
+    return open('templates/fix_brand_case.html').read()
 
 
 @app.route('/api/products/single-image-page')
@@ -132,7 +143,8 @@ def api_goat_check_new_images():
         'images': images,
         'has_new': len(images) > 1
     })
-    
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
