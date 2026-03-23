@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Product Finder - KP SHOES</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
+.hd{background:#111;padding:15px 20px;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:20px;font-weight:bold;color:#00ff88;text-decoration:none}
+.main{max-width:1400px;margin:0 auto;padding:20px}
+.hero{background:linear-gradient(135deg,#6c5ce722,#00ff8822);border:1px solid #6c5ce744;border-radius:12px;padding:25px;margin-bottom:20px}
+.hero h1{font-size:22px;margin-bottom:8px;background:linear-gradient(135deg,#6c5ce7,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:#888;font-size:13px;line-height:1.6}
+.stats{display:flex;gap:15px;padding:0;margin-bottom:20px;flex-wrap:wrap}
+.st{background:#1a1a2e;padding:14px 20px;border-radius:8px;text-align:center;min-width:120px;border:1px solid #222}
+.st .v{font-size:26px;font-weight:bold}
+.st .l{font-size:10px;color:#666;margin-top:3px}
+.section{background:#111;border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid #222}
+.section h2{font-size:15px;margin-bottom:12px}
+.btn{padding:12px 24px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;transition:all .2s}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.btn-scan{background:linear-gradient(135deg,#6c5ce7,#a855f7);color:#fff;font-size:15px;padding:14px 30px}
+.btn-scan:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 5px 20px #6c5ce744}
+.btn-sm{padding:6px 14px;font-size:11px;border:none;border-radius:6px;cursor:pointer;font-weight:600}
+.btn-filter{background:#1a1a2e;color:#888;border:1px solid #333}
+.btn-filter.active{background:#6c5ce733;color:#6c5ce7;border-color:#6c5ce7}
+.prog-bar{background:#333;border-radius:6px;overflow:hidden;height:8px;margin:15px 0}
+.prog-fill{width:0%;height:100%;background:linear-gradient(90deg,#6c5ce7,#00ff88);transition:width .3s}
+.spinner-sm{display:inline-block;width:16px;height:16px;border:2px solid #333;border-top-color:#6c5ce7;border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.msg{padding:12px 20px;border-radius:8px;margin-bottom:15px;font-size:13px;display:none}
+.msg.on{display:block}.msg.ok{background:#00ff8815;color:#00ff88}.msg.err{background:#ff475715;color:#ff4757}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:15px}
+.search{flex:1;min-width:200px;padding:10px 15px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:#fff;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.card{background:#1a1a2e;border:1px solid #333;border-radius:10px;overflow:hidden;transition:border-color .2s}
+.card:hover{border-color:#6c5ce7}
+.card img{width:100%;height:160px;object-fit:contain;background:#0d0d14}
+.card-body{padding:12px}
+.card-title{font-size:12px;font-weight:600;margin-bottom:4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-sku{font-size:10px;color:#666;font-family:monospace;margin-bottom:6px}
+.card-brand{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;background:#6c5ce722;color:#6c5ce7}
+.card-actions{padding:8px 12px;border-top:1px solid #222;display:flex;gap:6px}
+.card-actions a{padding:5px 10px;background:#333;color:#fff;border-radius:5px;text-decoration:none;font-size:10px;font-weight:600}
+.card-actions a:hover{background:#6c5ce7}
+.count-badge{background:#6c5ce7;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.load-more{text-align:center;padding:20px}
+#stepStatus{font-size:13px;color:#aaa;margin-top:10px;line-height:1.8}
+#stepStatus .done{color:#00ff88}
+#stepStatus .active{color:#6c5ce7}
+#stepStatus .wait{color:#444}
+</style>
+</head>
+<body>
+<header class="hd">
+<a href="/" class="logo">&larr; KP SHOES</a>
+<span style="color:#aaa;font-size:13px">Product Finder</span>
+</header>
+<main class="main">
+<div class="msg" id="msg"></div>
+
+<div class="hero">
+<h1>&#128270; Product Finder — WetTheNew</h1>
+<p>Compare le catalogue WetTheNew avec ton stock KP SHOES. Trouve les sneakers que tu n'as pas encore et découvre des opportunités.</p>
+</div>
+
+<div class="section" id="scanSection">
+<div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap">
+<button class="btn btn-scan" id="btnScan" onclick="startScan()">&#128640; Lancer le scan WetTheNew</button>
+<span id="scanStatus" style="font-size:13px;color:#888"></span>
+</div>
+<div id="scanProg" style="display:none;margin-top:15px">
+<div class="prog-bar"><div class="prog-fill" id="scanBar"></div></div>
+<div id="stepStatus"></div>
+</div>
+</div>
+
+<div id="resultsSection" style="display:none">
+<div class="stats">
+<div class="st"><div class="v" style="color:#6c5ce7" id="wtnTotal">0</div><div class="l">WETHENEW</div></div>
+<div class="st"><div class="v" style="color:#00ff88" id="kpTotal">0</div><div class="l">KP SHOES</div></div>
+<div class="st"><div class="v" style="color:#ff4757" id="missingTotal">0</div><div class="l">MANQUANTS</div></div>
+<div class="st"><div class="v" style="color:#00ff88" id="matchTotal">0</div><div class="l">D&Eacute;J&Agrave; EN STOCK</div></div>
+</div>
+
+<div class="section">
+<div class="toolbar">
+<input type="text" class="search" id="q" placeholder="Rechercher un produit manquant..." oninput="filterResults()">
+<div style="display:flex;gap:6px;flex-wrap:wrap">
+<button class="btn-sm btn-filter active" data-brand="all" onclick="setBrandFilter('all')">Toutes</button>
+<button class="btn-sm btn-filter" data-brand="jordan" onclick="setBrandFilter('jordan')">Jordan</button>
+<button class="btn-sm btn-filter" data-brand="nike" onclick="setBrandFilter('nike')">Nike</button>
+<button class="btn-sm btn-filter" data-brand="adidas" onclick="setBrandFilter('adidas')">Adidas</button>
+<button class="btn-sm btn-filter" data-brand="new balance" onclick="setBrandFilter('new balance')">NB</button>
+<button class="btn-sm btn-filter" data-brand="yeezy" onclick="setBrandFilter('yeezy')">Yeezy</button>
+<button class="btn-sm btn-filter" data-brand="asics" onclick="setBrandFilter('asics')">Asics</button>
+<button class="btn-sm btn-filter" data-brand="other" onclick="setBrandFilter('other')">Autres</button>
+</div>
+</div>
+<div id="resultCount" style="font-size:12px;color:#888;margin-bottom:12px"></div>
+<div class="grid" id="productGrid"></div>
+<div class="load-more" id="loadMore" style="display:none">
+<button class="btn" style="background:#333;color:#fff" onclick="showMore()">Charger plus...</button>
+</div>
+</div>
+</div>
+</main>
+
+<script>
+var wtnProducts = [];
+var kpProducts = [];
+var missingProducts = [];
+var currentFilter = 'all';
+var currentBrand = 'all';
+var displayCount = 50;
+
+function showMsg(t, type) {
+    var e = document.getElementById("msg");
+    e.textContent = t;
+    e.className = "msg on " + (type || "ok");
+    setTimeout(function() { e.className = "msg"; }, 5000);
+}
+
+function setStep(steps) {
+    var html = '';
+    for (var i = 0; i < steps.length; i++) {
+        var s = steps[i];
+        var cls = s.status === 'done' ? 'done' : s.status === 'active' ? 'active' : 'wait';
+        var icon = s.status === 'done' ? '&#9989;' : s.status === 'active' ? '<span class="spinner-sm"></span>' : '&#9898;';
+        html += '<div class="' + cls + '">' + icon + ' ' + s.text + '</div>';
+    }
+    document.getElementById("stepStatus").innerHTML = html;
+}
+
+function startScan() {
+    var btn = document.getElementById("btnScan");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-sm"></span> Scan en cours...';
+    document.getElementById("scanProg").style.display = "block";
+    document.getElementById("resultsSection").style.display = "none";
+
+    setStep([
+        { text: 'Chargement du catalogue WetTheNew...', status: 'active' },
+        { text: 'Chargement de tes produits KP SHOES...', status: 'wait' },
+        { text: 'Comparaison des catalogues...', status: 'wait' }
+    ]);
+    document.getElementById("scanBar").style.width = "10%";
+
+    // Step 1: Load WTN sitemap
+    fetch("/api/competitor/scan-wtn")
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.error) { showMsg("Erreur: " + d.error, "err"); btn.disabled = false; btn.innerHTML = "&#128640; Lancer le scan"; return; }
+            wtnProducts = d.products || [];
+
+            setStep([
+                { text: wtnProducts.length + ' sneakers WetTheNew chargées', status: 'done' },
+                { text: 'Chargement de tes produits KP SHOES...', status: 'active' },
+                { text: 'Comparaison des catalogues...', status: 'wait' }
+            ]);
+            document.getElementById("scanBar").style.width = "40%";
+
+            // Step 2: Load KP products
+            loadKPProducts(function() {
+                setStep([
+                    { text: wtnProducts.length + ' sneakers WetTheNew', status: 'done' },
+                    { text: kpProducts.length + ' produits KP SHOES', status: 'done' },
+                    { text: 'Comparaison en cours...', status: 'active' }
+                ]);
+                document.getElementById("scanBar").style.width = "80%";
+
+                // Step 3: Compare
+                setTimeout(function() {
+                    compareProducts();
+                    document.getElementById("scanBar").style.width = "100%";
+                    setStep([
+                        { text: wtnProducts.length + ' sneakers WetTheNew', status: 'done' },
+                        { text: kpProducts.length + ' produits KP SHOES', status: 'done' },
+                        { text: missingProducts.length + ' produits manquants trouvés !', status: 'done' }
+                    ]);
+                    btn.innerHTML = "&#9989; Scan terminé";
+                    btn.style.background = "#333";
+                    btn.style.color = "#00ff88";
+                    showResults();
+                }, 200);
+            });
+        })
+        .catch(function(e) {
+            showMsg("Erreur: " + e.message, "err");
+            btn.disabled = false;
+            btn.innerHTML = "&#128640; Lancer le scan";
+        });
+}
+
+function loadKPProducts(callback) {
+    kpProducts = [];
+    var sinceId = 0;
+    function loadPage() {
+        fetch("/api/products?since_id=" + sinceId + "&limit=250")
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var batch = d.products || [];
+                for (var i = 0; i < batch.length; i++) {
+                    var p = batch[i];
+                    var sku = (p.variants && p.variants[0]) ? p.variants[0].sku || "" : "";
+                    kpProducts.push({
+                        id: p.id,
+                        title: p.title,
+                        sku: sku,
+                        titleNorm: normalizeTitle(p.title)
+                    });
+                }
+                if (batch.length >= 250) {
+                    sinceId = batch[batch.length - 1].id;
+                    setStep([
+                        { text: wtnProducts.length + ' sneakers WetTheNew', status: 'done' },
+                        { text: 'Chargement... ' + kpProducts.length + ' produits KP SHOES', status: 'active' },
+                        { text: 'Comparaison des catalogues...', status: 'wait' }
+                    ]);
+                    setTimeout(loadPage, 100);
+                } else {
+                    callback();
+                }
+            });
+    }
+    loadPage();
+}
+
+function normalizeTitle(t) {
+    return t.toLowerCase()
+        .replace(/\s+/g, ' ')
+        .replace(/[''""]/g, '')
+        .replace(/\(.*?\)/g, '')
+        .trim();
+}
+
+function extractBrand(title) {
+    var t = title.toLowerCase();
+    if (t.indexOf('jordan') >= 0) return 'jordan';
+    if (t.indexOf('yeezy') >= 0) return 'yeezy';
+    if (t.indexOf('dunk') >= 0 || t.indexOf('air force') >= 0 || t.indexOf('air max') >= 0 || t.indexOf('vomero') >= 0 || t.indexOf('nike') >= 0) return 'nike';
+    if (t.indexOf('samba') >= 0 || t.indexOf('campus') >= 0 || t.indexOf('gazelle') >= 0 || t.indexOf('adidas') >= 0 || t.indexOf('spezial') >= 0 || t.indexOf('forum') >= 0 || t.indexOf('superstar') >= 0) return 'adidas';
+    if (t.indexOf('new balance') >= 0 || t.indexOf('new-balance') >= 0) return 'new balance';
+    if (t.indexOf('asics') >= 0 || t.indexOf('gel-') >= 0 || t.indexOf('gel ') >= 0) return 'asics';
+    if (t.indexOf('ugg') >= 0) return 'ugg';
+    if (t.indexOf('puma') >= 0) return 'puma';
+    if (t.indexOf('converse') >= 0) return 'converse';
+    if (t.indexOf('salomon') >= 0) return 'salomon';
+    return 'other';
+}
+
+function compareProducts() {
+    // Build lookup sets for KP products
+    var kpTitles = new Set();
+    var kpSkus = new Set();
+    var kpNorms = new Set();
+
+    for (var i = 0; i < kpProducts.length; i++) {
+        kpTitles.add(kpProducts[i].title.toLowerCase());
+        if (kpProducts[i].sku) kpSkus.add(kpProducts[i].sku.toUpperCase());
+        kpNorms.add(kpProducts[i].titleNorm);
+    }
+
+    // Build KP keywords index for fuzzy matching
+    var kpWords = {};
+    for (var i = 0; i < kpProducts.length; i++) {
+        var words = kpProducts[i].titleNorm.split(' ').filter(function(w) { return w.length > 2; });
+        for (var j = 0; j < words.length; j++) {
+            if (!kpWords[words[j]]) kpWords[words[j]] = [];
+            kpWords[words[j]].push(i);
+        }
+    }
+
+    missingProducts = [];
+    var matched = 0;
+
+    for (var i = 0; i < wtnProducts.length; i++) {
+        var wtn = wtnProducts[i];
+        var wtnNorm = normalizeTitle(wtn.title);
+        var found = false;
+
+        // 1. Exact SKU match
+        if (wtn.sku && kpSkus.has(wtn.sku.toUpperCase())) {
+            found = true;
+        }
+
+        // 2. Exact title match (normalized)
+        if (!found && kpNorms.has(wtnNorm)) {
+            found = true;
+        }
+
+        // 3. Fuzzy title match - check keyword overlap
+        if (!found) {
+            var wtnWords = wtnNorm.split(' ').filter(function(w) { return w.length > 2 && ['the', 'retro', 'high', 'low', 'mid'].indexOf(w) < 0; });
+            var bestScore = 0;
+            var candidates = {};
+
+            for (var j = 0; j < wtnWords.length; j++) {
+                var indices = kpWords[wtnWords[j]] || [];
+                for (var k = 0; k < indices.length; k++) {
+                    if (!candidates[indices[k]]) candidates[indices[k]] = 0;
+                    candidates[indices[k]]++;
+                }
+            }
+
+            for (var idx in candidates) {
+                var score = candidates[idx] / Math.max(wtnWords.length, 1);
+                if (score > bestScore) bestScore = score;
+            }
+
+            if (bestScore >= 0.7) {
+                found = true;
+            }
+        }
+
+        if (found) {
+            matched++;
+        } else {
+            wtn.brand = extractBrand(wtn.title);
+            missingProducts.push(wtn);
+        }
+    }
+
+    // Sort by brand then title
+    missingProducts.sort(function(a, b) {
+        if (a.brand !== b.brand) return a.brand < b.brand ? -1 : 1;
+        return a.title < b.title ? -1 : 1;
+    });
+
+    document.getElementById("wtnTotal").textContent = wtnProducts.length;
+    document.getElementById("kpTotal").textContent = kpProducts.length;
+    document.getElementById("missingTotal").textContent = missingProducts.length;
+    document.getElementById("matchTotal").textContent = matched;
+}
+
+function showResults() {
+    document.getElementById("resultsSection").style.display = "block";
+    displayCount = 50;
+    filterResults();
+}
+
+function setBrandFilter(brand) {
+    currentBrand = brand;
+    document.querySelectorAll('.btn-filter').forEach(function(b) {
+        b.className = 'btn-sm btn-filter' + (b.dataset.brand === brand ? ' active' : '');
+    });
+    displayCount = 50;
+    filterResults();
+}
+
+function filterResults() {
+    var q = document.getElementById("q").value.toLowerCase();
+    var filtered = [];
+
+    for (var i = 0; i < missingProducts.length; i++) {
+        var p = missingProducts[i];
+        if (q && p.title.toLowerCase().indexOf(q) < 0) continue;
+        if (currentBrand !== 'all' && p.brand !== currentBrand) continue;
+        filtered.push(p);
+    }
+
+    // Count per brand
+    var brandCounts = {};
+    for (var i = 0; i < missingProducts.length; i++) {
+        var b = missingProducts[i].brand;
+        brandCounts[b] = (brandCounts[b] || 0) + 1;
+    }
+
+    document.getElementById("resultCount").textContent = filtered.length + " produit" + (filtered.length > 1 ? "s" : "") + " manquant" + (filtered.length > 1 ? "s" : "");
+
+    var show = filtered.slice(0, displayCount);
+    var html = "";
+    for (var i = 0; i < show.length; i++) {
+        var p = show[i];
+        html += '<div class="card">';
+        if (p.image) html += '<img src="' + p.image + '" loading="lazy" onerror="this.style.display=\'none\'">';
+        html += '<div class="card-body">';
+        html += '<div class="card-title">' + esc(p.title) + '</div>';
+        if (p.sku) html += '<div class="card-sku">' + p.sku + '</div>';
+        html += '<span class="card-brand">' + p.brand.toUpperCase() + '</span>';
+        html += '</div>';
+        html += '<div class="card-actions">';
+        html += '<a href="' + p.url + '" target="_blank">Voir sur WTN &#8599;</a>';
+        html += '</div>';
+        html += '</div>';
+    }
+    document.getElementById("productGrid").innerHTML = html || '<div style="padding:40px;text-align:center;color:#666;grid-column:1/-1">Aucun produit manquant trouvé</div>';
+    document.getElementById("loadMore").style.display = filtered.length > displayCount ? "block" : "none";
+}
+
+function showMore() {
+    displayCount += 50;
+    filterResults();
+}
+
+function esc(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+</script>
+</body>
+</html>
