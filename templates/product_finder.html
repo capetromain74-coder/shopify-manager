@@ -18,7 +18,6 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 .st .v{font-size:26px;font-weight:bold}
 .st .l{font-size:10px;color:#666;margin-top:3px}
 .section{background:#111;border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid #222}
-.section h2{font-size:15px;margin-bottom:12px}
 .btn{padding:12px 24px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;transition:all .2s}
 .btn:disabled{opacity:0.4;cursor:not-allowed}
 .btn-scan{background:linear-gradient(135deg,#6c5ce7,#a855f7);color:#fff;font-size:15px;padding:14px 30px}
@@ -49,7 +48,6 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 .card-actions{padding:8px 12px;border-top:1px solid #222;display:flex;gap:6px}
 .card-actions a{padding:5px 10px;background:#333;color:#fff;border-radius:5px;text-decoration:none;font-size:10px;font-weight:600}
 .card-actions a:hover{background:#6c5ce7}
-.count-badge{background:#6c5ce7;color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
 .load-more{text-align:center;padding:20px}
 #stepStatus{font-size:13px;color:#aaa;margin-top:10px;line-height:1.8}
 #stepStatus .done{color:#00ff88}
@@ -57,10 +55,11 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 #stepStatus .wait{color:#444}
 .goat-section{background:#1a1a2e;border:1px solid #ff6b3544;border-radius:12px;padding:20px;margin-bottom:20px;display:none}
 .goat-section h2{color:#ff6b35;font-size:15px;margin-bottom:6px}
-.goat-section p{color:#888;font-size:12px;margin-bottom:15px}
+.goat-section p{color:#888;font-size:12px;margin-bottom:15px;line-height:1.6}
 .goat-stats{display:flex;gap:12px;font-size:12px;color:#888;margin-top:10px;flex-wrap:wrap}
 .goat-stats span{background:#222;padding:4px 10px;border-radius:6px}
-.goat-stats .kept{color:#00ff88}.goat-stats .removed{color:#ff4757}.goat-stats .nosku{color:#f9ca24}
+.goat-stats .kept{color:#00ff88}.goat-stats .removed{color:#ff4757}.goat-stats .notfound{color:#f9ca24}
+.goat-current{margin-top:8px;font-size:11px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 </style>
 </head>
 <body>
@@ -73,7 +72,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 
 <div class="hero">
 <h1>&#128270; Product Finder &mdash; WetTheNew</h1>
-<p>Compare le catalogue WetTheNew avec ton stock KP SHOES. Trouve les sneakers que tu n'as pas encore et v&eacute;rifie les images disponibles sur GOAT.</p>
+<p>Compare le catalogue WetTheNew avec ton stock KP SHOES. Trouve les sneakers manquantes et v&eacute;rifie les images GOAT.</p>
 </div>
 
 <div class="section" id="scanSection">
@@ -90,7 +89,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <!-- GOAT Scan Section -->
 <div class="goat-section" id="goatSection">
 <h2>&#128293; Scan GOAT &mdash; V&eacute;rifier les images</h2>
-<p>Scanne chaque produit manquant sur GOAT pour v&eacute;rifier le nombre d'images. Seuls les produits avec 2+ images sont gard&eacute;s (= exploitables pour ton shop).</p>
+<p id="goatDesc"></p>
 <div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap">
 <button class="btn btn-goat" id="btnGoat" onclick="startGoatScan()">&#128293; Lancer le scan GOAT</button>
 <button class="btn" style="background:#333;color:#fff" id="btnStopGoat" onclick="stopGoatScan()" disabled>&#9724; Stop</button>
@@ -99,6 +98,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <div id="goatProg" style="display:none;margin-top:12px">
 <div class="prog-bar"><div class="prog-fill goat" id="goatBar"></div></div>
 <div class="goat-stats" id="goatStats"></div>
+<div class="goat-current" id="goatCurrent"></div>
 </div>
 </div>
 
@@ -137,7 +137,6 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 var wtnProducts = [];
 var kpProducts = [];
 var missingProducts = [];
-var currentFilter = 'all';
 var currentBrand = 'all';
 var displayCount = 50;
 var goatScanning = false;
@@ -181,14 +180,12 @@ function startScan() {
         .then(function(d) {
             if (d.error) { showMsg("Erreur: " + d.error, "err"); btn.disabled = false; btn.innerHTML = "&#128640; Lancer le scan"; return; }
             wtnProducts = d.products || [];
-
             setStep([
-                { text: wtnProducts.length + ' sneakers WetTheNew charg\u00e9es', status: 'done' },
+                { text: wtnProducts.length + ' sneakers WetTheNew', status: 'done' },
                 { text: 'Chargement de tes produits KP SHOES...', status: 'active' },
                 { text: 'Comparaison des catalogues...', status: 'wait' }
             ]);
             document.getElementById("scanBar").style.width = "40%";
-
             loadKPProducts(function() {
                 setStep([
                     { text: wtnProducts.length + ' sneakers WetTheNew', status: 'done' },
@@ -196,26 +193,26 @@ function startScan() {
                     { text: 'Comparaison en cours...', status: 'active' }
                 ]);
                 document.getElementById("scanBar").style.width = "80%";
-
                 setTimeout(function() {
                     compareProducts();
                     document.getElementById("scanBar").style.width = "100%";
                     setStep([
                         { text: wtnProducts.length + ' sneakers WetTheNew', status: 'done' },
                         { text: kpProducts.length + ' produits KP SHOES', status: 'done' },
-                        { text: missingProducts.length + ' produits manquants trouv\u00e9s !', status: 'done' }
+                        { text: missingProducts.length + ' produits manquants !', status: 'done' }
                     ]);
                     btn.innerHTML = "&#9989; Scan termin\u00e9";
                     btn.style.background = "#333";
                     btn.style.color = "#00ff88";
                     showResults();
-                    // Show GOAT scan section
-                    document.getElementById("goatSection").style.display = "block";
+                    // Show GOAT section
                     var withSku = missingProducts.filter(function(p) { return p.sku; }).length;
-                    document.getElementById("goatSection").querySelector('p').innerHTML =
-                        'Scanne chaque produit manquant sur GOAT pour v&eacute;rifier le nombre d\'images. ' +
-                        'Seuls les produits avec <b>2+ images</b> sont gard&eacute;s.<br>' +
-                        '<b>' + withSku + '</b> produits avec SKU sur ' + missingProducts.length + ' manquants &mdash; les autres seront retir&eacute;s.';
+                    var noSku = missingProducts.length - withSku;
+                    document.getElementById("goatDesc").innerHTML =
+                        'Scanne les <b>' + missingProducts.length + '</b> produits manquants sur GOAT (Algolia) pour compter les images.<br>' +
+                        '<b>' + withSku + '</b> avec SKU (recherche par SKU) + <b>' + noSku + '</b> sans SKU (recherche par nom).<br>' +
+                        'Seuls les produits avec <b>2+ images</b> GOAT sont gard&eacute;s.';
+                    document.getElementById("goatSection").style.display = "block";
                 }, 200);
             });
         })
@@ -237,12 +234,7 @@ function loadKPProducts(callback) {
                 for (var i = 0; i < batch.length; i++) {
                     var p = batch[i];
                     var sku = (p.variants && p.variants[0]) ? p.variants[0].sku || "" : "";
-                    kpProducts.push({
-                        id: p.id,
-                        title: p.title,
-                        sku: sku,
-                        titleNorm: normalizeTitle(p.title)
-                    });
+                    kpProducts.push({ id: p.id, title: p.title, sku: sku, titleNorm: normalizeTitle(p.title) });
                 }
                 if (batch.length >= 250) {
                     sinceId = batch[batch.length - 1].id;
@@ -261,11 +253,7 @@ function loadKPProducts(callback) {
 }
 
 function normalizeTitle(t) {
-    return t.toLowerCase()
-        .replace(/\s+/g, ' ')
-        .replace(/[''""]/g, '')
-        .replace(/\(.*?\)/g, '')
-        .trim();
+    return t.toLowerCase().replace(/\s+/g, ' ').replace(/[''""]/g, '').replace(/\(.*?\)/g, '').trim();
 }
 
 function extractBrand(title) {
@@ -284,16 +272,12 @@ function extractBrand(title) {
 }
 
 function compareProducts() {
-    var kpTitles = new Set();
     var kpSkus = new Set();
     var kpNorms = new Set();
-
     for (var i = 0; i < kpProducts.length; i++) {
-        kpTitles.add(kpProducts[i].title.toLowerCase());
         if (kpProducts[i].sku) kpSkus.add(kpProducts[i].sku.toUpperCase());
         kpNorms.add(kpProducts[i].titleNorm);
     }
-
     var kpWords = {};
     for (var i = 0; i < kpProducts.length; i++) {
         var words = kpProducts[i].titleNorm.split(' ').filter(function(w) { return w.length > 2; });
@@ -302,20 +286,16 @@ function compareProducts() {
             kpWords[words[j]].push(i);
         }
     }
-
     missingProducts = [];
     var matched = 0;
-
     for (var i = 0; i < wtnProducts.length; i++) {
         var wtn = wtnProducts[i];
         var wtnNorm = normalizeTitle(wtn.title);
         var found = false;
-
         if (wtn.sku && kpSkus.has(wtn.sku.toUpperCase())) found = true;
         if (!found && kpNorms.has(wtnNorm)) found = true;
-
         if (!found) {
-            var wtnWords = wtnNorm.split(' ').filter(function(w) { return w.length > 2 && ['the', 'retro', 'high', 'low', 'mid'].indexOf(w) < 0; });
+            var wtnWords = wtnNorm.split(' ').filter(function(w) { return w.length > 2 && ['the','retro','high','low','mid'].indexOf(w) < 0; });
             var bestScore = 0;
             var candidates = {};
             for (var j = 0; j < wtnWords.length; j++) {
@@ -331,21 +311,17 @@ function compareProducts() {
             }
             if (bestScore >= 0.7) found = true;
         }
-
-        if (found) {
-            matched++;
-        } else {
+        if (found) { matched++; }
+        else {
             wtn.brand = extractBrand(wtn.title);
-            wtn.goatImages = null; // not scanned yet
+            wtn.goatImages = null;
             missingProducts.push(wtn);
         }
     }
-
     missingProducts.sort(function(a, b) {
         if (a.brand !== b.brand) return a.brand < b.brand ? -1 : 1;
         return a.title < b.title ? -1 : 1;
     });
-
     document.getElementById("wtnTotal").textContent = wtnProducts.length;
     document.getElementById("kpTotal").textContent = kpProducts.length;
     document.getElementById("missingTotal").textContent = missingProducts.length;
@@ -358,7 +334,6 @@ function startGoatScan() {
     if (goatScanning) return;
     goatScanning = true;
     goatAbort = false;
-
     var btn = document.getElementById("btnGoat");
     var stopBtn = document.getElementById("btnStopGoat");
     btn.disabled = true;
@@ -366,38 +341,33 @@ function startGoatScan() {
     stopBtn.disabled = false;
     document.getElementById("goatProg").style.display = "block";
 
-    // Products with SKU go first, without SKU are removed
-    var withSku = [];
-    var noSku = 0;
-    for (var i = 0; i < missingProducts.length; i++) {
-        if (missingProducts[i].sku) {
-            withSku.push(missingProducts[i]);
-        } else {
-            noSku++;
-        }
-    }
-
-    var total = withSku.length;
+    var total = missingProducts.length;
     var scanned = 0;
     var kept = 0;
     var removed = 0;
+    var notfound = 0;
     var keptProducts = [];
 
-    function updateGoatUI() {
+    function updateGoatUI(currentTitle) {
         var pct = total > 0 ? Math.round((scanned / total) * 100) : 0;
         document.getElementById("goatBar").style.width = pct + "%";
-        document.getElementById("goatStatus").textContent = scanned + " / " + total + " scann\u00e9s";
+        document.getElementById("goatStatus").textContent = scanned + " / " + total + " (" + pct + "%)";
         document.getElementById("goatStats").innerHTML =
-            '<span class="kept">&#9989; ' + kept + ' gard\u00e9s (2+ images)</span>' +
-            '<span class="removed">&#10060; ' + removed + ' retir\u00e9s</span>' +
-            '<span class="nosku">&#9888; ' + noSku + ' sans SKU (retir\u00e9s)</span>';
+            '<span class="kept">&#9989; ' + kept + ' gard\u00e9s (2+ imgs)</span>' +
+            '<span class="removed">&#10060; ' + removed + ' retir\u00e9s (0-1 img)</span>' +
+            '<span class="notfound">&#9888; ' + notfound + ' introuvables</span>';
+        if (currentTitle) {
+            document.getElementById("goatCurrent").textContent = "\u27a4 " + currentTitle;
+        }
     }
+    updateGoatUI('');
 
-    updateGoatUI();
+    // Copy the array so we iterate over original while building new
+    var toScan = missingProducts.slice();
 
     function scanNext(index) {
-        if (goatAbort || index >= withSku.length) {
-            // Done - replace missingProducts with kept only
+        if (goatAbort || index >= toScan.length) {
+            // Done
             missingProducts = keptProducts;
             missingProducts.sort(function(a, b) {
                 if ((b.goatImages || 0) !== (a.goatImages || 0)) return (b.goatImages || 0) - (a.goatImages || 0);
@@ -410,53 +380,66 @@ function startGoatScan() {
             stopBtn.disabled = true;
             document.getElementById("missingTotal").textContent = missingProducts.length;
             document.getElementById("goatBar").style.width = "100%";
+            document.getElementById("goatCurrent").textContent = "";
             displayCount = 50;
             filterResults();
-            showMsg(kept + " produits avec 2+ images GOAT trouv\u00e9s !", "ok");
+            showMsg(kept + " produits avec 2+ images GOAT !", "ok");
             return;
         }
 
-        var p = withSku[index];
-        fetch("/api/goat/check-new-images?sku=" + encodeURIComponent(p.sku))
+        var p = toScan[index];
+        updateGoatUI(p.title);
+
+        // Build the API URL: use SKU if available, otherwise use title
+        var apiUrl;
+        if (p.sku) {
+            apiUrl = "/api/goat/check-by-name?sku=" + encodeURIComponent(p.sku) + "&name=" + encodeURIComponent(p.title);
+        } else {
+            apiUrl = "/api/goat/check-by-name?name=" + encodeURIComponent(p.title);
+        }
+
+        fetch(apiUrl)
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 scanned++;
                 if (d.goat_found && d.goat_images > 1) {
                     p.goatImages = d.goat_images;
                     p.goatName = d.goat_name || '';
+                    if (d.goat_sku && !p.sku) p.sku = d.goat_sku;
                     keptProducts.push(p);
                     kept++;
+                } else if (!d.goat_found) {
+                    notfound++;
                 } else {
                     removed++;
                 }
-                updateGoatUI();
-                // Live update grid every 10 scans
-                if (scanned % 10 === 0 || index === withSku.length - 1) {
+                updateGoatUI('');
+                // Live refresh grid every 10
+                if (scanned % 10 === 0) {
                     missingProducts = keptProducts.slice();
                     missingProducts.sort(function(a, b) {
                         if ((b.goatImages || 0) !== (a.goatImages || 0)) return (b.goatImages || 0) - (a.goatImages || 0);
                         return a.title < b.title ? -1 : 1;
                     });
-                    document.getElementById("missingTotal").textContent = missingProducts.length;
+                    document.getElementById("missingTotal").textContent = missingProducts.length + " (scan: " + scanned + "/" + total + ")";
                     filterResults();
                 }
-                setTimeout(function() { scanNext(index + 1); }, 300);
+                setTimeout(function() { scanNext(index + 1); }, 400);
             })
             .catch(function(e) {
                 scanned++;
-                removed++;
-                updateGoatUI();
-                setTimeout(function() { scanNext(index + 1); }, 300);
+                notfound++;
+                updateGoatUI('');
+                setTimeout(function() { scanNext(index + 1); }, 400);
             });
     }
-
     scanNext(0);
 }
 
 function stopGoatScan() {
     goatAbort = true;
     document.getElementById("btnStopGoat").disabled = true;
-    document.getElementById("goatStatus").textContent += " (arr\u00eat demand\u00e9...)";
+    document.getElementById("goatStatus").textContent += " (arr\u00eat...)";
 }
 
 // ==================== DISPLAY ====================
@@ -479,16 +462,13 @@ function setBrandFilter(brand) {
 function filterResults() {
     var q = document.getElementById("q").value.toLowerCase();
     var filtered = [];
-
     for (var i = 0; i < missingProducts.length; i++) {
         var p = missingProducts[i];
         if (q && p.title.toLowerCase().indexOf(q) < 0) continue;
         if (currentBrand !== 'all' && p.brand !== currentBrand) continue;
         filtered.push(p);
     }
-
     document.getElementById("resultCount").textContent = filtered.length + " produit" + (filtered.length > 1 ? "s" : "") + " manquant" + (filtered.length > 1 ? "s" : "");
-
     var show = filtered.slice(0, displayCount);
     var html = "";
     for (var i = 0; i < show.length; i++) {
@@ -506,18 +486,13 @@ function filterResults() {
         html += '<div class="card-actions">';
         html += '<a href="' + p.url + '" target="_blank">WTN &#8599;</a>';
         if (p.sku) html += '<a href="https://www.goat.com/search?query=' + encodeURIComponent(p.sku) + '" target="_blank">GOAT &#8599;</a>';
-        html += '</div>';
-        html += '</div>';
+        html += '</div></div>';
     }
-    document.getElementById("productGrid").innerHTML = html || '<div style="padding:40px;text-align:center;color:#666;grid-column:1/-1">Aucun produit manquant trouv\u00e9</div>';
+    document.getElementById("productGrid").innerHTML = html || '<div style="padding:40px;text-align:center;color:#666;grid-column:1/-1">Aucun produit</div>';
     document.getElementById("loadMore").style.display = filtered.length > displayCount ? "block" : "none";
 }
 
-function showMore() {
-    displayCount += 50;
-    filterResults();
-}
-
+function showMore() { displayCount += 50; filterResults(); }
 function esc(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 </script>
 </body>
