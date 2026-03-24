@@ -111,3 +111,34 @@ def api_scan_wtn():
         'count': len(sneakers),
         'cached': (time.time() - _wtn_cache_time) < 5,
     })
+
+
+@competitor_bp.route('/api/goat/check-by-name')
+def api_goat_check_by_name():
+    """Recherche un produit sur GOAT par nom (Algolia) et retourne le nombre d'images."""
+    name = request.args.get('name', '').strip()
+    sku = request.args.get('sku', '').strip()
+    if not name and not sku:
+        return jsonify({'error': 'name ou sku requis'}), 400
+
+    from services.goat_client import search as goat_search, get_product_images
+
+    query = sku if sku else name
+    product = goat_search(query, title=name if name else None)
+
+    if not product or not product.get('slug'):
+        return jsonify({
+            'query': query,
+            'goat_found': False,
+            'goat_images': 0,
+        })
+
+    images = get_product_images(product['slug'])
+    return jsonify({
+        'query': query,
+        'goat_found': True,
+        'goat_name': product.get('name', ''),
+        'goat_sku': product.get('sku', ''),
+        'goat_images': len(images),
+        'has_new': len(images) > 1,
+    })
