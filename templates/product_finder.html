@@ -131,6 +131,15 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 </div>
 </div>
 </div>
+<!-- SKU List -->
+<div class="section" id="skuListSection" style="display:none">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<h2 style="font-size:15px;color:#ff6b35">&#128203; Liste des SKU manquants (<span id="skuCount">0</span>)</h2>
+<button class="btn" style="background:#333;color:#fff;padding:8px 16px;font-size:12px" onclick="copySkuList()">&#128203; Copier</button>
+</div>
+<textarea id="skuTextarea" readonly style="width:100%;height:400px;background:#0a0a0f;color:#00ff88;border:1px solid #333;border-radius:8px;padding:12px;font-family:monospace;font-size:12px;resize:vertical;line-height:1.6"></textarea>
+</div>
+
 </main>
 
 <script>
@@ -384,6 +393,8 @@ function startGoatScan() {
             displayCount = 50;
             filterResults();
             showMsg(kept + " produits avec 2+ images GOAT !", "ok");
+            // Build SKU list
+            buildSkuList(keptProducts);
             return;
         }
 
@@ -494,6 +505,25 @@ function filterResults() {
 
 function showMore() { displayCount += 50; filterResults(); }
 function esc(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+function buildSkuList(products) {
+    var skus = [];
+    for (var i = 0; i < products.length; i++) {
+        if (products[i].sku) skus.push(products[i].sku);
+    }
+    document.getElementById("skuCount").textContent = skus.length;
+    document.getElementById("skuTextarea").value = skus.join("\n");
+    document.getElementById("skuListSection").style.display = "block";
+    // Scroll to it
+    document.getElementById("skuListSection").scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function copySkuList() {
+    var ta = document.getElementById("skuTextarea");
+    ta.select();
+    document.execCommand('copy');
+    showMsg("Liste de " + ta.value.split("\n").length + " SKUs copi\u00e9e !", "ok");
+}
 </script>
 </body>
 </html>
