@@ -74,7 +74,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <input type="text" class="search" id="q" placeholder="Rechercher un produit...">
 <select class="filter" id="f"><option value="">Tous</option><option value="excellent">Excellent</option><option value="good">Bon</option><option value="warning">Moyen</option><option value="poor">Faible</option></select>
 <button class="btn btn-s" onclick="reload()">&#8635; Actualiser</button>
-<button class="btn btn-s" onclick="selectAll()">Tout cocher</button>
+<button class="btn btn-s" onclick="selectAll()">&#9745; Cocher la page</button>
 <button class="btn" style="background:#00ff88;color:#000" onclick="openCorrector()">&#128295; Corriger<span id="selBadge"></span></button>
 <button class="btn" style="background:#9b59b6;color:#fff" onclick="openBulkGoat()">&#128247; Photos GOAT<span id="goatBadge"></span></button>
 <button class="btn" style="background:#3b82f6;color:#fff" onclick="openAnalyzer()">&#128270; Analyser</button>
@@ -171,7 +171,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <div class="grid" id="grid"><div class="loading"><div class="spinner"></div>Chargement...</div></div>
 </main>
 <script>
-var P=[],C=[],sinceId=0,loading=false,totalV=0,selectedPids=[];
+var P=[],C=[],sinceId=0,loading=false,totalV=0,selectedPids=[],filteredList=[];
 
 function saveCache(){
     try{
@@ -248,7 +248,7 @@ function filter(){
     var q=document.getElementById("q").value.toLowerCase();
     var f=document.getElementById("f").value;
     var L=[];for(var i=0;i<P.length;i++){var p=P[i];if(q&&p.title.toLowerCase().indexOf(q)<0)continue;if(f&&p._seo!==f)continue;L.push(p)}
-    render(L);
+    filteredList=L;render(L);
 }
 
 function render(L){
@@ -270,7 +270,7 @@ function render(L){
 }
 
 function toggleSel(pid){var i=selectedPids.indexOf(pid);if(i>=0)selectedPids.splice(i,1);else selectedPids.push(pid);updateSelCount()}
-function selectAll(){selectedPids=[];for(var i=0;i<P.length;i++)selectedPids.push(P[i].id);filter()}
+function selectAll(){selectedPids=[];var max=Math.min(filteredList.length,100);for(var i=0;i<max;i++)selectedPids.push(filteredList[i].id);filter()}
 function deselectAll(){selectedPids=[];filter()}
 function updateSelCount(){
     var el=document.getElementById("selectCount");
@@ -308,7 +308,6 @@ function startBulkGoat(){
     var pids=(scope==="selection")?selectedPids.slice():P.map(function(p){return p.id});
     if(!pids.length){toast("Aucun produit selectionne","error");return}
     
-    // Construire la liste des produits avec SKU
     var products=[];
     for(var i=0;i<pids.length;i++){
         for(var j=0;j<P.length;j++){
@@ -343,26 +342,24 @@ function startBulkGoat(){
     function processNext(idx){
         if(idx>=products.length){
             btn.innerHTML="✅ Termin&eacute;!";btn.style.background="#00ff88";btn.style.color="#000";
-            addLog("\\n🏁 Termin\\u00e9 : "+ok+" succ\\u00e8s, "+fail+" erreurs, "+skipped+" ignor\\u00e9s","#00ff88");
+            addLog("\n🏁 Termin\u00e9 : "+ok+" succ\u00e8s, "+fail+" erreurs, "+skipped+" ignor\u00e9s","#00ff88");
             return;
         }
         var p=products[idx];
         addLog("📷 "+p.title+" ("+p.sku+")...");
         updateProgress();
         
-        // Étape 1 : récupérer les images GOAT
         fetch("/api/goat/images?sku="+encodeURIComponent(p.sku)+"&title="+encodeURIComponent(p.title||""))
         .then(function(r){return r.json()})
         .then(function(d){
             if(d.error||!d.images||!d.images.length){
-                addLog("  ⏭ Pas d'images GOAT trouv\\u00e9es","#ff9f43");
+                addLog("  ⏭ Pas d'images GOAT trouv\u00e9es","#ff9f43");
                 skipped++;done++;updateProgress();
                 setTimeout(function(){processNext(idx+1)},300);
                 return;
             }
-            addLog("  "+d.images.length+" images trouv\\u00e9es, remplacement...");
+            addLog("  "+d.images.length+" images trouv\u00e9es, remplacement...");
             
-            // Étape 2 : appliquer les images
             fetch("/api/goat/apply",{
                 method:"POST",
                 headers:{"Content-Type":"application/json"},
@@ -371,7 +368,7 @@ function startBulkGoat(){
             .then(function(r){return r.json()})
             .then(function(r){
                 if(r.success){
-                    addLog("  ✅ "+r.added+" photos remplac\\u00e9es","#00ff88");
+                    addLog("  ✅ "+r.added+" photos remplac\u00e9es","#00ff88");
                     ok++;
                 }else{
                     addLog("  ❌ "+r.error,"#ff4757");
@@ -393,7 +390,7 @@ function startBulkGoat(){
         });
     }
     
-    addLog("🚀 D\\u00e9marrage : "+products.length+" produits avec SKU sur "+pids.length+" s\\u00e9lectionn\\u00e9s","#9b59b6");
+    addLog("🚀 D\u00e9marrage : "+products.length+" produits avec SKU sur "+pids.length+" s\u00e9lectionn\u00e9s","#9b59b6");
     processNext(0);
 }
 
@@ -405,7 +402,7 @@ function openCorrector(){
     document.getElementById("corTotal").textContent=P.length;
     document.getElementById("corStatus").style.display="none";
     document.getElementById("corProg").style.display="none";
-    var btn=document.getElementById("corBtn");btn.disabled=false;btn.textContent="\\uD83D\\uDE80 Lancer la correction";
+    var btn=document.getElementById("corBtn");btn.disabled=false;btn.textContent="\uD83D\uDE80 Lancer la correction";
     if(selectedPids.length>0)document.querySelector('input[name="corScope"][value="selection"]').checked=true;
     else document.querySelector('input[name="corScope"][value="all"]').checked=true;
 }
@@ -435,12 +432,12 @@ function startCorrection(){
         if(done>=pids.length){
             bar.style.width="100%";txt.textContent=done+"/"+pids.length;
             status.style.background="#00ff8822";status.style.color="#00ff88";
-            status.textContent="\\u2705 "+done+" produits corrig\\u00e9s"+(errs?" ("+errs+" erreurs)":"");
-            btn.textContent="\\u2705 Termin\\u00e9!";return;
+            status.textContent="\u2705 "+done+" produits corrig\u00e9s"+(errs?" ("+errs+" erreurs)":"");
+            btn.textContent="\u2705 Termin\u00e9!";return;
         }
         bar.style.width=Math.round(done/pids.length*100)+"%";
         txt.textContent=(done+1)+"/"+pids.length;
-        status.textContent="\\u23F3 Produit "+(done+1)+"/"+pids.length+"...";
+        status.textContent="\u23F3 Produit "+(done+1)+"/"+pids.length+"...";
         var promises=[];
         if(seoFields.length>0)promises.push(fetch("/api/seo/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done],fields:seoFields})}).then(function(r){return r.json()}));
         if(doImg)promises.push(fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})}).then(function(r){return r.json()}));
@@ -516,7 +513,6 @@ function runAnalysis(){
             h+="<div style='text-align:center;padding:25px;color:#00ff88;font-size:15px;margin-top:10px'>\u2705 Tout est parfait ! Aucune correction nécessaire.</div>";
         }
 
-        // Bouton corriger
         h+="<div id='azActions' style='margin-top:20px;display:flex;gap:10px;align-items:center'>";
         if(totalTasks>0){
             h+="<button class='btn btn-p' onclick='runAutoFix()' style='flex:1;padding:14px;font-size:15px;background:linear-gradient(135deg,#00ff88,#00cc6a);color:#000;font-weight:700;border:none;border-radius:8px;cursor:pointer'>&#128640; Corriger "+totalTasks+" t&acirc;ches automatiquement</button>";
@@ -533,13 +529,10 @@ function runAnalysis(){
 }
 
 function runAutoFix(){
-    // Construire la liste de tâches
     var tasks=[];
-    // 1. Descriptions (body_html) - inclut noDesc + noLink
     var descPids=[];
     for(var i=0;i<azIssues.noDesc.length;i++){var id=azIssues.noDesc[i].id;if(descPids.indexOf(id)<0){descPids.push(id);tasks.push({pid:id,type:"seo",fields:["body_html"],label:"Bio"})}}
     for(var i=0;i<azIssues.noLink.length;i++){var id=azIssues.noLink[i].id;if(descPids.indexOf(id)<0){descPids.push(id);tasks.push({pid:id,type:"seo",fields:["body_html"],label:"Bio"})}}
-    // 2. Images (alt + filename)
     var imgPids=[];
     for(var i=0;i<azIssues.badAlt.length;i++){var id=azIssues.badAlt[i].id;if(imgPids.indexOf(id)<0)imgPids.push(id)}
     for(var i=0;i<azIssues.badFn.length;i++){var id=azIssues.badFn[i].id;if(imgPids.indexOf(id)<0)imgPids.push(id)}
