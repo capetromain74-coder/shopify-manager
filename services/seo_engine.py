@@ -76,7 +76,7 @@ def find_collection(title, collections):
     if not title or not collections: return None
     t = title.lower()
     if is_clothing(title):
-        col = next((c for c in collections if c['handle'] == 'tous-nos-vetements'), None)
+        col = next((c for c in collections if c['handle'] == 'streetwear'), None)
         if col: return {'handle': col['handle'], 'title': col['title'], 'url': f"https://{SITE_DOMAIN}/collections/{col['handle']}", 'type': 'model'}
     available = [c['handle'] for c in collections if c['handle'] not in EXCLUDED]
     for handle, keywords in MODEL_COLLECTIONS.items():
@@ -808,7 +808,12 @@ def generate_color_sentence_fallback(title, colorway):
 def is_clothing(title):
     """Détecte si le produit est un vêtement (pas une sneaker)"""
     clothing_kw = ['hoodie', 'sweatshirt', 'sweatpant', 'sweatshort', 'tee ', 't-shirt', 'crewneck', 'jacket',
-                   'pant ', 'pants', 'short ', 'shorts', 'sweater', 'vest ', 'polo', 'jersey']
+                   'pant ', 'pants', 'short ', 'shorts', 'sweater', 'vest ', 'polo', 'jersey',
+                   'pullover', 'anorak', 'puffer', 'fleece', 'windbreaker', 'coat ', 'cardigan',
+                   'overshirt', 'workshirt', 'work shirt', 'half zip', 'full zip', 'quarter zip',
+                   'henley', 'tank top', 'longsleeve', 'long sleeve', 'beanie', 'cap ', 'scarf',
+                   'tracksuit', 'track pant', 'jogger', 'cargo pant', 'trouser',
+                   'down jacket', 'parka', 'bomber', 'varsity', 'balaclava']
     t = title.lower()
     return any(kw in t for kw in clothing_kw)
 
@@ -816,18 +821,32 @@ def is_clothing(title):
 def get_clothing_type(title):
     """Retourne le type de vêtement en français"""
     t = title.lower()
-    if 'hoodie' in t: return 'hoodie'
+    if 'hoodie' in t or 'hooded' in t: return 'hoodie'
+    if 'pullover' in t: return 'pullover'
     if 'sweatshirt' in t: return 'sweatshirt'
-    if 'sweater' in t: return 'pull'
-    if 'sweatpant' in t: return 'jogging'
+    if 'sweater' in t or 'cardigan' in t: return 'pull'
+    if 'sweatpant' in t or 'jogger' in t or 'track pant' in t: return 'jogging'
     if 'sweatshort' in t: return 'short'
     if 'crewneck' in t or 's/s tee' in t or 'ss tee' in t or 't-shirt' in t or 'tee ' in t: return 't-shirt'
     if 'polo' in t: return 'polo'
     if 'jersey' in t: return 'jersey'
-    if 'jacket' in t: return 'veste'
+    if 'down jacket' in t or 'puffer' in t: return 'doudoune'
+    if 'bomber' in t: return 'bomber'
+    if 'varsity' in t: return 'varsity'
+    if 'parka' in t or 'anorak' in t: return 'parka'
+    if 'jacket' in t or 'windbreaker' in t or 'coat' in t: return 'veste'
+    if 'overshirt' in t or 'workshirt' in t or 'work shirt' in t: return 'surchemise'
+    if 'fleece' in t or 'half zip' in t or 'full zip' in t or 'quarter zip' in t: return 'polaire'
     if 'vest' in t: return 'gilet'
-    if 'pant' in t: return 'pantalon'
+    if 'henley' in t or 'longsleeve' in t or 'long sleeve' in t: return 'manches longues'
+    if 'tank' in t: return 'débardeur'
+    if 'pant' in t or 'trouser' in t or 'cargo' in t: return 'pantalon'
     if 'short' in t: return 'short'
+    if 'beanie' in t: return 'bonnet'
+    if 'cap' in t: return 'casquette'
+    if 'scarf' in t: return 'écharpe'
+    if 'tracksuit' in t: return 'survêtement'
+    if 'balaclava' in t: return 'cagoule'
     return 'pièce'
 
 
@@ -845,7 +864,10 @@ def extract_clothing_color(title):
     clothing_words = ['Classic', 'Fleece', 'Essential', 'Jersey', 'Crewneck', 'Core', 'Collection',
                       'Heavy', 'S/S', 'SS', 'NBA', 'Relaxed', 'Hoodie', 'Sweatpant', 'Sweatshort',
                       'Sweatshorts', 'Sweatshirt', 'Sweater', 'Tee', 'T-Shirt', 'Jacket', 'Vest',
-                      'Polo', 'Shorts', 'Pants', 'The', 'Cotton', 'Wreath']
+                      'Polo', 'Shorts', 'Pants', 'The', 'Cotton', 'Wreath',
+                      'Pullover', 'Half', 'Zip', 'Hooded', 'Full', 'Quarter',
+                      'Puffer', 'Fleece', 'Bomber', 'Varsity', 'Parka', 'Anorak',
+                      'Windbreaker', 'Overshirt', 'Tracksuit', 'Jogger', 'Cargo']
     color_start = 0
     for i, p in enumerate(parts):
         if p in clothing_words:
