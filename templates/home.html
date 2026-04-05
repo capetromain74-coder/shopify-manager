@@ -172,6 +172,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 </main>
 <script>
 var P=[],C=[],sinceId=0,loading=false,totalV=0,selectedPids=[],filteredList=[];
+var HIDDEN_KW=['sunglasses','glasses','goggles','eyewear','lunettes'];
 
 function saveCache(){
     try{
@@ -247,7 +248,7 @@ function updateStats(){
 function filter(){
     var q=document.getElementById("q").value.toLowerCase();
     var f=document.getElementById("f").value;
-    var L=[];for(var i=0;i<P.length;i++){var p=P[i];if(q&&p.title.toLowerCase().indexOf(q)<0)continue;if(f&&p._seo!==f)continue;L.push(p)}
+    var L=[];for(var i=0;i<P.length;i++){var p=P[i];var tl=p.title.toLowerCase();if(HIDDEN_KW.some(function(ex){return tl.indexOf(ex)>=0}))continue;if(q&&tl.indexOf(q)<0)continue;if(f&&p._seo!==f)continue;L.push(p)}
     filteredList=L;render(L);
 }
 
