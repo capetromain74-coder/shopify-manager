@@ -139,6 +139,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <label class="opt-sub"><input type="checkbox" class="corF" value="meta_description" style="accent-color:#00ff88"> &#128203; Meta Description</label>
 <label class="opt-sub"><input type="checkbox" class="corF" value="images_alt" style="accent-color:#00ff88"> &#128444;&#65039; Alt Photos</label>
 <label class="opt-sub"><input type="checkbox" class="corF" value="images_filename" style="accent-color:#00ff88"> &#128193; Nom Photos</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="handle" style="accent-color:#00ff88"> &#128279; Handle (URL)</label>
 </div>
 </div>
 
@@ -409,6 +410,8 @@ function openCorrector(){
 }
 function closeCorrector(){document.getElementById("correctorModal").style.display="none"}
 
+function slugify(t){var s=t.toLowerCase();s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');s=s.replace(/[^a-z0-9]+/g,'-');s=s.replace(/-+/g,'-').replace(/^-|-$/g,'');return s}
+
 function startCorrection(){
     var scope=document.querySelector('input[name="corScope"]:checked').value;
     var fields=[];var checks=document.querySelectorAll(".corF:checked");
@@ -417,8 +420,9 @@ function startCorrection(){
     var pids=(scope==="selection")?selectedPids.slice():P.map(function(p){return p.id});
     if(!pids.length){alert("Aucun produit.");return}
 
-    var seoFields=fields.filter(function(f){return f!=="images_alt"&&f!=="images_filename"});
+    var seoFields=fields.filter(function(f){return f!=="images_alt"&&f!=="images_filename"&&f!=="handle"});
     var doImg=fields.indexOf("images_alt")>=0||fields.indexOf("images_filename")>=0;
+    var doHandle=fields.indexOf("handle")>=0;
 
     var btn=document.getElementById("corBtn");
     var status=document.getElementById("corStatus");
@@ -442,6 +446,15 @@ function startCorrection(){
         var promises=[];
         if(seoFields.length>0)promises.push(fetch("/api/seo/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done],fields:seoFields})}).then(function(r){return r.json()}));
         if(doImg)promises.push(fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})}).then(function(r){return r.json()}));
+        if(doHandle){
+            var prod=P.find(function(p){return p.id===pids[done]});
+            if(prod){
+                var expected=slugify(prod.title);
+                if(prod.handle!==expected){
+                    promises.push(fetch("/api/seo/fix-handle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done],handle:expected})}).then(function(r){return r.json()}));
+                }
+            }
+        }
         Promise.all(promises).then(function(){done++;setTimeout(next,50)}).catch(function(){errs++;done++;setTimeout(next,50)});
     }
     next();
