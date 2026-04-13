@@ -218,7 +218,9 @@ def api_preview_brand_case():
     return jsonify({"find": find_str, "count": len(matches), "products": matches})
 @seo_bp.route("/api/progress")
 def api_progress():
-    @seo_bp.route('/api/seo/fix-handle', methods=['POST'])
+    return jsonify(get_task_progress())
+
+@seo_bp.route('/api/seo/fix-handle', methods=['POST'])
 def api_fix_handle():
     """Corrige le handle (URL) d'un produit pour correspondre au titre."""
     data = request.get_json()
@@ -235,4 +237,3 @@ def api_fix_handle():
         return jsonify({'error': 'Shopify error'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    return jsonify(get_task_progress())
