@@ -410,7 +410,7 @@ function openCorrector(){
 }
 function closeCorrector(){document.getElementById("correctorModal").style.display="none"}
 
-function slugify(t){var s=t.toLowerCase();s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');s=s.replace(/[^a-z0-9]+/g,'-');s=s.replace(/-+/g,'-').replace(/^-|-$/g,'');return s}
+function slugify(t){var s=t.toLowerCase();s=s.replace(/[()]/g,' ');s=s.replace(/[''\'\']/g,'');s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');s=s.replace(/[^a-z0-9]+/g,'-');s=s.replace(/-+/g,'-').replace(/^-|-$/g,'');return s}
 
 function startCorrection(){
     var scope=document.querySelector('input[name="corScope"]:checked').value;
