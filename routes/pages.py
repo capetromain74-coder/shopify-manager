@@ -41,3 +41,6 @@ def fix_brand_case_page():
 @pages_bp.route('/product-finder')
 def product_finder_page():
     return _read_template('product_finder.html')
+@pages_bp.route('/fix-handles')
+def fix_handles_page():
+    return _read_template('fix_handles.html')
