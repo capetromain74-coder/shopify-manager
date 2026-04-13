@@ -113,6 +113,10 @@ function showMsg(t, type) {
 
 function slugify(title) {
     var s = title.toLowerCase();
+    // Remove parentheses chars but keep content
+    s = s.replace(/[()]/g, ' ');
+    // Remove apostrophes
+    s = s.replace(/[''\']/g, '');
     // Remove accents
     s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     // Replace special chars with hyphens
