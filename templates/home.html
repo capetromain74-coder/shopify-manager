@@ -423,6 +423,8 @@ function startCorrection(){
     var seoFields=fields.filter(function(f){return f!=="images_alt"&&f!=="images_filename"&&f!=="handle"});
     var doImg=fields.indexOf("images_alt")>=0||fields.indexOf("images_filename")>=0;
     var doHandle=fields.indexOf("handle")>=0;
+    // Delay adapté : plus lent si handle (3 appels Shopify par produit)
+    var delay=doHandle?800:50;
 
     var btn=document.getElementById("corBtn");
     var status=document.getElementById("corStatus");
@@ -432,30 +434,35 @@ function startCorrection(){
     status.style.display="block";status.style.background="#333";status.style.color="#aaa";
     document.getElementById("corProg").style.display="block";bar.style.width="0%";
 
-    var done=0,errs=0;
+    var done=0,errs=0,fixed=0,skipped=0;
     function next(){
         if(done>=pids.length){
             bar.style.width="100%";txt.textContent=done+"/"+pids.length;
             status.style.background="#00ff8822";status.style.color="#00ff88";
-            status.textContent="\u2705 "+done+" produits corrig\u00e9s"+(errs?" ("+errs+" erreurs)":"");
+            var msg="\u2705 "+done+" produits traités";
+            if(doHandle)msg+=" ("+fixed+" handles corrigés, "+skipped+" déjà OK)";
+            if(errs)msg+=" ("+errs+" erreurs)";
+            status.textContent=msg;
             btn.textContent="\u2705 Termin\u00e9!";return;
         }
         bar.style.width=Math.round(done/pids.length*100)+"%";
         txt.textContent=(done+1)+"/"+pids.length;
-        status.textContent="\u23F3 Produit "+(done+1)+"/"+pids.length+"...";
+        var prod=P.find(function(p){return p.id===pids[done]});
+        var titleShort=prod?prod.title.substring(0,40):"#"+pids[done];
+        status.textContent="\u23F3 "+titleShort+"... ("+(done+1)+"/"+pids.length+")";
+
         var promises=[];
         if(seoFields.length>0)promises.push(fetch("/api/seo/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done],fields:seoFields})}).then(function(r){return r.json()}));
         if(doImg)promises.push(fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})}).then(function(r){return r.json()}));
-        if(doHandle){
-            var prod=P.find(function(p){return p.id===pids[done]});
-            if(prod){
-                var expected=slugify(prod.title);
-                if(prod.handle!==expected){
-                    promises.push(fetch("/api/seo/fix-handle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done],handle:expected})}).then(function(r){return r.json()}));
-                }
-            }
+        if(doHandle&&prod){
+            var expected=slugify(prod.title);
+            promises.push(
+                fetch("/api/seo/fix-handle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done],handle:expected})})
+                .then(function(r){return r.json()})
+                .then(function(d){if(d.fixed)fixed++;else skipped++;return d;})
+            );
         }
-        Promise.all(promises).then(function(){done++;setTimeout(next,50)}).catch(function(){errs++;done++;setTimeout(next,50)});
+        Promise.all(promises).then(function(){done++;setTimeout(next,delay)}).catch(function(){errs++;done++;setTimeout(next,delay)});
     }
     next();
 }
