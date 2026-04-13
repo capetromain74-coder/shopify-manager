@@ -218,4 +218,21 @@ def api_preview_brand_case():
     return jsonify({"find": find_str, "count": len(matches), "products": matches})
 @seo_bp.route("/api/progress")
 def api_progress():
+    @seo_bp.route('/api/seo/fix-handle', methods=['POST'])
+def api_fix_handle():
+    """Corrige le handle (URL) d'un produit pour correspondre au titre."""
+    data = request.get_json()
+    pid = data.get('product_id')
+    new_handle = data.get('handle', '').strip()
+    if not pid or not new_handle:
+        return jsonify({'error': 'product_id et handle requis'}), 400
+    try:
+        r = shopify_request(f'products/{pid}.json', 'PUT', {
+            'product': {'id': pid, 'handle': new_handle}
+        })
+        if r:
+            return jsonify({'success': True, 'handle': new_handle})
+        return jsonify({'error': 'Shopify error'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     return jsonify(get_task_progress())
