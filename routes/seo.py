@@ -222,18 +222,33 @@ def api_progress():
 
 @seo_bp.route('/api/seo/fix-handle', methods=['POST'])
 def api_fix_handle():
-    """Corrige le handle (URL) d'un produit pour correspondre au titre."""
+    """Corrige le handle (URL) d'un produit et crée une redirection 301."""
     data = request.get_json()
     pid = data.get('product_id')
     new_handle = data.get('handle', '').strip()
     if not pid or not new_handle:
         return jsonify({'error': 'product_id et handle requis'}), 400
     try:
+        # 1. Récupérer l'ancien handle
+        current = shopify_request(f'products/{pid}.json?fields=id,handle')
+        old_handle = current['product']['handle'] if current else ''
+
+        # 2. Mettre à jour le handle
         r = shopify_request(f'products/{pid}.json', 'PUT', {
             'product': {'id': pid, 'handle': new_handle}
         })
-        if r:
-            return jsonify({'success': True, 'handle': new_handle})
-        return jsonify({'error': 'Shopify error'}), 500
+        if not r:
+            return jsonify({'error': 'Shopify error'}), 500
+
+        # 3. Créer la redirection 301 ancien -> nouveau
+        if old_handle and old_handle != new_handle:
+            shopify_request('redirects.json', 'POST', {
+                'redirect': {
+                    'path': f'/products/{old_handle}',
+                    'target': f'/products/{new_handle}'
+                }
+            })
+
+        return jsonify({'success': True, 'handle': new_handle, 'redirect': old_handle})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
