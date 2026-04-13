@@ -229,26 +229,32 @@ def api_fix_handle():
     if not pid or not new_handle:
         return jsonify({'error': 'product_id et handle requis'}), 400
     try:
-        # 1. Récupérer l'ancien handle
+        # 1. Récupérer le handle actuel
         current = shopify_request(f'products/{pid}.json?fields=id,handle')
-        old_handle = current['product']['handle'] if current else ''
+        if not current:
+            return jsonify({'error': 'Produit introuvable'}), 404
+        old_handle = current['product']['handle']
 
-        # 2. Mettre à jour le handle
+        # 2. Si déjà correct, skip
+        if old_handle == new_handle:
+            return jsonify({'success': True, 'fixed': False, 'handle': old_handle})
+
+        # 3. Mettre à jour le handle
         r = shopify_request(f'products/{pid}.json', 'PUT', {
             'product': {'id': pid, 'handle': new_handle}
         })
         if not r:
-            return jsonify({'error': 'Shopify error'}), 500
+            return jsonify({'error': 'Shopify update error'}), 500
 
-        # 3. Créer la redirection 301 ancien -> nouveau
-        if old_handle and old_handle != new_handle:
-            shopify_request('redirects.json', 'POST', {
-                'redirect': {
-                    'path': f'/products/{old_handle}',
-                    'target': f'/products/{new_handle}'
-                }
-            })
+        # 4. Créer la redirection 301
+        time.sleep(0.3)
+        shopify_request('redirects.json', 'POST', {
+            'redirect': {
+                'path': f'/products/{old_handle}',
+                'target': f'/products/{new_handle}'
+            }
+        })
 
-        return jsonify({'success': True, 'handle': new_handle, 'redirect': old_handle})
+        return jsonify({'success': True, 'fixed': True, 'old': old_handle, 'handle': new_handle})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
