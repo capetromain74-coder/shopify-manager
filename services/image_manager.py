@@ -212,7 +212,7 @@ def fix_product_images(product_id):
         if '.' in current_filename:
             ext = current_filename.split('.')[-1].lower()
         
-        new_filename = f"{title_for_filename}_{product_id}_{i+1}.{ext}"
+        new_filename = f"{title_for_filename}_{i+1}.{ext}"
         files_to_rename.append({"id": media_gids[i], "filename": new_filename})
     
     if files_to_rename:
