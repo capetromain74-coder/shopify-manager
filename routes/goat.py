@@ -346,7 +346,7 @@ def api_goat_apply():
                 b64 = _resize_goat_image_to_750x500(img_url)
                 if b64:
                     result = shopify_request(f'products/{product_id}/images.json', 'POST', {
-                        'image': {'attachment': b64, 'position': i + 1, 'filename': f'goat_{product_id}_{i+1}.png'}
+                        'image': {'attachment': b64, 'position': i + 1, 'filename': f'goat_{i+1}.png'}
                     })
                 else:
                     # Fallback: envoyer l'URL telle quelle
