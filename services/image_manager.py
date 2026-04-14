@@ -205,8 +205,9 @@ def fix_product_images(product_id):
         current_src = img.get('src', '') or ''
         current_filename = current_src.split('/')[-1].split('?')[0] if current_src else ''
         
-        if title_for_filename in current_filename:
-            continue  # Déjà renommé
+        expected_name = f"{title_for_filename}_{i+1}"
+        if expected_name in current_filename and str(product_id) not in current_filename:
+            continue  # Déjà correctement renommé
         
         ext = 'jpg'
         if '.' in current_filename:
