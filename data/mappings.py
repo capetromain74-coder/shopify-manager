@@ -1,7 +1,6 @@
 """
 KP SHOES - Mappings collections <-> modeles, extraction marques
 """
-
 MODEL_COLLECTIONS = {
     'jordan-4': ['jordan 4'], 'jordan-1-high': ['jordan 1 high'], 'jordan-1-low': ['jordan 1 low'],
     'jordan-1-mid': ['jordan 1 mid'], 'nike-dunk': ['dunk'], 'air-force-1': ['air force 1'],
@@ -14,15 +13,13 @@ MODEL_COLLECTIONS = {
     'asics-gel-kayano': ['kayano'], 'asics-gel-nyc': ['gel-nyc', 'gel nyc'],
     'ugg-tasman': ['tasman'], 'ugg-tazz': ['tazz'], 'ugg-ultra-mini': ['ultra mini'],
     'travis-scott': ['travis scott'], 'off-white': ['off-white'], 'supreme': ['supreme'],
-    'tous-nos-vetements': ['essentials', 'hoodie', 'sweatshirt', 'sweater', 'sweatpant', 'sweatshort', 'tee ', 't-shirt', 'crewneck', 'jacket', 'pants', 'pant ', 'short ', 'shorts', 'polo', 'jersey', 'vest '],
+    'streetwear': ['essentials', 'hoodie', 'sweatshirt', 'sweater', 'sweatpant', 'sweatshort', 'tee ', 't-shirt', 'crewneck', 'jacket', 'pants', 'pant ', 'short ', 'shorts', 'polo', 'jersey', 'vest '],
 }
-
 BRAND_COLLECTIONS = {
-    'jordan-1': ['jordan'], 'nike-1': ['nike', 'nocta', 'blazer'], 'adidas-1': ['adidas'],
-    'yeezy-1': ['yeezy', 'foam runner'], 'new-balance-1': ['new balance'], 'asics-1': ['asics'],
-    'ugg-1': ['ugg'], 'puma-1': ['puma'], 'crocs': ['crocs'], 'birkenstock-1': ['birkenstock'],
+    'jordan': ['jordan'], 'nike': ['nike', 'nocta', 'blazer'], 'adidas': ['adidas'],
+    'yeezy': ['yeezy', 'foam runner'], 'new-balance': ['new balance'], 'asics': ['asics'],
+    'ugg': ['ugg'], 'puma': ['puma'], 'crocs': ['crocs'], 'birkenstock': ['birkenstock'],
     'converse': ['converse'], 'salomon': ['salomon'], 'timberland': ['timberland'],
     'maison-mihara': ['mihara', 'mmy', 'maison mihara'],
 }
-
 EXCLUDED = ['tout-nos-modeles', 'best-seller', 'moins-de-150', 'livraison-48h', 'pour-enfants', 'sport', 'autre-marques']
