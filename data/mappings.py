@@ -18,9 +18,9 @@ MODEL_COLLECTIONS = {
     'streetwear': ['essentials', 'hoodie', 'sweatshirt', 'sweater', 'sweatpant', 'sweatshort', 'tee ', 't-shirt', 'crewneck', 'jacket', 'pants', 'pant ', 'short ', 'shorts', 'polo', 'jersey', 'vest ', 'pullover', 'anorak', 'puffer', 'fleece', 'bomber', 'balaclava'],
 }
 BRAND_COLLECTIONS = {
-    'air-jordan': ['jordan'], 'nike-1': ['nike', 'nocta', 'blazer'], 'adidas-1': ['adidas'],
-    'yeezy-1': ['yeezy', 'foam runner'], 'new-balance-1': ['new balance'], 'asics': ['asics'],
-    'ugg-1': ['ugg'], 'puma-1': ['puma'], 'crocs': ['crocs'], 'birkenstock-1': ['birkenstock'],
+    'air-jordan': ['jordan'], 'nike': ['nike', 'nocta', 'blazer'], 'adidas': ['adidas'],
+    'yeezy': ['yeezy', 'foam runner'], 'new-balance': ['new balance'], 'asics': ['asics'],
+    'ugg': ['ugg'], 'puma-': ['puma'], 'crocs': ['crocs'], 'birkenstock': ['birkenstock'],
     'converse': ['converse'], 'salomon': ['salomon'], 'timberland': ['timberland'],
     'maison-mihara': ['mihara', 'mmy', 'maison mihara'], 'vans': ['vans'],
 }
