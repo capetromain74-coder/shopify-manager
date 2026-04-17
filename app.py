@@ -91,44 +91,49 @@ def fix_brand_case_page():
 
 @app.route('/api/products/single-image-page')
 def api_products_single_image_page():
-    """Récupère UNE page de produits (250 max) et filtre ceux avec 1 seule image."""
+    """Récupère UNE page de produits (250 max) et filtre selon le nombre d'images.
+    Sneakers: < 5 images. Vêtements: 1 seule image. Lunettes: exclues."""
     since_id = request.args.get('since_id', '0')
     r = shopify_request(f'products.json?limit=250&since_id={since_id}&fields=id,title,handle,images,variants')
     if not r or not r.get('products'):
         return jsonify({'products': [], 'has_more': False, 'next_since_id': '0', 'page_total': 0})
 
     products = r['products']
-    single_image = []
+    filtered = []
+    clothing_kw = ['hoodie', 'sweatshirt', 'sweatpant', 'tee ', 't-shirt', 'crewneck', 'jacket',
+                   'pants', 'pant ', 'shorts', 'short ', 'polo', 'jersey', 'vest ', 'pullover',
+                   'fleece', 'bomber', 'balaclava', 'anorak', 'puffer']
+
     for p in products:
         img_count = len(p.get('images', []))
-            title_lower = p['title'].lower()
-            # Exclure lunettes
-            if 'lunette' in title_lower or 'sunglasses' in title_lower or 'glasses' in title_lower:
-                continue
-            # Vêtements : seulement si 1 image
-            clothing_kw = ['hoodie','sweatshirt','sweatpant','tee ','t-shirt','crewneck','jacket','pants','pant ','shorts','short ','polo','jersey','vest ','pullover','fleece','bomber','balaclava','anorak','puffer']
-            is_clothing = any(kw in title_lower for kw in clothing_kw)
-            if is_clothing and img_count != 1:
-                continue
-            if not is_clothing and img_count >= 5:
-                continue
-            if img_count == 0:
-                continue
-            if True:
-            sku = p['variants'][0].get('sku', '') if p.get('variants') else ''
-            single_image.append({
-                'id': p['id'],
-                'title': p['title'],
-                'handle': p.get('handle', ''),
-                'sku': sku,
-                'image_url': p['images'][0]['src'] if p.get('images') else '',
-            })
+        if img_count == 0:
+            continue
+        title_lower = p['title'].lower()
+        # Exclure lunettes
+        if 'lunette' in title_lower or 'sunglasses' in title_lower or 'glasses' in title_lower:
+            continue
+        # Vêtements : seulement si 1 image
+        is_clothing = any(kw in title_lower for kw in clothing_kw)
+        if is_clothing and img_count != 1:
+            continue
+        # Sneakers : seulement si < 5 images
+        if not is_clothing and img_count >= 5:
+            continue
+
+        sku = p['variants'][0].get('sku', '') if p.get('variants') else ''
+        filtered.append({
+            'id': p['id'],
+            'title': p['title'],
+            'handle': p.get('handle', ''),
+            'sku': sku,
+            'image_url': p['images'][0]['src'] if p.get('images') else '',
+        })
 
     has_more = len(products) >= 250
     next_id = str(products[-1]['id']) if products else '0'
 
     return jsonify({
-        'products': single_image,
+        'products': filtered,
         'page_total': len(products),
         'has_more': has_more,
         'next_since_id': next_id,
