@@ -100,7 +100,7 @@ def api_products_single_image_page():
     products = r['products']
     single_image = []
     for p in products:
-        if len(p.get('images', [])) == 1:
+        if len(p.get('images', [])) < 5:
             sku = p['variants'][0].get('sku', '') if p.get('variants') else ''
             single_image.append({
                 'id': p['id'],
