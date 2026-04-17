@@ -100,7 +100,21 @@ def api_products_single_image_page():
     products = r['products']
     single_image = []
     for p in products:
-        if len(p.get('images', [])) < 5:
+        img_count = len(p.get('images', []))
+            title_lower = p['title'].lower()
+            # Exclure lunettes
+            if 'lunette' in title_lower or 'sunglasses' in title_lower or 'glasses' in title_lower:
+                continue
+            # Vêtements : seulement si 1 image
+            clothing_kw = ['hoodie','sweatshirt','sweatpant','tee ','t-shirt','crewneck','jacket','pants','pant ','shorts','short ','polo','jersey','vest ','pullover','fleece','bomber','balaclava','anorak','puffer']
+            is_clothing = any(kw in title_lower for kw in clothing_kw)
+            if is_clothing and img_count != 1:
+                continue
+            if not is_clothing and img_count >= 5:
+                continue
+            if img_count == 0:
+                continue
+            if True:
             sku = p['variants'][0].get('sku', '') if p.get('variants') else ''
             single_image.append({
                 'id': p['id'],
