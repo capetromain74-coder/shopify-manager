@@ -1041,11 +1041,178 @@ def build_goat_description(goat_details, title, colorway):
     return sentence, 'goat_details'
 
 
+def _build_intro_sneaker(title, brand, colorway, collection):
+    """Génère une intro variée pour les sneakers (évite contenu dupliqué)."""
+    import random
+    # Use product title as seed for deterministic but varied output
+    random.seed(title)
+
+    if collection:
+        link = f'<a href="{collection["url"]}">{collection["title"]}</a>'
+        templates = [
+            f'<strong>{brand}</strong> dévoile la <strong>{title}</strong>, dernière itération de la silhouette emblématique. Découvrez ce modèle dans notre collection {link}.',
+            f'La <strong>{title}</strong> rejoint le catalogue {SITE_NAME}. Retrouvez ce modèle et bien d\'autres dans notre collection {link}.',
+            f'<strong>{title}</strong> — la nouvelle déclinaison signée {brand}. À découvrir aux côtés des autres modèles de la collection {link}.',
+            f'Disponible dès maintenant : la <strong>{title}</strong>. Explorez la collection {link} pour découvrir d\'autres modèles dans la même lignée.',
+            f'La maison {brand} propose une nouvelle interprétation avec la <strong>{title}</strong>. Pièce à retrouver dans notre collection {link}.',
+        ]
+    else:
+        templates = [
+            f'<strong>{brand}</strong> dévoile la <strong>{title}</strong>, dernière itération de la silhouette emblématique.',
+            f'La <strong>{title}</strong> rejoint le catalogue {SITE_NAME}.',
+            f'<strong>{title}</strong> — la nouvelle déclinaison signée {brand}.',
+            f'Disponible dès maintenant : la <strong>{title}</strong>.',
+            f'La maison {brand} propose une nouvelle interprétation avec la <strong>{title}</strong>.',
+        ]
+    return random.choice(templates)
+
+
+def _build_intro_clothing(title, brand, color, collection):
+    """Génère une intro variée pour les vêtements."""
+    import random
+    random.seed(title)
+
+    if collection:
+        link = f'<a href="{collection["url"]}">{collection["title"]}</a>'
+        templates = [
+            f'<strong>{brand}</strong> présente le <strong>{title}</strong>. Pièce à découvrir dans notre collection {link}.',
+            f'Le <strong>{title}</strong> rejoint le catalogue {SITE_NAME}. Retrouvez cette pièce dans notre collection {link}.',
+            f'<strong>{title}</strong> — la nouvelle pièce signée {brand}. À découvrir parmi les autres essentiels de la collection {link}.',
+            f'Disponible dès maintenant : le <strong>{title}</strong>. Explorez la collection {link} pour d\'autres pièces de la marque.',
+        ]
+    else:
+        templates = [
+            f'<strong>{brand}</strong> présente le <strong>{title}</strong>.',
+            f'Le <strong>{title}</strong> rejoint le catalogue {SITE_NAME}.',
+            f'<strong>{title}</strong> — la nouvelle pièce signée {brand}.',
+            f'Disponible dès maintenant : le <strong>{title}</strong>.',
+        ]
+    return random.choice(templates)
+
+
+def _inject_collection_links(text, collections, title):
+    """Injecte des liens vers les collections dans le texte de description.
+    Trouve les mentions naturelles (marques, modèles) et transforme la PREMIÈRE occurrence en lien.
+    Évite les liens dans les balises HTML existantes."""
+    import re as _re
+    if not text or not collections:
+        return text
+
+    available_handles = [c['handle'] for c in collections if c['handle'] not in EXCLUDED]
+    title_lower = title.lower()
+
+    # Mots-clés à chercher dans le texte → handle de collection
+    # Ordre: du plus spécifique au plus générique
+    keyword_to_handle = []
+
+    # Modèles spécifiques (priorité haute)
+    model_map = {
+        'air jordan 4': 'jordan-4',
+        'jordan 4': 'jordan-4',
+        'air jordan 1 high': 'jordan-1-high',
+        'jordan 1 high': 'jordan-1-high',
+        'air jordan 1 low': 'jordan-1-low',
+        'jordan 1 low': 'jordan-1-low',
+        'air jordan 1 mid': 'jordan-1-mid',
+        'jordan 1 mid': 'jordan-1-mid',
+        'dunk low': 'nike-dunk',
+        'dunk high': 'nike-dunk',
+        'dunk': 'nike-dunk',
+        'air force 1': 'air-force-1',
+        'air max': 'air-max',
+        'vomero': 'nike-vomero',
+        'samba': 'adidas-samba',
+        'campus': 'adidas-campus',
+        'gazelle': 'adidas-gazelle',
+        'spezial': 'adidas-spezial',
+        'forum': 'adidas-forum',
+        'superstar': 'adidas-superstar',
+        'yeezy slide': 'yeezy-slide',
+        'yeezy 350': 'yeezy-350',
+        'yeezy 700': 'yeezy-700',
+        '550': 'new-balance-550',
+        '530': 'new-balance-530',
+        '2002r': 'new-balance-2002r',
+        '9060': 'new-balance-9060',
+        'gel-1130': 'asics-gel-1130',
+        'gel 1130': 'asics-gel-1130',
+        'kayano': 'asics-gel-kayano',
+        'gel-nyc': 'asics-gel-nyc',
+        'gel nyc': 'asics-gel-nyc',
+        'tasman': 'ugg-tasman',
+        'tazz': 'ugg-tazz',
+        'ultra mini': 'ugg-ultra-mini',
+        'travis scott': 'travis-scott',
+        'off-white': 'off-white',
+        'supreme': 'supreme',
+    }
+
+    # Marques (priorité basse)
+    brand_map = {
+        'nike': 'nike-1',
+        'adidas': 'adidas-1',
+        'jordan': 'air-jordan',
+        'yeezy': 'yeezy-1',
+        'new balance': 'new-balance-1',
+        'asics': 'asics',
+        'ugg': 'ugg-1',
+        'puma': 'puma-1',
+        'crocs': 'crocs',
+        'birkenstock': 'birkenstock-1',
+        'converse': 'converse',
+        'salomon': 'salomon',
+        'timberland': 'timberland',
+        'vans': 'vans',
+    }
+
+    # Construire la liste finale (modèles d'abord, puis marques)
+    for kw, handle in sorted(model_map.items(), key=lambda x: -len(x[0])):
+        if handle in available_handles:
+            keyword_to_handle.append((kw, handle))
+    for kw, handle in sorted(brand_map.items(), key=lambda x: -len(x[0])):
+        if handle in available_handles:
+            keyword_to_handle.append((kw, handle))
+
+    used_handles = set()
+    result = text
+
+    # Injecter max 2 liens (1 modèle + 1 marque idéalement) pour éviter le spam
+    links_added = 0
+    max_links = 2
+
+    for kw, handle in keyword_to_handle:
+        if links_added >= max_links:
+            break
+        if handle in used_handles:
+            continue
+
+        # Trouver la collection
+        col = next((c for c in collections if c['handle'] == handle), None)
+        if not col:
+            continue
+
+        # Pattern qui ignore les balises HTML et les mots déjà dans des liens
+        # On cherche le mot-clé case-insensitive, hors balises <a>...</a>
+        pattern = _re.compile(
+            r'(?<![<>/=\w-])(' + _re.escape(kw) + r')(?![\w-])(?![^<]*</a>)',
+            _re.IGNORECASE
+        )
+
+        match = pattern.search(result)
+        if match:
+            matched_text = match.group(1)
+            link_html = f'<a href="{col["url"]}">{matched_text}</a>'
+            result = result[:match.start()] + link_html + result[match.end():]
+            used_handles.add(handle)
+            links_added += 1
+
+    return result
+
+
 def generate_body_html(product, collections, goat_slug=''):
     title = product.get('title', '')
     brand = extract_brand(title)
     sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
-    collection = find_collection(title, collections)
     
     # ── VÊTEMENTS ──
     if is_clothing(title):
@@ -1057,25 +1224,25 @@ def generate_body_html(product, collections, goat_slug=''):
             goat_details = _fetch_goat_details(sku, goat_slug=goat_slug)
         
         lines = []
-        if collection:
-            lines.append(f'<p>Découvrez le <strong>{title}</strong> disponible sur {SITE_NAME}. Retrouvez cette pièce et bien d\'autres dans notre collection <a href="{collection["url"]}">{collection["title"]}</a>.</p>')
-        else:
-            lines.append(f'<p>Découvrez le <strong>{title}</strong> disponible sur {SITE_NAME}.</p>')
         
+        # 1. Description AI/GOAT avec liens injectés
         ai_clothing_desc = generate_story_ai(title, brand, color or '', '', goat_data=goat_details)
         if ai_clothing_desc:
-            lines.append(f'<p>{ai_clothing_desc}</p>')
+            ai_with_links = _inject_collection_links(ai_clothing_desc, collections, title)
+            lines.append(f'<p>{ai_with_links}</p>')
         else:
             type_descs = {
-                'hoodie': 'Ce hoodie en molleton offre un confort enveloppant avec sa capuche doublée et ses finitions côtelées. Une pièce essentielle de toute garde-robe streetwear.',
+                'hoodie': 'Ce hoodie en molleton offre un confort enveloppant avec sa capuche doublée et ses finitions côtelées.',
                 'jogging': 'Ce jogging en molleton premium allie confort et style avec sa coupe décontractée et ses finitions côtelées aux chevilles.',
                 'short': 'Ce short combine confort et style décontracté avec sa coupe ample et ses finitions soignées.',
-                't-shirt': 'Ce t-shirt en coton premium offre une coupe ample et décontractée. Un basique streetwear élevé au rang de pièce premium.',
+                't-shirt': 'Ce t-shirt en coton premium offre une coupe ample et décontractée.',
                 'veste': 'Cette veste allie fonctionnalité et esthétique streetwear avec ses matériaux premium et sa coupe contemporaine.',
             }
             desc = type_descs.get(clothing_type, 'Cette pièce incarne l\'esthétique streetwear avec des matériaux de haute qualité et une coupe contemporaine.')
-            lines.append(f'<p>{desc}</p>')
+            desc_with_links = _inject_collection_links(desc, collections, title)
+            lines.append(f'<p>{desc_with_links}</p>')
         
+        # 2. Infos produit
         tech_items = []
         if sku:
             tech_items.append(f'<li><strong>Référence :</strong> {sku}</li>')
@@ -1088,8 +1255,6 @@ def generate_body_html(product, collections, goat_slug=''):
         if color:
             tech_items.append(f'<li><strong>Coloris :</strong> {color}</li>')
         lines.append('<ul style="list-style:none;padding-left:0;">' + ''.join(tech_items) + '</ul>')
-        
-        lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque article. Tous nos produits sont vérifiés par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
         
         return ''.join(lines)
     
@@ -1120,19 +1285,20 @@ def generate_body_html(product, collections, goat_slug=''):
         color_sentence, cw_type = generate_color_description_ai(title, colorway, brand, model_desc)
     elif not color_sentence:
         color_sentence, cw_type = '', 'color'
+
     lines = []
     
-    if collection:
-        lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}. Retrouvez ce modèle et bien d\'autres dans notre collection <a href="{collection["url"]}">{collection["title"]}</a>.</p>')
-    else:
-        lines.append(f'<p>Découvrez la <strong>{title}</strong> disponible sur {SITE_NAME}.</p>')
-    
+    # 1. Description modèle avec liens (uniquement si pas d'AI story)
     if not goat_sentence and cw_type != 'ai_story':
-        lines.append(f'<p>{model_desc}</p>')
+        model_with_links = _inject_collection_links(model_desc, collections, title)
+        lines.append(f'<p>{model_with_links}</p>')
     
+    # 2. Description GOAT/AI avec liens injectés naturellement
     if color_sentence:
-        lines.append(f'<p>{color_sentence}</p>')
+        sentence_with_links = _inject_collection_links(color_sentence, collections, title)
+        lines.append(f'<p>{sentence_with_links}</p>')
     
+    # 3. Infos produit
     tech_items = []
     if sku:
         tech_items.append(f'<li><strong>Référence :</strong> {sku}</li>')
@@ -1143,8 +1309,6 @@ def generate_body_html(product, collections, goat_slug=''):
         else:
             tech_items.append(f'<li><strong>Coloris :</strong> {colorway}</li>')
     lines.append('<ul style="list-style:none;padding-left:0;">' + ''.join(tech_items) + '</ul>')
-    
-    lines.append(f'<p>Chez <strong>{SITE_NAME}</strong>, nous garantissons l\'authenticité de chaque paire. Toutes nos sneakers sont vérifiées par nos experts avant expédition. Livraison rapide et paiement sécurisé.</p>')
     
     return ''.join(lines)
 
