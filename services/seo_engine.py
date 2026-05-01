@@ -1190,6 +1190,7 @@ def _inject_collection_links(text, collections, title):
         col = next((c for c in collections if c['handle'] == handle), None)
         if not col:
             continue
+        col_url = col.get('url') or f'https://{SITE_DOMAIN}/collections/{col["handle"]}'
 
         # Pattern qui ignore les balises HTML et les mots déjà dans des liens
         # On cherche le mot-clé case-insensitive, hors balises <a>...</a>
@@ -1201,7 +1202,7 @@ def _inject_collection_links(text, collections, title):
         match = pattern.search(result)
         if match:
             matched_text = match.group(1)
-            link_html = f'<a href="{col["url"]}">{matched_text}</a>'
+            link_html = f'<a href="{col_url}">{matched_text}</a>'
             result = result[:match.start()] + link_html + result[match.end():]
             used_handles.add(handle)
             links_added += 1
