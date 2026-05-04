@@ -34,7 +34,8 @@ def _get_shop_id():
 
 
 def _fetch_all_variants():
-    """Bulk query → {variant_gid: {product_gid, price, compare_at}}"""
+    """Bulk query → {variant_id_short: {product_id_short, price, compare_at}}
+    Utilise des IDs courts (juste les numéros) pour rester sous 2MB de metafield."""
     # Lancer le bulk operation
     start = shopify_graphql("""
     mutation {
@@ -95,8 +96,11 @@ def _fetch_all_variants():
             continue
         oid = obj.get("id", "")
         if "ProductVariant" in oid:
-            variants[oid] = {
-                "product_id": obj.get("__parentId", ""),
+            # Extraire juste les IDs numériques pour compresser
+            variant_short = oid.rsplit('/', 1)[-1]
+            parent_short = obj.get("__parentId", "").rsplit('/', 1)[-1]
+            variants[variant_short] = {
+                "product_id": parent_short,
                 "price": float(obj["price"]),
                 "compare_at": float(obj["compareAtPrice"]) if obj.get("compareAtPrice") else None,
             }
@@ -163,11 +167,15 @@ def _save_snapshot(shop_id, prices):
 
 
 def _update_variants(updates):
-    """updates: list de (product_gid, variant_gid, new_compare_at | None)"""
+    """updates: list de (product_id_short, variant_id_short, new_compare_at | None)
+    Reconstruit les gids avant d'envoyer à Shopify."""
     by_product = defaultdict(list)
     for pid, vid, cap in updates:
-        by_product[pid].append({
-            "id": vid,
+        # Si c'est déjà un gid, garde-le, sinon construis-le
+        pid_gid = pid if pid.startswith('gid://') else f"gid://shopify/Product/{pid}"
+        vid_gid = vid if vid.startswith('gid://') else f"gid://shopify/ProductVariant/{vid}"
+        by_product[pid_gid].append({
+            "id": vid_gid,
             "compareAtPrice": str(cap) if cap is not None else None,
         })
 
@@ -351,14 +359,16 @@ def api_price_test_product():
         results = []
         updates = []
         for v in product.get('variants', []):
-            vid_gid = f"gid://shopify/ProductVariant/{v['id']}"
+            vid_short = str(v['id'])
+            vid_gid = f"gid://shopify/ProductVariant/{vid_short}"
             today_price = float(v['price'])
             current_cap = float(v['compare_at_price']) if v.get('compare_at_price') else None
 
             if fake_old:
                 yest_price = float(fake_old)
             else:
-                yest_price = yesterday.get(vid_gid)
+                # Snapshot stocke avec IDs courts
+                yest_price = yesterday.get(vid_short)
 
             action = "no_change"
             target_cap = current_cap
