@@ -132,7 +132,8 @@ def _save_snapshot(shop_id, prices):
     res = shopify_graphql("""
     mutation save($metafields: [MetafieldsSetInput!]!) {
       metafieldsSet(metafields: $metafields) {
-        userErrors { field message }
+        metafields { id key namespace }
+        userErrors { field message code }
       }
     }
     """, {
@@ -144,11 +145,20 @@ def _save_snapshot(shop_id, prices):
             "value": value,
         }]
     })
-    if res and res.get('data'):
+    log.info(f"[PriceTracker] Save snapshot raw response: {res}")
+    if not res:
+        log.error("[PriceTracker] No response from GraphQL")
+        return False
+    if res.get('errors'):
+        log.error(f"[PriceTracker] GraphQL errors: {res['errors']}")
+        return False
+    if res.get('data'):
         errs = res['data'].get('metafieldsSet', {}).get('userErrors', [])
         if errs:
-            log.error(f"[PriceTracker] Snapshot save errors: {errs}")
+            log.error(f"[PriceTracker] Snapshot save userErrors: {errs}")
             return False
+        saved = res['data'].get('metafieldsSet', {}).get('metafields', [])
+        log.info(f"[PriceTracker] Saved metafields: {saved}")
     return True
 
 
