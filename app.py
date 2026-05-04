@@ -21,6 +21,7 @@ Structure:
         collections.py  - API collections
         blog.py         - API blog
         competitor.py   - API competitor scanning
+        price_tracker.py - API price drop tracker
     data/           - Donnees statiques
         descriptions.py     - Descriptions modeles/colorways
         collections_seo.py  - SEO des collections
@@ -46,6 +47,7 @@ def create_app():
     from routes.collections import collections_bp
     from routes.blog import blog_bp
     from routes.competitor import competitor_bp
+    from routes.price_tracker import price_bp
 
     app.register_blueprint(pages_bp)
     app.register_blueprint(products_bp)
@@ -55,6 +57,7 @@ def create_app():
     app.register_blueprint(collections_bp)
     app.register_blueprint(blog_bp)
     app.register_blueprint(competitor_bp)
+    app.register_blueprint(price_bp)
 
     return app
 
