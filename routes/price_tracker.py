@@ -290,15 +290,120 @@ def run_price_check():
         return result
 
 
+def _save_last_run(result):
+    """Sauvegarde le résultat du dernier run dans un metafield pour pouvoir le consulter."""
+    try:
+        shop_id = _get_shop_id()
+        shopify_graphql("""
+        mutation save($metafields: [MetafieldsSetInput!]!) {
+          metafieldsSet(metafields: $metafields) {
+            userErrors { field message }
+          }
+        }
+        """, {
+            "metafields": [{
+                "ownerId": shop_id,
+                "namespace": NAMESPACE,
+                "key": "last_run",
+                "type": "json",
+                "value": json.dumps(result, separators=(",", ":")),
+            }]
+        })
+    except Exception as e:
+        log.error(f"[PriceTracker] Could not save last_run: {e}")
+
+
+def _load_last_run():
+    """Charge le résultat du dernier run."""
+    res = shopify_graphql(f"""
+    {{
+      shop {{
+        metafield(namespace: "{NAMESPACE}", key: "last_run") {{ value }}
+      }}
+    }}
+    """)
+    if not res or not res.get('data'):
+        return None
+    mf = res['data']['shop'].get('metafield')
+    if not mf:
+        return None
+    try:
+        return json.loads(mf['value'])
+    except:
+        return None
+
+
+# État en mémoire pour savoir si un job tourne
+_job_running = {"running": False, "started_at": None}
+
+
+def _run_async():
+    """Wrapper pour lancer le job en background et stocker le résultat."""
+    import threading
+    if _job_running["running"]:
+        return False
+    _job_running["running"] = True
+    _job_running["started_at"] = datetime.now().isoformat()
+
+    def worker():
+        try:
+            result = run_price_check()
+            _save_last_run(result)
+        except Exception as e:
+            log.error(f"[PriceTracker] Async worker error: {e}")
+        finally:
+            _job_running["running"] = False
+
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+    return True
+
+
 @price_bp.route('/api/price/run', methods=['POST', 'GET'])
 def api_run_price_check():
-    """Trigger le job. Sécurisé par token."""
+    """Trigger le job en background. Retourne immédiatement 200.
+    Pour voir le résultat, ping /api/price/last-run après quelques minutes."""
     token = request.args.get('token', '') or request.headers.get('X-Cron-Token', '')
     if CRON_TOKEN and token != CRON_TOKEN:
         return jsonify({'error': 'Unauthorized'}), 401
 
-    result = run_price_check()
-    return jsonify(result)
+    # Mode synchrone (ancien) si ?sync=1
+    if request.args.get('sync') == '1':
+        result = run_price_check()
+        _save_last_run(result)
+        return jsonify(result)
+
+    # Mode async par défaut (pour éviter timeout gunicorn)
+    started = _run_async()
+    if not started:
+        return jsonify({
+            'status': 'already_running',
+            'started_at': _job_running.get("started_at"),
+            'message': 'Un job est déjà en cours. Réessaie dans quelques minutes.'
+        }), 202
+
+    return jsonify({
+        'status': 'started',
+        'started_at': _job_running["started_at"],
+        'message': 'Job lancé en arrière-plan. Consulte /api/price/last-run dans 1-3 minutes pour voir le résultat.'
+    }), 202
+
+
+@price_bp.route('/api/price/last-run')
+def api_last_run():
+    """Retourne le résultat du dernier run terminé."""
+    result = _load_last_run()
+    if not result:
+        return jsonify({
+            'has_last_run': False,
+            'job_running': _job_running["running"],
+            'message': 'Aucun run terminé pour le moment.'
+        })
+    return jsonify({
+        'has_last_run': True,
+        'job_running': _job_running["running"],
+        'last_run': result
+    })
 
 
 @price_bp.route('/api/price/status')
