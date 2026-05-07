@@ -336,12 +336,33 @@ def _load_last_run():
 # État en mémoire pour savoir si un job tourne
 _job_running = {"running": False, "started_at": None}
 
+# Si un job dit "running" depuis plus de X minutes, on le considère mort
+JOB_STALE_MINUTES = 10
+
+
+def _is_job_stale():
+    """Vérifie si le flag running est probablement resté coincé."""
+    if not _job_running["running"] or not _job_running["started_at"]:
+        return False
+    try:
+        from datetime import datetime as dt
+        started = dt.fromisoformat(_job_running["started_at"])
+        elapsed = (dt.now() - started).total_seconds()
+        return elapsed > (JOB_STALE_MINUTES * 60)
+    except:
+        return True
+
 
 def _run_async():
     """Wrapper pour lancer le job en background et stocker le résultat."""
     import threading
-    if _job_running["running"]:
+    # Si un job dit qu'il tourne mais qu'il est trop vieux, on le considère mort
+    if _job_running["running"] and not _is_job_stale():
         return False
+
+    if _is_job_stale():
+        log.warning(f"[PriceTracker] Stale job detected (started {_job_running['started_at']}), forcing reset")
+
     _job_running["running"] = True
     _job_running["started_at"] = datetime.now().isoformat()
 
@@ -379,7 +400,7 @@ def api_run_price_check():
         return jsonify({
             'status': 'already_running',
             'started_at': _job_running.get("started_at"),
-            'message': 'Un job est déjà en cours. Réessaie dans quelques minutes.'
+            'message': 'Un job est déjà en cours. Réessaie dans quelques minutes ou utilise /api/price/force-reset.'
         }), 202
 
     return jsonify({
@@ -387,6 +408,18 @@ def api_run_price_check():
         'started_at': _job_running["started_at"],
         'message': 'Job lancé en arrière-plan. Consulte /api/price/last-run dans 1-3 minutes pour voir le résultat.'
     }), 202
+
+
+@price_bp.route('/api/price/force-reset', methods=['POST', 'GET'])
+def api_force_reset():
+    """Force le reset du flag running (à utiliser si bloqué)."""
+    token = request.args.get('token', '') or request.headers.get('X-Cron-Token', '')
+    if CRON_TOKEN and token != CRON_TOKEN:
+        return jsonify({'error': 'Unauthorized'}), 401
+    was_running = _job_running["running"]
+    _job_running["running"] = False
+    _job_running["started_at"] = None
+    return jsonify({'success': True, 'was_running': was_running})
 
 
 @price_bp.route('/api/price/last-run')
@@ -397,11 +430,13 @@ def api_last_run():
         return jsonify({
             'has_last_run': False,
             'job_running': _job_running["running"],
+            'started_at': _job_running.get("started_at"),
             'message': 'Aucun run terminé pour le moment.'
         })
     return jsonify({
         'has_last_run': True,
         'job_running': _job_running["running"],
+        'started_at': _job_running.get("started_at"),
         'last_run': result
     })
 
