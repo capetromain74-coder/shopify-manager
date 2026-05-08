@@ -298,55 +298,98 @@ def _process_chunk():
     }
 
 
+# État en mémoire pour éviter de lancer plusieurs threads en parallèle
+_thread_running = {"running": False, "started_at": None}
+
+
+def _do_run_work():
+    """Le vrai travail : démarre un cycle ou continue la queue."""
+    try:
+        queue = _load_metafield(QUEUE_KEY)
+        pending_count = len(queue.get('updates', [])) if queue else 0
+
+        if pending_count == 0:
+            log.info("[PriceTracker] No queue, starting new cycle")
+            cycle_data = _start_new_cycle()
+            if 'error' in cycle_data:
+                log.error(f"[PriceTracker] Cycle start error: {cycle_data}")
+                return
+
+            if cycle_data.get('updates'):
+                # Traiter chunks en boucle jusqu'à plus rien ou ~3 min écoulées
+                start_time = time.time()
+                while time.time() - start_time < 180:  # max 3 min
+                    result = _process_chunk()
+                    if result.get('status') in ('queue_empty', 'cycle_complete'):
+                        break
+            else:
+                # Aucun update à faire
+                shop_id = _get_shop_id()
+                last_run = {
+                    "completed_at": datetime.now().isoformat(),
+                    "started_at": cycle_data.get('started_at'),
+                    "stats": cycle_data.get('stats', {}),
+                    "updates_ok": 0,
+                    "updates_err": 0,
+                }
+                _save_metafield(shop_id, LASTRUN_KEY, last_run)
+        else:
+            log.info(f"[PriceTracker] Queue has {pending_count} pending, processing chunks")
+            start_time = time.time()
+            while time.time() - start_time < 180:  # max 3 min par appel
+                result = _process_chunk()
+                if result.get('status') in ('queue_empty', 'cycle_complete'):
+                    break
+    except Exception as e:
+        import traceback
+        log.error(f"[PriceTracker] Run error: {e}\n{traceback.format_exc()}")
+    finally:
+        _thread_running["running"] = False
+
+
 @price_bp.route('/api/price/run', methods=['POST', 'GET'])
 def api_run():
-    """Endpoint principal :
-    - Si queue vide : démarre un nouveau cycle (fetch + compute + queue + 1er chunk)
-    - Si queue non vide : continue à traiter les chunks restants
-    À pinger toutes les 3-5 min jusqu'à ce que la queue soit vide."""
+    """Endpoint principal en mode async :
+    - Lance le travail en arrière-plan, retourne immédiatement
+    - Pour voir le progrès, ping /api/price/status
+    - À pinger toutes les 5 min jusqu'à queue vide."""
     token = request.args.get('token', '') or request.headers.get('X-Cron-Token', '')
     if CRON_TOKEN and token != CRON_TOKEN:
         return jsonify({'error': 'Unauthorized'}), 401
 
+    # Si un thread tourne déjà depuis moins de 5 min → renvoie ça
+    if _thread_running["running"]:
+        try:
+            from datetime import datetime as dt
+            started = dt.fromisoformat(_thread_running["started_at"])
+            elapsed = (dt.now() - started).total_seconds()
+            if elapsed < 300:
+                return jsonify({
+                    'status': 'already_running',
+                    'started_at': _thread_running["started_at"],
+                    'message': f'Job en cours depuis {int(elapsed)}s. Réessaie plus tard.'
+                }), 202
+        except:
+            pass
+
+    # Démarrer le thread
+    import threading
+    _thread_running["running"] = True
+    _thread_running["started_at"] = datetime.now().isoformat()
+
+    t = threading.Thread(target=_do_run_work, daemon=True)
+    t.start()
+
+    # Snapshot de l'état actuel pour info
     queue = _load_metafield(QUEUE_KEY)
-    pending_count = len(queue.get('updates', [])) if queue else 0
+    pending = len(queue.get('updates', [])) if queue else 0
 
-    if pending_count == 0:
-        # Pas de queue active → nouveau cycle
-        log.info("[PriceTracker] No queue, starting new cycle")
-        cycle_data = _start_new_cycle()
-        if 'error' in cycle_data:
-            return jsonify(cycle_data), 500
-
-        # Démarrer le 1er chunk immédiatement
-        if cycle_data.get('updates'):
-            chunk_result = _process_chunk()
-            return jsonify({
-                'status': 'cycle_started',
-                'stats': cycle_data.get('stats', {}),
-                'first_chunk': chunk_result,
-            })
-        else:
-            # Aucun update à faire, queue déjà vide
-            shop_id = _get_shop_id()
-            last_run = {
-                "completed_at": datetime.now().isoformat(),
-                "started_at": cycle_data.get('started_at'),
-                "stats": cycle_data.get('stats', {}),
-                "updates_ok": 0,
-                "updates_err": 0,
-            }
-            _save_metafield(shop_id, LASTRUN_KEY, last_run)
-            return jsonify({
-                'status': 'cycle_complete',
-                'stats': cycle_data.get('stats', {}),
-                'message': 'Aucune mise à jour nécessaire (no drops/clears).'
-            })
-    else:
-        # Queue active → traiter le prochain chunk
-        log.info(f"[PriceTracker] Queue has {pending_count} pending, processing next chunk")
-        result = _process_chunk()
-        return jsonify(result)
+    return jsonify({
+        'status': 'started',
+        'started_at': _thread_running["started_at"],
+        'queue_pending_before': pending,
+        'message': 'Job lancé en arrière-plan. Check /api/price/status pour le progrès.'
+    }), 202
 
 
 @price_bp.route('/api/price/status')
