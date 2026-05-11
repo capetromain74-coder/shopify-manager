@@ -15,7 +15,7 @@ import os
 import json
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 from flask import Blueprint, jsonify, request
 
@@ -28,8 +28,10 @@ NAMESPACE = "kp_pricetracker"
 SNAPSHOT_KEY = "snapshot"
 QUEUE_KEY = "queue"
 LASTRUN_KEY = "last_run"
+PROMO_DATES_KEY = "promo_dates"  # {variant_id: date_iso} pour tracker l'âge des promos
 
 CHUNK_SIZE = 500  # nombre max d'updates par exécution
+PROMO_MAX_DAYS = 30  # après 30 jours, on clear automatiquement (loi française)
 CRON_TOKEN = os.environ.get("CRON_TOKEN", "")
 
 
@@ -193,7 +195,14 @@ def _apply_updates(updates):
 
 
 def _start_new_cycle():
-    """Démarre un nouveau cycle : fetch, compare, save queue + snapshot."""
+    """Démarre un nouveau cycle : fetch, compare, save queue + snapshot.
+    
+    Logique :
+    - Today < Yesterday → set compare_at = max(yesterday, current_cap) [promo]
+    - Today == Yesterday → ne rien clear, garder l'état (loi 30j)
+    - Today > Yesterday → clear le compare_at (plus de promo)
+    - Promos > 30 jours → auto-clear (conformité légale FR)
+    """
     started = datetime.now()
     log.info(f"[PriceTracker] === NEW CYCLE START at {started:%H:%M:%S} ===")
 
@@ -203,12 +212,19 @@ def _start_new_cycle():
         return {"error": "No variants fetched", "started_at": started.isoformat()}
 
     yesterday = _load_metafield(SNAPSHOT_KEY)
+    promo_dates = _load_metafield(PROMO_DATES_KEY) or {}
 
     drops = 0
     clears = 0
+    expired_clears = 0
     already_ok = 0
+    stable_kept = 0
     new_variants = 0
     updates = []
+
+    from datetime import datetime as dt
+    now_iso = started.isoformat()
+    cutoff_date = (started - timedelta(days=PROMO_MAX_DAYS)).isoformat()
 
     if yesterday:
         for vid, info in today.items():
@@ -221,17 +237,38 @@ def _start_new_cycle():
                 continue
 
             if today_price < yest_price:
-                if current_cap != yest_price:
-                    updates.append([info["product_id"], vid, yest_price])
+                # BAISSE → set compare_at (garder le plus haut si déjà set)
+                target_cap = max(yest_price, current_cap) if current_cap else yest_price
+                if current_cap != target_cap:
+                    updates.append([info["product_id"], vid, target_cap])
                     drops += 1
+                    # Mémoriser la date de la promo
+                    promo_dates[vid] = now_iso
                 else:
                     already_ok += 1
+                    # Garder la date existante si elle existe, sinon noter maintenant
+                    if vid not in promo_dates:
+                        promo_dates[vid] = now_iso
+            elif today_price == yest_price:
+                # STABLE → ne rien faire (garder la promo existante)
+                if current_cap is not None and current_cap > today_price:
+                    # Vérifier si promo trop ancienne (>30j) → expirer
+                    promo_date = promo_dates.get(vid)
+                    if promo_date and promo_date < cutoff_date:
+                        updates.append([info["product_id"], vid, None])
+                        expired_clears += 1
+                        promo_dates.pop(vid, None)
+                    else:
+                        stable_kept += 1
+                # else: pas de promo en cours, rien à faire
             else:
+                # HAUSSE → clear le compare_at
                 if current_cap is not None:
                     updates.append([info["product_id"], vid, None])
                     clears += 1
+                    promo_dates.pop(vid, None)
 
-        log.info(f"[PriceTracker] Computed: {drops} drops, {clears} clears, {already_ok} ok, {new_variants} new")
+        log.info(f"[PriceTracker] Computed: {drops} drops, {clears} clears (price up), {expired_clears} expired clears (>30j), {stable_kept} stable kept, {already_ok} already ok, {new_variants} new")
 
     # Sauvegarder queue
     queue_data = {
@@ -240,6 +277,8 @@ def _start_new_cycle():
         "stats": {
             "drops": drops,
             "clears": clears,
+            "expired_clears": expired_clears,
+            "stable_kept": stable_kept,
             "already_ok": already_ok,
             "new_variants": new_variants,
             "total_variants": len(today),
@@ -251,6 +290,10 @@ def _start_new_cycle():
     # Sauvegarder snapshot d'aujourd'hui
     snapshot = {vid: info["price"] for vid, info in today.items()}
     _save_metafield(shop_id, SNAPSHOT_KEY, snapshot)
+
+    # Sauvegarder promo_dates (nettoyer les variants qui n'existent plus)
+    promo_dates_cleaned = {k: v for k, v in promo_dates.items() if k in today}
+    _save_metafield(shop_id, PROMO_DATES_KEY, promo_dates_cleaned)
 
     return queue_data
 
