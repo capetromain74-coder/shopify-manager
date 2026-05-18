@@ -32,6 +32,7 @@ PROMO_DATES_KEY = "promo_dates"  # {variant_id: date_iso} pour tracker l'âge de
 
 CHUNK_SIZE = 500  # nombre max d'updates par exécution
 PROMO_MAX_DAYS = 30  # après 30 jours, on clear automatiquement (loi française)
+MAX_DISCOUNT_PCT = 0.30  # si réduction depuis compare_at > 30%, on rebase sur yesterday_price
 CRON_TOKEN = os.environ.get("CRON_TOKEN", "")
 
 
@@ -215,6 +216,7 @@ def _start_new_cycle():
     promo_dates = _load_metafield(PROMO_DATES_KEY) or {}
 
     drops = 0
+    rebased = 0
     clears = 0
     expired_clears = 0
     already_ok = 0
@@ -237,18 +239,30 @@ def _start_new_cycle():
                 continue
 
             if today_price < yest_price:
-                # BAISSE → set compare_at (garder le plus haut si déjà set)
-                target_cap = max(yest_price, current_cap) if current_cap else yest_price
+                # BAISSE → définir target_cap
+                if current_cap and current_cap > yest_price:
+                    # Une promo plus haute existe déjà → vérifier si on la garde
+                    potential_discount = (current_cap - today_price) / current_cap
+                    if potential_discount > MAX_DISCOUNT_PCT:
+                        # Réduction trop grosse → on rebase sur yesterday_price
+                        target_cap = yest_price
+                        rebased += 1
+                        promo_dates[vid] = now_iso  # nouvelle base = nouvelle date
+                    else:
+                        # Garde le compare_at original (réduction raisonnable)
+                        target_cap = current_cap
+                        if vid not in promo_dates:
+                            promo_dates[vid] = now_iso
+                else:
+                    # Pas de promo existante (ou compare_at <= yesterday) → yesterday
+                    target_cap = yest_price
+                    promo_dates[vid] = now_iso
+
                 if current_cap != target_cap:
                     updates.append([info["product_id"], vid, target_cap])
                     drops += 1
-                    # Mémoriser la date de la promo
-                    promo_dates[vid] = now_iso
                 else:
                     already_ok += 1
-                    # Garder la date existante si elle existe, sinon noter maintenant
-                    if vid not in promo_dates:
-                        promo_dates[vid] = now_iso
             elif today_price == yest_price:
                 # STABLE → ne rien faire (garder la promo existante)
                 if current_cap is not None and current_cap > today_price:
@@ -268,7 +282,7 @@ def _start_new_cycle():
                     clears += 1
                     promo_dates.pop(vid, None)
 
-        log.info(f"[PriceTracker] Computed: {drops} drops, {clears} clears (price up), {expired_clears} expired clears (>30j), {stable_kept} stable kept, {already_ok} already ok, {new_variants} new")
+        log.info(f"[PriceTracker] Computed: {drops} drops ({rebased} rebased), {clears} clears (price up), {expired_clears} expired clears (>30j), {stable_kept} stable kept, {already_ok} already ok, {new_variants} new")
 
     # Sauvegarder queue
     queue_data = {
@@ -276,6 +290,7 @@ def _start_new_cycle():
         "started_at": started.isoformat(),
         "stats": {
             "drops": drops,
+            "rebased": rebased,
             "clears": clears,
             "expired_clears": expired_clears,
             "stable_kept": stable_kept,
@@ -283,6 +298,7 @@ def _start_new_cycle():
             "new_variants": new_variants,
             "total_variants": len(today),
             "first_run": yesterday is None,
+            "max_discount_pct": MAX_DISCOUNT_PCT,
         }
     }
     _save_metafield(shop_id, QUEUE_KEY, queue_data)
