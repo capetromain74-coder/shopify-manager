@@ -179,6 +179,19 @@ def search_by_slug(title, sku=''):
     log.info(f"[GOAT] Slug fallback failed for: {title[:50]}")
     return None
 
+def _upgrade_image_quality(url):
+    """Convertit une URL d'image GOAT vers la qualité 'original' (normale/max).
+    GOAT sert les images galerie en /medium/ (~27Ko). La version /original/ (~160Ko)
+    est la meilleure qualité. On bascule simplement le segment du chemin."""
+    if not url:
+        return url
+    if '/medium/' in url:
+        return url.replace('/medium/', '/original/')
+    if '/grid/' in url:
+        return url.replace('/grid/', '/original/')
+    return url
+
+
 def get_product_images(slug):
     """Récupère TOUTES les images d'un produit via web-api. Gère les produits à 1 seule image."""
     raw = _goat_get(f"{GOAT_PRODUCT_API}/{slug}")
@@ -203,12 +216,13 @@ def get_product_images(slug):
         if not isinstance(pics, list): continue
         for pic in pics:
             if isinstance(pic, dict):
-                # IMPORTANT: mainPictureUrl = qualité classique (medium), les autres champs = original (trop gros)
+                # mainPictureUrl est servi en /medium/ : on bascule en /original/ (qualité normale/max)
                 url = pic.get('mainPictureUrl', '')
             elif isinstance(pic, str):
                 url = pic
             else:
                 continue
+            url = _upgrade_image_quality(url)
             if url and url not in gallery_images:
                 gallery_images.append(url)
     
