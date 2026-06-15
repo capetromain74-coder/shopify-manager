@@ -403,16 +403,20 @@ function startBulkGoat(){
             })
             .then(function(r){return r.json()})
             .then(function(r){
-                if(r.success){
-                    goatMarkDone(p.id);
-                    if(r.complete===false&&r.expected){
-                        addLog("  ⚠ "+r.added+"/"+r.expected+" photos seulement (incomplet, à refaire)","#ff9f43");
-                    }else{
-                        addLog("  ✅ "+r.added+" photos remplac\u00e9es","#00ff88");
-                    }
+                if(r.skipped_throttle){
+                    // GOAT a renvoyé moins de photos que l'existant -> on a gardé l'ancien, à retenter
+                    addLog("  ⏸ GOAT bloqué ("+r.got+" vs "+r.had+" existantes) — gardé, à retenter","#ff9f43");
+                    skipped++;
+                }else if(r.success&&r.complete){
+                    goatMarkDone(p.id);   // marqué fait UNIQUEMENT si set complet
+                    addLog("  ✅ "+r.added+" photos remplac\u00e9es","#00ff88");
+                    ok++;
+                }else if(r.success){
+                    // remplacé mais incomplet -> on NE marque PAS fait, sera repassé
+                    addLog("  ⚠ "+r.added+"/"+(r.expected||"?")+" photos seulement (incomplet, à refaire)","#ff9f43");
                     ok++;
                 }else{
-                    addLog("  ❌ "+r.error,"#ff4757");
+                    addLog("  ❌ "+(r.error||"erreur"),"#ff4757");
                     fail++;
                 }
                 done++;updateProgress();

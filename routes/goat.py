@@ -219,6 +219,19 @@ def api_goat_apply():
             return jsonify({'error': 'Produit non trouve'}), 404
         product = r['product']
         old_images = product.get('images', [])
+
+        # ── Sécurité anti-throttle ──
+        # Si le produit a déjà un vrai set d'images (>=3) et que GOAT renvoie
+        # MOINS d'images, c'est très probablement un blocage Cloudflare en cours.
+        # On NE casse PAS l'existant : on garde les photos actuelles et on
+        # signale au front de retenter ce produit plus tard.
+        if len(old_images) >= 3 and len(images) < len(old_images):
+            log.warning(f"[GOAT Apply] Throttle suspect product {product_id}: "
+                        f"GOAT={len(images)} < existant={len(old_images)}, on garde l'existant")
+            return jsonify({'success': False, 'skipped_throttle': True,
+                            'got': len(images), 'had': len(old_images),
+                            'error': 'GOAT a renvoyé moins de photos que l\'existant (blocage probable)'})
+
         product_title = product.get('title', '').lower()
         clothing_kw = ['hoodie', 'sweatshirt', 'sweater', 'sweatpant', 'sweatshort', 'tee ', 't-shirt',
                        'crewneck', 'jacket', 'pant ', 'pants', 'short ', 'shorts', 'polo', 'jersey', 'vest ',
