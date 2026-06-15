@@ -93,6 +93,9 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <div class="opt-label">PORT&Eacute;E</div>
 <label class="opt-radio"><input type="radio" name="goatScope" value="selection" checked> S&eacute;lection uniquement (<span id="goatSel">0</span> coch&eacute;s)</label>
 <label class="opt-radio"><input type="radio" name="goatScope" value="all"> Tous les produits (<span id="goatTotal">0</span>)</label>
+<label class="opt-radio"><input type="radio" name="goatScope" value="incomplete"> R&eacute;parer les incomplets &mdash; moins de
+<input type="number" id="goatThreshold" value="5" min="1" max="12" style="width:48px;padding:2px 4px;margin:0 4px;background:#222;color:#fff;border:1px solid #444;border-radius:4px"> photos</label>
+<label class="opt-radio" style="color:#9b59b6"><input type="checkbox" id="goatSkipDone" checked> Sauter les produits d&eacute;j&agrave; trait&eacute;s (tag goat_done)</label>
 </div>
 
 <div style="padding:15px 20px;font-size:13px;color:#aaa;line-height:1.6">
@@ -101,6 +104,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <p style="margin:0 0 5px">2. Chercher les images sur GOAT</p>
 <p style="margin:0 0 5px">3. Remplacer toutes les photos par celles de GOAT</p>
 <p style="margin:10px 0 0;color:#ff9f43">&#9888; Les produits sans SKU seront ignor&eacute;s</p>
+<p style="margin:5px 0 0;color:#00d2d3">&#8635; Reprise auto : si tu recharges, les produits d&eacute;j&agrave; faits dans cette session sont saut&eacute;s.</p>
 </div>
 
 <div id="bulkGoatStatus" style="display:none;padding:10px 20px">
@@ -305,22 +309,52 @@ function openBulkGoat(){
 }
 function closeBulkGoat(){document.getElementById("bulkGoatModal").style.display="none"}
 
+/* ── Reprise : memoriser les produits deja traites dans cette session ── */
+function goatDoneSet(){
+    try{return new Set(JSON.parse(sessionStorage.getItem("kp_goat_done")||"[]"))}
+    catch(e){return new Set()}
+}
+function goatMarkDone(id){
+    try{var st=goatDoneSet();st.add(id);sessionStorage.setItem("kp_goat_done",JSON.stringify(Array.prototype.slice.call(st)))}
+    catch(e){}
+}
+function goatHasTag(p,tag){
+    var t=p.tags||"";
+    if(typeof t!=="string")t=(t||[]).join(",");
+    return t.toLowerCase().split(",").map(function(x){return x.trim()}).indexOf(tag)!==-1;
+}
+function goatImgCount(p){return (p.images&&p.images.length)?p.images.length:0;}
+
 function startBulkGoat(){
     var scope=document.querySelector('input[name="goatScope"]:checked').value;
-    var pids=(scope==="selection")?selectedPids.slice():P.map(function(p){return p.id});
-    if(!pids.length){toast("Aucun produit selectionne","error");return}
-    
-    var products=[];
-    for(var i=0;i<pids.length;i++){
-        for(var j=0;j<P.length;j++){
-            if(P[j].id===pids[i]){
-                var sku=(P[j].variants&&P[j].variants[0])?P[j].variants[0].sku||"":"";
-                if(sku)products.push({id:P[j].id,title:P[j].title,sku:sku});
-                break;
-            }
-        }
+    var skipDone=document.getElementById("goatSkipDone").checked;
+    var threshold=parseInt(document.getElementById("goatThreshold").value,10)||5;
+    var doneSet=goatDoneSet();
+
+    // 1. Selectionner les produits candidats selon la portee
+    var candidates;
+    if(scope==="selection"){
+        candidates=P.filter(function(p){return selectedPids.indexOf(p.id)!==-1});
+    }else if(scope==="incomplete"){
+        candidates=P.filter(function(p){return goatImgCount(p)<threshold});
+    }else{
+        candidates=P.slice();
     }
-    if(!products.length){toast("Aucun produit avec un SKU","error");return}
+
+    // 2. Filtrer : SKU obligatoire, sauter taggés goat_done + déjà faits cette session
+    var products=[],skippedDone=0;
+    for(var i=0;i<candidates.length;i++){
+        var p=candidates[i];
+        var sku=(p.variants&&p.variants[0])?p.variants[0].sku||"":"";
+        if(!sku)continue;
+        if(doneSet.has(p.id)){skippedDone++;continue;}
+        if(skipDone&&goatHasTag(p,"goat_done")){skippedDone++;continue;}
+        products.push({id:p.id,title:p.title,sku:sku});
+    }
+    if(!products.length){
+        toast(skippedDone?("Tout est déjà fait ("+skippedDone+" sautés)"):"Aucun produit éligible","error");
+        return;
+    }
     
     var btn=document.getElementById("bulkGoatBtn");
     btn.disabled=true;btn.innerHTML="<span class='spinner' style='width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px'></span>En cours...";
@@ -370,7 +404,12 @@ function startBulkGoat(){
             .then(function(r){return r.json()})
             .then(function(r){
                 if(r.success){
-                    addLog("  ✅ "+r.added+" photos remplac\u00e9es","#00ff88");
+                    goatMarkDone(p.id);
+                    if(r.complete===false&&r.expected){
+                        addLog("  ⚠ "+r.added+"/"+r.expected+" photos seulement (incomplet, à refaire)","#ff9f43");
+                    }else{
+                        addLog("  ✅ "+r.added+" photos remplac\u00e9es","#00ff88");
+                    }
                     ok++;
                 }else{
                     addLog("  ❌ "+r.error,"#ff4757");
@@ -392,7 +431,7 @@ function startBulkGoat(){
         });
     }
     
-    addLog("🚀 D\u00e9marrage : "+products.length+" produits avec SKU sur "+pids.length+" s\u00e9lectionn\u00e9s","#9b59b6");
+    addLog("🚀 D\u00e9marrage : "+products.length+" produits à traiter"+(skippedDone?(" ("+skippedDone+" déjà faits, sautés)"):""),"#9b59b6");
     processNext(0);
 }
 

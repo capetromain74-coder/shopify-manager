@@ -218,9 +218,7 @@ def api_goat_apply():
         if not r or 'product' not in r:
             return jsonify({'error': 'Produit non trouve'}), 404
         product = r['product']
-        for img in product.get('images', []):
-            shopify_request(f'products/{product_id}/images/{img["id"]}.json', 'DELETE')
-            time.sleep(0.3)
+        old_images = product.get('images', [])
         product_title = product.get('title', '').lower()
         clothing_kw = ['hoodie', 'sweatshirt', 'sweater', 'sweatpant', 'sweatshort', 'tee ', 't-shirt',
                        'crewneck', 'jacket', 'pant ', 'pants', 'short ', 'shorts', 'polo', 'jersey', 'vest ',
@@ -228,35 +226,65 @@ def api_goat_apply():
         is_clothing_product = any(kw in product_title for kw in clothing_kw)
         needs_resize = len(images) == 1 and 'image.goat.com' in images[0] and not is_clothing_product
         log.info(f"[GOAT Apply] {len(images)} images, needs_resize={needs_resize}, is_clothing={is_clothing_product}")
+
+        # 1. AJOUTER les nouvelles images D'ABORD (apres les anciennes).
+        #    Ainsi, si la requete echoue/est coupee en cours, le produit n'est
+        #    JAMAIS laisse a 0 photo (on ne supprime l'ancien qu'apres succes).
+        base_pos = len(old_images)
         added = 0
         for i, img_url in enumerate(images):
+            pos = base_pos + i + 1
             if needs_resize:
                 b64 = _resize_goat_image_to_750x500(img_url)
                 if b64:
                     result = shopify_request(f'products/{product_id}/images.json', 'POST', {
-                        'image': {'attachment': b64, 'position': i + 1, 'filename': f'goat_{i+1}.png'}
+                        'image': {'attachment': b64, 'position': pos, 'filename': f'goat_{i+1}.png'}
                     })
                 else:
                     result = shopify_request(f'products/{product_id}/images.json', 'POST', {
-                        'image': {'src': img_url, 'position': i + 1}
+                        'image': {'src': img_url, 'position': pos}
                     })
             else:
                 result = shopify_request(f'products/{product_id}/images.json', 'POST', {
-                    'image': {'src': img_url, 'position': i + 1}
+                    'image': {'src': img_url, 'position': pos}
                 })
             if result:
                 added += 1
             time.sleep(0.3)
-        log.info(f"[GOAT Apply] Added {added} images to product {product_id} (resized={needs_resize})")
-        
-        # Fix SEO images (alt text + filename)
+
+        # 2. Supprimer les anciennes images UNIQUEMENT si on a bien ajoute du nouveau
+        deleted = 0
+        if added > 0:
+            for img in old_images:
+                if shopify_request(f'products/{product_id}/images/{img["id"]}.json', 'DELETE'):
+                    deleted += 1
+                time.sleep(0.3)
+        log.info(f"[GOAT Apply] Added {added}/{len(images)} images, deleted {deleted} old (product {product_id}, resized={needs_resize})")
+
+        # 3. Fix SEO images (alt text = titre + nom de fichier Titre_N) — comme la regle manuelle
         if added > 0:
             time.sleep(0.5)
             from services.image_manager import fix_product_images
             fix_product_images(product_id)
             log.info(f"[GOAT Apply] SEO images fixed for product {product_id}")
-        
-        return jsonify({'success': True, 'added': added, 'resized': needs_resize})
+
+        # 4. Tagger 'goat_done' UNIQUEMENT si le set complet a ete applique.
+        #    Permet de sauter ce produit lors des relances (pas de re-traitement inutile).
+        complete = added > 0 and added == len(images)
+        if complete:
+            try:
+                existing_tags = product.get('tags', '') or ''
+                tag_list = [t.strip() for t in existing_tags.split(',') if t.strip()]
+                if 'goat_done' not in tag_list:
+                    tag_list.append('goat_done')
+                    shopify_request(f'products/{product_id}.json', 'PUT',
+                                    {'product': {'id': product_id, 'tags': ', '.join(tag_list)}})
+                    log.info(f"[GOAT Apply] tagged goat_done on product {product_id}")
+            except Exception as e:
+                log.warning(f"[GOAT Apply] could not tag goat_done: {e}")
+
+        return jsonify({'success': True, 'added': added, 'expected': len(images),
+                        'complete': complete, 'deleted': deleted, 'resized': needs_resize})
     except Exception as e:
         log.error(f"[GOAT Apply] Error: {e}")
         return jsonify({'error': str(e)}), 500
