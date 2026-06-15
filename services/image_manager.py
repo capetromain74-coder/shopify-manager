@@ -118,18 +118,20 @@ def download_goat_image_b64(image_url):
         import base64
     except ImportError:
         return None
+    import time as _time
     img_data = None
-    # 1. Session curl_cffi (contourne Cloudflare via impersonation TLS)
-    sess = _get_goat_session()
-    if sess:
-        try:
-            r = sess.get(image_url, timeout=20, headers={'Referer': 'https://www.goat.com/'})
-            if r.status_code == 200:
-                img_data = r.content
-        except Exception as e:
-            log.warning(f"[GOAT DL] Session download failed: {e}")
-    # 2. Fallback subprocess curl
-    if not img_data:
+    # Jusqu'a 3 tentatives : session curl_cffi (rotation TLS si echec), puis curl.
+    for attempt in range(3):
+        sess = _get_goat_session(force_new=(attempt > 0), rotate_profile=(attempt > 0))
+        if sess:
+            try:
+                r = sess.get(image_url, timeout=20, headers={'Referer': 'https://www.goat.com/'})
+                if r.status_code == 200 and r.content and len(r.content) >= 1000:
+                    img_data = r.content
+                    break
+            except Exception as e:
+                log.warning(f"[GOAT DL] Session download attempt {attempt+1} failed: {e}")
+        # Fallback subprocess curl
         import subprocess
         try:
             result = subprocess.run(
@@ -137,12 +139,14 @@ def download_goat_image_b64(image_url):
                  "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                  "-H", "Referer: https://www.goat.com/"],
                 capture_output=True, timeout=25)
-            if result.returncode == 0 and result.stdout:
+            if result.returncode == 0 and result.stdout and len(result.stdout) >= 1000:
                 img_data = result.stdout
+                break
         except Exception as e:
-            log.warning(f"[GOAT DL] curl download failed: {e}")
+            log.warning(f"[GOAT DL] curl download attempt {attempt+1} failed: {e}")
+        _time.sleep(1 + attempt)  # backoff avant la prochaine tentative
     if not img_data or len(img_data) < 1000:
-        log.warning(f"[GOAT DL] Image too small/empty: {len(img_data) if img_data else 0} bytes for {image_url[:70]}")
+        log.warning(f"[GOAT DL] Echec telechargement apres retries: {image_url[:70]}")
         return None
     return base64.b64encode(img_data).decode('utf-8')
 

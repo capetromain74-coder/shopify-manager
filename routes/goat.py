@@ -244,37 +244,51 @@ def api_goat_apply():
         #    Ainsi, si la requete echoue/est coupee en cours, le produit n'est
         #    JAMAIS laisse a 0 photo (on ne supprime l'ancien qu'apres succes).
         base_pos = len(old_images)
-        added = 0
-        for i, img_url in enumerate(images):
-            pos = base_pos + i + 1
+
+        def _upload_one(img_url, pos, idx):
+            """Upload UNE image. Renvoie le resultat Shopify (ou None)."""
             if needs_resize:
                 b64 = _resize_goat_image_to_750x500(img_url)
                 if b64:
-                    result = shopify_request(f'products/{product_id}/images.json', 'POST', {
-                        'image': {'attachment': b64, 'position': pos, 'filename': f'goat_{i+1}.png'}
+                    return shopify_request(f'products/{product_id}/images.json', 'POST', {
+                        'image': {'attachment': b64, 'position': pos, 'filename': f'goat_{idx+1}.png'}
                     })
-                else:
-                    result = shopify_request(f'products/{product_id}/images.json', 'POST', {
-                        'image': {'src': img_url, 'position': pos}
-                    })
-            else:
-                # On telecharge NOUS-MEMES l'image et on l'envoie en base64 (fiable).
-                # 'src' echoue silencieusement quand Shopify n'arrive pas a fetch GOAT.
-                m = re.search(r'\.(jpe?g|png|webp)(?:[.?].*)?$', img_url.lower())
-                ext = (m.group(1) if m else 'jpg').replace('jpeg', 'jpg')
-                b64 = download_goat_image_b64(img_url)
-                if b64:
-                    result = shopify_request(f'products/{product_id}/images.json', 'POST', {
-                        'image': {'attachment': b64, 'position': pos, 'filename': f'goat_{i+1}.{ext}'}
-                    })
-                else:
-                    # Dernier recours : laisser Shopify tenter via l'URL
-                    result = shopify_request(f'products/{product_id}/images.json', 'POST', {
-                        'image': {'src': img_url, 'position': pos}
-                    })
-            if result:
-                added += 1
-            time.sleep(0.3)
+                return shopify_request(f'products/{product_id}/images.json', 'POST', {
+                    'image': {'src': img_url, 'position': pos}
+                })
+            # Telecharger NOUS-MEMES + base64 (fiable; 'src' echoue en silence si Shopify
+            # n'arrive pas a fetch GOAT). download_goat_image_b64 a son propre retry.
+            m = re.search(r'\.(jpe?g|png|webp)(?:[.?].*)?$', img_url.lower())
+            ext = (m.group(1) if m else 'jpg').replace('jpeg', 'jpg')
+            b64 = download_goat_image_b64(img_url)
+            if b64:
+                return shopify_request(f'products/{product_id}/images.json', 'POST', {
+                    'image': {'attachment': b64, 'position': pos, 'filename': f'goat_{idx+1}.{ext}'}
+                })
+            return shopify_request(f'products/{product_id}/images.json', 'POST', {
+                'image': {'src': img_url, 'position': pos}
+            })
+
+        # 1er passage : uploader toutes les images (0.5s d'ecart -> sous la limite Shopify 2 req/s)
+        ok = [False] * len(images)
+        for i, img_url in enumerate(images):
+            if _upload_one(img_url, base_pos + i + 1, i):
+                ok[i] = True
+            time.sleep(0.5)
+
+        # Re-essais cibles : seulement les images qui ont echoue (max 2 tours, avec pause)
+        for retry_round in range(2):
+            missing = [i for i, done in enumerate(ok) if not done]
+            if not missing:
+                break
+            log.warning(f"[GOAT Apply] product {product_id}: {len(missing)} images manquantes, retry {retry_round+1}/2")
+            time.sleep(3)
+            for i in missing:
+                if _upload_one(images[i], base_pos + i + 1, i):
+                    ok[i] = True
+                time.sleep(0.6)
+
+        added = sum(1 for done in ok if done)
 
         # 2. Supprimer les anciennes images UNIQUEMENT si on a bien ajoute du nouveau
         deleted = 0
@@ -282,21 +296,28 @@ def api_goat_apply():
             for img in old_images:
                 if shopify_request(f'products/{product_id}/images/{img["id"]}.json', 'DELETE'):
                     deleted += 1
-                time.sleep(0.3)
+                time.sleep(0.5)
         log.info(f"[GOAT Apply] Added {added}/{len(images)} images, deleted {deleted} old (product {product_id}, resized={needs_resize})")
 
-        # 3. Fix SEO images (alt text = titre + nom de fichier Titre_N) — comme la regle manuelle
-        if added > 0:
-            time.sleep(1.5)  # laisser Shopify finir de traiter les media avant rename/alt
+        # 3. VERIFICATION : compter les images REELLEMENT presentes sur Shopify.
+        #    'added' = POST acceptes, mais on confirme cote Shopify pour ne JAMAIS
+        #    taguer 'fini' un produit incomplet (il sera repris au prochain passage).
+        time.sleep(1.5)  # laisser Shopify finir de traiter les media
+        real_count = added
+        verify = shopify_request(f'products/{product_id}.json')
+        if verify and 'product' in verify:
+            real_count = len(verify['product'].get('images', []))
+        log.info(f"[GOAT Apply] product {product_id}: {real_count} images reelles sur Shopify (attendu {len(images)})")
+
+        # 4. Fix SEO images (alt text = titre + nom de fichier Titre_N) — comme la regle manuelle
+        if real_count > 0:
             from services.image_manager import fix_product_images
             fix_product_images(product_id)
             log.info(f"[GOAT Apply] SEO images fixed for product {product_id}")
 
-        # 4. Tag fiable 'goat_hd' UNIQUEMENT si le set GOAT complet a ete applique
-        #    via le nouveau code base64 (images reellement deposees). On NE se fie
-        #    PLUS a l'ancien 'goat_done' qui a pu etre pose pendant le bug 'src'
-        #    (le bot comptait 8 alors que Shopify n'en gardait que 3).
-        complete = added > 0 and added == len(images)
+        # 5. Tag fiable 'goat_hd' UNIQUEMENT si le nombre REEL d'images = attendu.
+        #    On NE se fie PLUS a l'ancien 'goat_done' (pose pendant le bug 'src').
+        complete = real_count >= len(images) and len(images) > 0
         if complete:
             try:
                 existing_tags = product.get('tags', '') or ''
@@ -312,8 +333,9 @@ def api_goat_apply():
             except Exception as e:
                 log.warning(f"[GOAT Apply] could not tag goat_hd: {e}")
 
-        return jsonify({'success': True, 'added': added, 'expected': len(images),
-                        'complete': complete, 'deleted': deleted, 'resized': needs_resize})
+        return jsonify({'success': True, 'added': added, 'real_count': real_count,
+                        'expected': len(images), 'complete': complete,
+                        'deleted': deleted, 'resized': needs_resize})
     except Exception as e:
         log.error(f"[GOAT Apply] Error: {e}")
         return jsonify({'error': str(e)}), 500

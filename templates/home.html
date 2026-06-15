@@ -426,11 +426,11 @@ function startBulkGoat(){
                     skipped++;
                 }else if(r.success&&r.complete){
                     goatMarkDone(p.id);   // marqué fait UNIQUEMENT si set complet
-                    addLog("  ✅ "+r.added+" photos remplac\u00e9es","#00ff88");
+                    addLog("  ✅ "+(r.real_count||r.added)+" photos confirm\u00e9es","#00ff88");
                     ok++;
                 }else if(r.success){
                     // remplacé mais incomplet -> on NE marque PAS fait, sera repassé
-                    addLog("  ⚠ "+r.added+"/"+(r.expected||"?")+" photos seulement (incomplet, à refaire)","#ff9f43");
+                    addLog("  ⚠ "+(r.real_count||r.added)+"/"+(r.expected||"?")+" photos seulement (incomplet, sera repris)","#ff9f43");
                     ok++;
                 }else{
                     addLog("  ❌ "+(r.error||"erreur"),"#ff4757");
