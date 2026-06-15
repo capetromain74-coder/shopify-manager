@@ -185,17 +185,19 @@ function saveCache(){
         var lite=[];
         for(var i=0;i<P.length;i++){
             var p=P[i];
+            var _mw=0;if(p.images){for(var k=0;k<p.images.length;k++){var _w=p.images[k].width||0;if(_w>_mw)_mw=_w;}}
             lite.push({id:p.id,title:p.title,handle:p.handle,vendor:p.vendor,product_type:p.product_type,
                 images:p.images?[{src:(p.images[0]||{}).src||"",alt:(p.images[0]||{}).alt||""}]:[],
+                imgCount:p.images?p.images.length:0, imgMaxW:_mw,
                 variants:p.variants?[{sku:(p.variants[0]||{}).sku||"",price:(p.variants[0]||{}).price||""}]:[],
                 _lk:p._lk,_ds:p._ds,_img:p._img,_sc:p._sc,_seo:p._seo,tags:p.tags||""});
         }
-        sessionStorage.setItem("kp_cache",JSON.stringify({P:lite,C:C,totalV:totalV,ts:Date.now()}));
-    }catch(e){try{sessionStorage.removeItem("kp_cache")}catch(e2){}}
+        sessionStorage.setItem("kp_cache_v2",JSON.stringify({P:lite,C:C,totalV:totalV,ts:Date.now()}));
+    }catch(e){try{sessionStorage.removeItem("kp_cache_v2")}catch(e2){}}
 }
 function loadCache(){
     try{
-        var d=JSON.parse(sessionStorage.getItem("kp_cache")||"null");
+        var d=JSON.parse(sessionStorage.getItem("kp_cache_v2")||"null");
         if(d&&d.P&&d.P.length>500&&(Date.now()-d.ts)<300000){
             P=d.P;C=d.C;totalV=d.totalV;sinceId=P[P.length-1].id;
             updateStats();filter();
@@ -292,7 +294,7 @@ function updateSelCount(){
 }
 function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
 function go(id){window.location.href="/product/"+id}
-function reload(){P=[];C=[];sinceId=0;totalV=0;try{sessionStorage.removeItem("kp_cache")}catch(e){}document.getElementById("grid").innerHTML="<div class='loading'><div class='spinner'></div>Chargement...</div>";load()}
+function reload(){P=[];C=[];sinceId=0;totalV=0;try{sessionStorage.removeItem("kp_cache_v2")}catch(e){}document.getElementById("grid").innerHTML="<div class='loading'><div class='spinner'></div>Chargement...</div>";load()}
 document.getElementById("q").oninput=filter;
 document.getElementById("f").onchange=filter;
 
@@ -324,9 +326,10 @@ function goatHasTag(p,tag){
     if(typeof t!=="string")t=(t||[]).join(",");
     return t.toLowerCase().split(",").map(function(x){return x.trim()}).indexOf(tag)!==-1;
 }
-function goatImgCount(p){return (p.images&&p.images.length)?p.images.length:0;}
+function goatImgCount(p){if(typeof p.imgCount==="number")return p.imgCount;return (p.images&&p.images.length)?p.images.length:0;}
 // Largeur max des images du produit (Shopify renvoie width/height par image)
 function goatImgMaxWidth(p){
+    if(typeof p.imgMaxW==="number")return p.imgMaxW;
     if(!p.images||!p.images.length)return 0;
     var w=0;for(var i=0;i<p.images.length;i++){var iw=p.images[i].width||0;if(iw>w)w=iw;}
     return w;
@@ -632,7 +635,7 @@ function runAutoFix(){
             txt.innerHTML="<span style='color:#00ff88;font-weight:600'>\u2705 Terminé ! "+ok+" corrections réussies"+(errs>0?", "+errs+" erreurs":"")+"</span>";
             if(btn){btn.textContent="\u2705 Terminé !";btn.style.background="#00ff88";}
             log.innerHTML+="<div style='color:#00ff88;margin-top:8px;font-weight:600'>Rechargement dans 3s...</div>";
-            setTimeout(function(){try{sessionStorage.removeItem("kp_cache")}catch(e){}location.reload();},3000);
+            setTimeout(function(){try{sessionStorage.removeItem("kp_cache_v2")}catch(e){}location.reload();},3000);
             return;
         }
         var t=tasks[done];
