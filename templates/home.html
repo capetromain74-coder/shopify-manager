@@ -96,6 +96,7 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <label class="opt-radio"><input type="radio" name="goatScope" value="incomplete"> R&eacute;parer les incomplets &mdash; moins de
 <input type="number" id="goatThreshold" value="8" min="1" max="12" style="width:48px;padding:2px 4px;margin:0 4px;background:#222;color:#fff;border:1px solid #444;border-radius:4px"> photos</label>
 <label class="opt-radio" style="color:#9b59b6"><input type="checkbox" id="goatSkipDone" checked> Sauter les produits d&eacute;j&agrave; finis (tag goat_hd, ou set complet en haute r&eacute;solution)</label>
+<label class="opt-radio" style="color:#feca57"><input type="checkbox" id="goatTrustTag"> Se fier au tag goat_hd (plus rapide). <b>D&eacute;coch&eacute;</b> = re-v&eacute;rifier TOUT par le nombre r&eacute;el de photos (recommand&eacute; pour un nettoyage final)</label>
 </div>
 
 <div style="padding:15px 20px;font-size:13px;color:#aaa;line-height:1.6">
@@ -340,6 +341,7 @@ function goatIsOriginal(p){return goatImgMaxWidth(p)>=1000;}
 function startBulkGoat(){
     var scope=document.querySelector('input[name="goatScope"]:checked').value;
     var skipDone=document.getElementById("goatSkipDone").checked;
+    var trustTag=document.getElementById("goatTrustTag").checked;
     var threshold=parseInt(document.getElementById("goatThreshold").value,10)||5;
     var doneSet=goatDoneSet();
 
@@ -365,7 +367,10 @@ function startBulkGoat(){
         // n'est PAS sauté : il sera refait. Medium = jamais sauté (à upgrader).
         // Fini de facon SURE = tag goat_hd (pose seulement par le nouveau code base64,
         // set GOAT complet reellement depose). Sinon heuristique: set complet + HD.
-        if(skipDone && (goatHasTag(p,"goat_hd") || (goatImgCount(p)>=threshold && goatIsOriginal(p)))){skippedDone++;continue;}
+        // trustTag coché: le tag goat_hd suffit (rapide). Décoché: on IGNORE le tag
+        // et on exige un vrai set complet en HD (re-vérifie les produits mal taggés).
+        var doneOk = (trustTag && goatHasTag(p,"goat_hd")) || (goatImgCount(p)>=threshold && goatIsOriginal(p));
+        if(skipDone && doneOk){skippedDone++;continue;}
         products.push({id:p.id,title:p.title,sku:sku});
     }
     if(!products.length){
