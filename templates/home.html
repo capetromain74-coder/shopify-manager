@@ -357,9 +357,10 @@ function startBulkGoat(){
         var sku=(p.variants&&p.variants[0])?p.variants[0].sku||"":"";
         if(!sku)continue;
         if(doneSet.has(p.id)){skippedDone++;continue;}
-        // Sauter si déjà traité (tag) OU si les photos sont déjà en haute résolution (original).
-        // -> robuste même si le tag goat_done manque (run sur ancien code, etc.)
-        if(skipDone&&(goatHasTag(p,"goat_done")||goatIsOriginal(p))){skippedDone++;continue;}
+        // Sauter UNIQUEMENT si le set est complet (>= seuil) ET déjà en HD/traité.
+        // Ainsi un produit corrompu (ex: 3 photos HD car Shopify n'a fetch que 3/8)
+        // n'est PAS sauté : il sera refait. Medium = jamais sauté (à upgrader).
+        if(skipDone && goatImgCount(p)>=threshold && (goatHasTag(p,"goat_done")||goatIsOriginal(p))){skippedDone++;continue;}
         products.push({id:p.id,title:p.title,sku:sku});
     }
     if(!products.length){
