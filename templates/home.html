@@ -94,8 +94,8 @@ body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
 <label class="opt-radio"><input type="radio" name="goatScope" value="selection" checked> S&eacute;lection uniquement (<span id="goatSel">0</span> coch&eacute;s)</label>
 <label class="opt-radio"><input type="radio" name="goatScope" value="all"> Tous les produits (<span id="goatTotal">0</span>)</label>
 <label class="opt-radio"><input type="radio" name="goatScope" value="incomplete"> R&eacute;parer les incomplets &mdash; moins de
-<input type="number" id="goatThreshold" value="5" min="1" max="12" style="width:48px;padding:2px 4px;margin:0 4px;background:#222;color:#fff;border:1px solid #444;border-radius:4px"> photos</label>
-<label class="opt-radio" style="color:#9b59b6"><input type="checkbox" id="goatSkipDone" checked> Sauter les produits d&eacute;j&agrave; en HD (tag goat_done OU photos d&eacute;j&agrave; en haute r&eacute;solution)</label>
+<input type="number" id="goatThreshold" value="8" min="1" max="12" style="width:48px;padding:2px 4px;margin:0 4px;background:#222;color:#fff;border:1px solid #444;border-radius:4px"> photos</label>
+<label class="opt-radio" style="color:#9b59b6"><input type="checkbox" id="goatSkipDone" checked> Sauter les produits d&eacute;j&agrave; finis (tag goat_hd, ou set complet en haute r&eacute;solution)</label>
 </div>
 
 <div style="padding:15px 20px;font-size:13px;color:#aaa;line-height:1.6">
@@ -363,7 +363,9 @@ function startBulkGoat(){
         // Sauter UNIQUEMENT si le set est complet (>= seuil) ET déjà en HD/traité.
         // Ainsi un produit corrompu (ex: 3 photos HD car Shopify n'a fetch que 3/8)
         // n'est PAS sauté : il sera refait. Medium = jamais sauté (à upgrader).
-        if(skipDone && goatImgCount(p)>=threshold && (goatHasTag(p,"goat_done")||goatIsOriginal(p))){skippedDone++;continue;}
+        // Fini de facon SURE = tag goat_hd (pose seulement par le nouveau code base64,
+        // set GOAT complet reellement depose). Sinon heuristique: set complet + HD.
+        if(skipDone && (goatHasTag(p,"goat_hd") || (goatImgCount(p)>=threshold && goatIsOriginal(p)))){skippedDone++;continue;}
         products.push({id:p.id,title:p.title,sku:sku});
     }
     if(!products.length){

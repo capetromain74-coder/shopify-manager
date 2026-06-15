@@ -292,20 +292,25 @@ def api_goat_apply():
             fix_product_images(product_id)
             log.info(f"[GOAT Apply] SEO images fixed for product {product_id}")
 
-        # 4. Tagger 'goat_done' UNIQUEMENT si le set complet a ete applique.
-        #    Permet de sauter ce produit lors des relances (pas de re-traitement inutile).
+        # 4. Tag fiable 'goat_hd' UNIQUEMENT si le set GOAT complet a ete applique
+        #    via le nouveau code base64 (images reellement deposees). On NE se fie
+        #    PLUS a l'ancien 'goat_done' qui a pu etre pose pendant le bug 'src'
+        #    (le bot comptait 8 alors que Shopify n'en gardait que 3).
         complete = added > 0 and added == len(images)
         if complete:
             try:
                 existing_tags = product.get('tags', '') or ''
                 tag_list = [t.strip() for t in existing_tags.split(',') if t.strip()]
-                if 'goat_done' not in tag_list:
-                    tag_list.append('goat_done')
+                changed = False
+                for t in ('goat_hd', 'goat_done'):
+                    if t not in tag_list:
+                        tag_list.append(t); changed = True
+                if changed:
                     shopify_request(f'products/{product_id}.json', 'PUT',
                                     {'product': {'id': product_id, 'tags': ', '.join(tag_list)}})
-                    log.info(f"[GOAT Apply] tagged goat_done on product {product_id}")
+                    log.info(f"[GOAT Apply] tagged goat_hd on product {product_id}")
             except Exception as e:
-                log.warning(f"[GOAT Apply] could not tag goat_done: {e}")
+                log.warning(f"[GOAT Apply] could not tag goat_hd: {e}")
 
         return jsonify({'success': True, 'added': added, 'expected': len(images),
                         'complete': complete, 'deleted': deleted, 'resized': needs_resize})
