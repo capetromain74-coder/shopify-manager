@@ -32,38 +32,64 @@ def set_task_progress(**kwargs):
         task_progress.update(kwargs)
 
 
+# Nombre max de tentatives quand Shopify limite (429 REST / THROTTLED GraphQL)
+SHOPIFY_MAX_RETRIES = 5
+
+
 def shopify_request(endpoint, method='GET', data=None):
-    """Requete REST Shopify avec SSL active."""
+    """Requete REST Shopify avec SSL active + retry automatique sur rate-limit (429).
+    Respecte l'en-tete Retry-After de Shopify. Evite les 'photos manquantes' quand
+    l'API limite apres un long run."""
     url = f"https://{SHOP}/admin/api/{API_VERSION}/{endpoint}"
     headers = {
         'X-Shopify-Access-Token': ACCESS_TOKEN,
         'Content-Type': 'application/json'
     }
-    try:
-        body = json.dumps(data).encode('utf-8') if data else None
-        req = Request(url, data=body, headers=headers, method=method)
-        with urlopen(req, timeout=30) as r:
-            if method == 'DELETE':
-                return True
-            return json.loads(r.read().decode('utf-8'))
-    except HTTPError as e:
-        body_text = ''
+    body = json.dumps(data).encode('utf-8') if data else None
+
+    for attempt in range(SHOPIFY_MAX_RETRIES):
         try:
-            body_text = e.read().decode('utf-8')[:200]
-        except Exception:
-            pass
-        log.error(f"[Shopify] HTTP {e.code} on {method} {endpoint}: {body_text}")
-        return None
-    except URLError as e:
-        log.error(f"[Shopify] URL error on {endpoint}: {e.reason}")
-        return None
-    except Exception as e:
-        log.error(f"[Shopify] Error on {endpoint}: {e}")
-        return None
+            req = Request(url, data=body, headers=headers, method=method)
+            with urlopen(req, timeout=30) as r:
+                if method == 'DELETE':
+                    return True
+                return json.loads(r.read().decode('utf-8'))
+        except HTTPError as e:
+            # 429 = rate limit, 5xx = erreur serveur transitoire -> on retente
+            if e.code in (429, 500, 502, 503, 504) and attempt < SHOPIFY_MAX_RETRIES - 1:
+                try:
+                    wait = float(e.headers.get('Retry-After', '')) if e.headers else 0
+                except (TypeError, ValueError):
+                    wait = 0
+                if wait <= 0:
+                    wait = 1.5 * (attempt + 1)  # backoff progressif
+                log.warning(f"[Shopify] HTTP {e.code} on {method} {endpoint} -> retry {attempt+1}/{SHOPIFY_MAX_RETRIES} dans {wait:.1f}s")
+                time.sleep(wait)
+                continue
+            body_text = ''
+            try:
+                body_text = e.read().decode('utf-8')[:200]
+            except Exception:
+                pass
+            log.error(f"[Shopify] HTTP {e.code} on {method} {endpoint}: {body_text}")
+            return None
+        except URLError as e:
+            if attempt < SHOPIFY_MAX_RETRIES - 1:
+                log.warning(f"[Shopify] URL error on {endpoint} ({e.reason}) -> retry {attempt+1}")
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            log.error(f"[Shopify] URL error on {endpoint}: {e.reason}")
+            return None
+        except Exception as e:
+            log.error(f"[Shopify] Error on {endpoint}: {e}")
+            return None
+    return None
 
 
 def shopify_graphql(query, variables=None):
-    """Requete GraphQL Shopify avec SSL active."""
+    """Requete GraphQL Shopify + retry sur throttling.
+    Shopify GraphQL renvoie un HTTP 200 avec une erreur 'THROTTLED' (limite basee
+    sur le cout) -> sans retry, les renommages/alt echouaient silencieusement."""
     url = f"https://{SHOP}/admin/api/{API_VERSION}/graphql.json"
     headers = {
         'X-Shopify-Access-Token': ACCESS_TOKEN,
@@ -72,14 +98,49 @@ def shopify_graphql(query, variables=None):
     payload = {'query': query}
     if variables:
         payload['variables'] = variables
-    try:
-        body = json.dumps(payload).encode('utf-8')
-        req = Request(url, data=body, headers=headers, method='POST')
-        with urlopen(req, timeout=30) as r:
-            return json.loads(r.read().decode('utf-8'))
-    except Exception as e:
-        log.error(f"[Shopify GraphQL] {e}")
-        return None
+    body = json.dumps(payload).encode('utf-8')
+
+    for attempt in range(SHOPIFY_MAX_RETRIES):
+        try:
+            req = Request(url, data=body, headers=headers, method='POST')
+            with urlopen(req, timeout=30) as r:
+                result = json.loads(r.read().decode('utf-8'))
+            # Detecter le throttling cout-base (HTTP 200 mais errors THROTTLED)
+            errs = result.get('errors') if isinstance(result, dict) else None
+            throttled = False
+            if errs:
+                for err in errs:
+                    code = (err.get('extensions', {}) or {}).get('code', '')
+                    if code == 'THROTTLED' or 'throttl' in (err.get('message', '') or '').lower():
+                        throttled = True
+                        break
+            if throttled and attempt < SHOPIFY_MAX_RETRIES - 1:
+                wait = 2.0 * (attempt + 1)
+                log.warning(f"[Shopify GraphQL] THROTTLED -> retry {attempt+1}/{SHOPIFY_MAX_RETRIES} dans {wait:.1f}s")
+                time.sleep(wait)
+                continue
+            return result
+        except HTTPError as e:
+            if e.code in (429, 500, 502, 503, 504) and attempt < SHOPIFY_MAX_RETRIES - 1:
+                try:
+                    wait = float(e.headers.get('Retry-After', '')) if e.headers else 0
+                except (TypeError, ValueError):
+                    wait = 0
+                if wait <= 0:
+                    wait = 2.0 * (attempt + 1)
+                log.warning(f"[Shopify GraphQL] HTTP {e.code} -> retry {attempt+1}/{SHOPIFY_MAX_RETRIES} dans {wait:.1f}s")
+                time.sleep(wait)
+                continue
+            log.error(f"[Shopify GraphQL] HTTP {e.code}")
+            return None
+        except Exception as e:
+            if attempt < SHOPIFY_MAX_RETRIES - 1:
+                log.warning(f"[Shopify GraphQL] {e} -> retry {attempt+1}")
+                time.sleep(2.0 * (attempt + 1))
+                continue
+            log.error(f"[Shopify GraphQL] {e}")
+            return None
+    return None
 
 
 def get_collections():

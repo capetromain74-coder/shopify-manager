@@ -108,6 +108,45 @@ def _resize_goat_image_to_750x500(image_url):
         return None
 
 
+def download_goat_image_b64(image_url):
+    """Telecharge une image GOAT (qualite d'origine, SANS resize) et renvoie son base64.
+    But: l'uploader a Shopify en 'attachment' au lieu de 'src'. L'upload par 'src'
+    echoue SILENCIEUSEMENT quand Shopify n'arrive pas a telecharger depuis GOAT
+    (blocage Cloudflare cote serveurs Shopify) -> le bot croyait avoir mis 8 photos
+    alors qu'il n'en restait que 3. En fournissant les octets, l'image est garantie."""
+    try:
+        import base64
+    except ImportError:
+        return None
+    img_data = None
+    # 1. Session curl_cffi (contourne Cloudflare via impersonation TLS)
+    sess = _get_goat_session()
+    if sess:
+        try:
+            r = sess.get(image_url, timeout=20, headers={'Referer': 'https://www.goat.com/'})
+            if r.status_code == 200:
+                img_data = r.content
+        except Exception as e:
+            log.warning(f"[GOAT DL] Session download failed: {e}")
+    # 2. Fallback subprocess curl
+    if not img_data:
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["curl", "-s", "-m", "20", "-L", image_url,
+                 "-H", "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                 "-H", "Referer: https://www.goat.com/"],
+                capture_output=True, timeout=25)
+            if result.returncode == 0 and result.stdout:
+                img_data = result.stdout
+        except Exception as e:
+            log.warning(f"[GOAT DL] curl download failed: {e}")
+    if not img_data or len(img_data) < 1000:
+        log.warning(f"[GOAT DL] Image too small/empty: {len(img_data) if img_data else 0} bytes for {image_url[:70]}")
+        return None
+    return base64.b64encode(img_data).decode('utf-8')
+
+
 
 
 def rename_image_file(image_gid, new_filename):

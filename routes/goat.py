@@ -3,7 +3,7 @@ import json, re, time, logging, subprocess
 from flask import Blueprint, jsonify, request
 from services.shopify import shopify_request
 from services.goat_client import search as goat_search, get_product_images as goat_get_product_images, get_images as get_goat_images, _get_session as _get_goat_session, _url_exists as _goat_url_exists, _goat_get, _goat_post
-from services.image_manager import _resize_goat_image_to_750x500
+from services.image_manager import _resize_goat_image_to_750x500, download_goat_image_b64
 from config import GOAT_ALGOLIA_URL, GOAT_ALGOLIA_APP_ID, GOAT_ALGOLIA_API_KEY, GOAT_PRODUCT_API
 log = logging.getLogger("kpshoes.goat_routes")
 goat_bp = Blueprint("goat", __name__)
@@ -258,9 +258,20 @@ def api_goat_apply():
                         'image': {'src': img_url, 'position': pos}
                     })
             else:
-                result = shopify_request(f'products/{product_id}/images.json', 'POST', {
-                    'image': {'src': img_url, 'position': pos}
-                })
+                # On telecharge NOUS-MEMES l'image et on l'envoie en base64 (fiable).
+                # 'src' echoue silencieusement quand Shopify n'arrive pas a fetch GOAT.
+                m = re.search(r'\.(jpe?g|png|webp)(?:[.?].*)?$', img_url.lower())
+                ext = (m.group(1) if m else 'jpg').replace('jpeg', 'jpg')
+                b64 = download_goat_image_b64(img_url)
+                if b64:
+                    result = shopify_request(f'products/{product_id}/images.json', 'POST', {
+                        'image': {'attachment': b64, 'position': pos, 'filename': f'goat_{i+1}.{ext}'}
+                    })
+                else:
+                    # Dernier recours : laisser Shopify tenter via l'URL
+                    result = shopify_request(f'products/{product_id}/images.json', 'POST', {
+                        'image': {'src': img_url, 'position': pos}
+                    })
             if result:
                 added += 1
             time.sleep(0.3)
@@ -276,7 +287,7 @@ def api_goat_apply():
 
         # 3. Fix SEO images (alt text = titre + nom de fichier Titre_N) — comme la regle manuelle
         if added > 0:
-            time.sleep(0.5)
+            time.sleep(1.5)  # laisser Shopify finir de traiter les media avant rename/alt
             from services.image_manager import fix_product_images
             fix_product_images(product_id)
             log.info(f"[GOAT Apply] SEO images fixed for product {product_id}")
