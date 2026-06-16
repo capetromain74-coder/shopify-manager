@@ -506,12 +506,13 @@ function startCorrection(){
     status.style.display="block";status.style.background="#333";status.style.color="#aaa";
     document.getElementById("corProg").style.display="block";bar.style.width="0%";
 
-    var done=0,errs=0,fixed=0,skipped=0;
+    var done=0,errs=0,fixed=0,skipped=0,imgSkipped=0;
     function next(){
         if(done>=pids.length){
             bar.style.width="100%";txt.textContent=done+"/"+pids.length;
             status.style.background="#00ff8822";status.style.color="#00ff88";
             var msg="\u2705 "+done+" produits traités";
+            if(doImg)msg+=" ("+imgSkipped+" images déjà OK, sautées)";
             if(doHandle)msg+=" ("+fixed+" handles corrigés, "+skipped+" déjà OK)";
             if(errs)msg+=" ("+errs+" erreurs)";
             status.textContent=msg;
@@ -525,7 +526,11 @@ function startCorrection(){
 
         var promises=[];
         if(seoFields.length>0)promises.push(fetch("/api/seo/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done],fields:seoFields})}).then(function(r){return r.json()}));
-        if(doImg)promises.push(fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})}).then(function(r){return r.json()}));
+        // Images: on saute si le produit a DEJA 100% des alt+noms corrects (prod._img)
+        if(doImg){
+            if(prod&&prod._img){imgSkipped++;}
+            else{promises.push(fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done]})}).then(function(r){return r.json()}));}
+        }
         if(doHandle&&prod){
             var expected=slugify(prod.title);
             promises.push(
