@@ -104,6 +104,10 @@ a{color:inherit}
   .modal-box{margin:16px;padding:20px}
   .st .v{font-size:22px}
 }
+.ministat-btn{display:inline-block;margin-top:8px;font-size:10px;font-weight:700;color:var(--accent);
+  background:var(--accent-soft);border:1px solid rgba(0,255,136,.25);padding:5px 9px;border-radius:6px;
+  text-decoration:none;transition:background .15s}
+.ministat-btn:hover{background:rgba(0,255,136,.2)}
 </style>
 </head>
 <body>
@@ -116,15 +120,26 @@ a{color:inherit}
 </header>
 <div class="stats">
 <div class="st"><div class="v" id="totalP">-</div><div class="l">PRODUITS</div></div>
-<div class="st"><div class="v" id="totalV">-</div><div class="l">VARIANTES</div></div>
-<div class="st"><div class="v" id="seoAvg">-</div><div class="l">SEO MOY.</div></div>
+<div class="st"><div class="v" id="statReady">-</div><div class="l">PR&Ecirc;TS (essentiels OK)</div></div>
+<div class="st"><div class="v" id="statHD">-</div><div class="l">100% EN HD</div></div>
+<div class="st"><div class="v" id="statOne">-</div><div class="l">1 SEULE PHOTO</div><a href="/image-scanner" class="ministat-btn">&#128269; Chercher de nouvelles images</a></div>
 <div class="st" style="cursor:pointer" onclick="window.location='/collections'"><div class="v" id="totalC">-</div><div class="l">COLLECTIONS &#8594;</div></div>
 </div>
 <main class="main">
 <div class="msg" id="msg"></div>
 <div class="toolbar">
 <input type="text" class="search" id="q" placeholder="Rechercher un produit...">
-<select class="filter" id="f"><option value="">Tous</option><option value="excellent">Excellent</option><option value="good">Bon</option><option value="warning">Moyen</option><option value="poor">Faible</option></select>
+<select class="filter" id="f">
+<option value="">Tous les produits</option>
+<option value="ready">&#10004;&#65039; Pr&ecirc;ts (essentiels OK)</option>
+<option value="nodesc">&#128221; Sans description</option>
+<option value="nolink">&#128279; Sans lien interne</option>
+<option value="imgfix">&#128444;&#65039; Images &agrave; corriger (alt/nom)</option>
+<option value="nohd">&#10071; Pas 100% en HD</option>
+<option value="fewphotos">&#128247; Moins de 8 photos</option>
+<option value="onephoto">&#9888;&#65039; 1 seule photo</option>
+<option value="nosku">&#127991;&#65039; Sans SKU</option>
+</select>
 <button class="btn btn-s" onclick="reload()">&#8635; Actualiser</button>
 <button class="btn btn-s" onclick="selectAll()">&#9745; Cocher la page</button>
 <button class="btn" style="background:#00ff88;color:#000" onclick="openCorrector()">&#128295; Corriger<span id="selBadge"></span></button>
@@ -243,14 +258,14 @@ function saveCache(){
                 images:p.images?[{src:(p.images[0]||{}).src||"",alt:(p.images[0]||{}).alt||""}]:[],
                 imgCount:p.images?p.images.length:0, imgMaxW:_mw, imgMinW:_mn,
                 variants:p.variants?[{sku:(p.variants[0]||{}).sku||"",price:(p.variants[0]||{}).price||""}]:[],
-                _lk:p._lk,_ds:p._ds,_img:p._img,_sc:p._sc,_seo:p._seo,tags:p.tags||""});
+                _lk:p._lk,_ds:p._ds,_img:p._img,_hd:p._hd,_sku:p._sku,_ready:p._ready,_seo:p._seo,_statusLabel:p._statusLabel,tags:p.tags||""});
         }
-        sessionStorage.setItem("kp_cache_v3",JSON.stringify({P:lite,C:C,totalV:totalV,ts:Date.now()}));
-    }catch(e){try{sessionStorage.removeItem("kp_cache_v3")}catch(e2){}}
+        sessionStorage.setItem("kp_cache_v4",JSON.stringify({P:lite,C:C,totalV:totalV,ts:Date.now()}));
+    }catch(e){try{sessionStorage.removeItem("kp_cache_v4")}catch(e2){}}
 }
 function loadCache(){
     try{
-        var d=JSON.parse(sessionStorage.getItem("kp_cache_v3")||"null");
+        var d=JSON.parse(sessionStorage.getItem("kp_cache_v4")||"null");
         if(d&&d.P&&d.P.length>500&&(Date.now()-d.ts)<300000){
             P=d.P;C=d.C;totalV=d.totalV;sinceId=P[P.length-1].id;
             updateStats();filter();
@@ -284,11 +299,9 @@ function load(){
                     }
                 }else{imgOk=false}
                 p._img=imgOk;
-                var hasSku=!!((p.variants||[])[0]||{}).sku;
-                var metaEst=(p._ds&&p._lk)?35:(p._ds?15:0);
-                p._sc=metaEst+(p._ds?15:0)+(p._lk?15:0)+(p._img?20:0)+(hasSku?10:0);
-                p._sc=Math.min(p._sc,100);
-                if(p._sc>=85)p._seo="excellent";else if(p._sc>=70)p._seo="good";else if(p._sc>=50)p._seo="warning";else p._seo="poor";
+                p._sku=!!((p.variants||[])[0]||{}).sku;
+                p._hd=(p.images&&p.images.length>0)&&goatImgMinWidth(p)>=1000;
+                computeStatus(p);
                 totalV+=(p.variants||[]).length;P.push(p);
             }
             sinceId=d.products[d.products.length-1].id;updateStats();filter();loading=false;
@@ -297,19 +310,39 @@ function load(){
     }).catch(function(e){document.getElementById("msg").textContent="Erreur: "+e.message;loading=false});
 }
 
+function computeStatus(p){
+    var ess=[p._ds,p._img,p._hd,p._sku];
+    var miss=0;for(var i=0;i<ess.length;i++)if(!ess[i])miss++;
+    p._ready=(miss===0);
+    if(miss===0){p._seo=p._lk?"excellent":"good";p._statusLabel=p._lk?"Complet":"Sans lien";}
+    else if(miss===1){p._seo="warning";p._statusLabel="\u00c0 finir";}
+    else{p._seo="poor";p._statusLabel="Incomplet";}
+}
+function matchFilter(p,f){
+    switch(f){
+        case "": return true;
+        case "ready": return p._ready;
+        case "nodesc": return !p._ds;
+        case "nolink": return !p._lk;
+        case "imgfix": return !p._img;
+        case "nohd": return !p._hd;
+        case "fewphotos": var n=goatImgCount(p);return n>0&&n<8;
+        case "onephoto": return goatImgCount(p)===1;
+        case "nosku": return !p._sku;
+        default: return true;
+    }
+}
 function updateStats(){
-    document.getElementById("totalP").textContent=P.length;
-    document.getElementById("totalV").textContent=totalV;
-    document.getElementById("totalC").textContent=C.length;
-    var avg=0;for(var i=0;i<P.length;i++)avg+=P[i]._sc;
-    avg=P.length?Math.round(avg/P.length):0;
-    document.getElementById("seoAvg").textContent=avg+"%";
+    var ready=0,hd=0,one=0;
+    for(var i=0;i<P.length;i++){var p=P[i];if(p._ready)ready++;if(p._hd)hd++;if(goatImgCount(p)===1)one++;}
+    function S(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+    S("totalP",P.length);S("statReady",ready);S("statHD",hd);S("statOne",one);S("totalC",C.length);
 }
 
 function filter(){
     var q=document.getElementById("q").value.toLowerCase();
     var f=document.getElementById("f").value;
-    var L=[];for(var i=0;i<P.length;i++){var p=P[i];var tl=p.title.toLowerCase();if(HIDDEN_KW.some(function(ex){return tl.indexOf(ex)>=0}))continue;if(q&&tl.indexOf(q)<0)continue;if(f&&p._seo!==f)continue;L.push(p)}
+    var L=[];for(var i=0;i<P.length;i++){var p=P[i];var tl=p.title.toLowerCase();if(HIDDEN_KW.some(function(ex){return tl.indexOf(ex)>=0}))continue;if(q&&tl.indexOf(q)<0)continue;if(!matchFilter(p,f))continue;L.push(p)}
     filteredList=L;render(L);
 }
 
@@ -325,7 +358,7 @@ function render(L){
         html+="<input type='checkbox'"+chk+" onclick='event.stopPropagation();toggleSel("+p.id+")' style='position:absolute;top:8px;left:8px;width:20px;height:20px;z-index:2;cursor:pointer;accent-color:#00ff88'>";
         html+="<img src='"+img+"' onclick='go("+p.id+")'><div class='card-body' onclick='go("+p.id+")'>";
         html+="<div class='card-title'>"+esc(p.title)+"</div><div class='card-sku'>"+sku+"</div>";
-        html+="<div class='card-meta'><span class='card-price'>"+price+" EUR</span><span class='badge "+p._seo+"'>"+p._sc+"%</span></div>";
+        html+="<div class='card-meta'><span class='card-price'>"+price+" EUR</span><span class='badge "+p._seo+"'>"+(p._statusLabel||"")+"</span></div>";
         html+="</div></div>";
     }
     el.innerHTML=html;updateSelCount();
@@ -347,7 +380,7 @@ function updateSelCount(){
 }
 function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
 function go(id){window.location.href="/product/"+id}
-function reload(){P=[];C=[];sinceId=0;totalV=0;try{sessionStorage.removeItem("kp_cache_v3")}catch(e){}document.getElementById("grid").innerHTML="<div class='loading'><div class='spinner'></div>Chargement...</div>";load()}
+function reload(){P=[];C=[];sinceId=0;totalV=0;try{sessionStorage.removeItem("kp_cache_v4")}catch(e){}document.getElementById("grid").innerHTML="<div class='loading'><div class='spinner'></div>Chargement...</div>";load()}
 document.getElementById("q").oninput=filter;
 document.getElementById("f").onchange=filter;
 
@@ -706,7 +739,7 @@ function runAutoFix(){
             txt.innerHTML="<span style='color:#00ff88;font-weight:600'>\u2705 Terminé ! "+ok+" corrections réussies"+(errs>0?", "+errs+" erreurs":"")+"</span>";
             if(btn){btn.textContent="\u2705 Terminé !";btn.style.background="#00ff88";}
             log.innerHTML+="<div style='color:#00ff88;margin-top:8px;font-weight:600'>Rechargement dans 3s...</div>";
-            setTimeout(function(){try{sessionStorage.removeItem("kp_cache_v3")}catch(e){}location.reload();},3000);
+            setTimeout(function(){try{sessionStorage.removeItem("kp_cache_v4")}catch(e){}location.reload();},3000);
             return;
         }
         var t=tasks[done];
