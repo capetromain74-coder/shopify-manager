@@ -10,8 +10,6 @@ Structure:
         goat_client.py  - Client GOAT (Algolia + web-api)
         seo_engine.py   - Moteur SEO (analyse + generation)
         image_manager.py - Gestion images (resize, rename, alt)
-        blog_generator.py - Generation articles de blog
-        web_research.py   - Recherche web pour blog
     routes/         - Endpoints API (Blueprints)
         pages.py        - Pages HTML
         products.py     - API produits
@@ -19,7 +17,6 @@ Structure:
         goat.py         - API GOAT images
         images.py       - API images (fix alt/filename)
         collections.py  - API collections
-        blog.py         - API blog
         competitor.py   - API competitor scanning
         price_tracker.py - API price drop tracker
     data/           - Donnees statiques
@@ -45,7 +42,6 @@ def create_app():
     from routes.goat import goat_bp
     from routes.images import images_bp
     from routes.collections import collections_bp
-    from routes.blog import blog_bp
     from routes.competitor import competitor_bp
     from routes.price_tracker import price_bp
 
@@ -55,7 +51,6 @@ def create_app():
     app.register_blueprint(goat_bp)
     app.register_blueprint(images_bp)
     app.register_blueprint(collections_bp)
-    app.register_blueprint(blog_bp)
     app.register_blueprint(competitor_bp)
     app.register_blueprint(price_bp)
 
@@ -75,21 +70,6 @@ from services.shopify import shopify_request
 from services.goat_client import get_images as get_goat_images
 
 log = logging.getLogger("kpshoes.image_scanner")
-
-
-@app.route('/image-scanner')
-def image_scanner_page():
-    return open('templates/image_scanner.html').read()
-
-
-@app.route('/product-finder')
-def product_finder_page():
-    return open('templates/product_finder.html').read()
-
-
-@app.route('/fix-brand-case')
-def fix_brand_case_page():
-    return open('templates/fix_brand_case.html').read()
 
 
 @app.route('/api/products/single-image-page')
