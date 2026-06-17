@@ -297,6 +297,39 @@ function applyAllNew(){
     }
     next();
 }
+
+/* ---- Reprise depuis l'accueil : eviter de re-scanner tous les produits ---- */
+function _scanClassify(p){
+    var n=p.imgCount||0;
+    if(n===0)return false;
+    var t=(p.title||"").toLowerCase();
+    if(t.indexOf("lunette")>=0||t.indexOf("sunglasses")>=0||t.indexOf("glasses")>=0)return false;
+    var ck=["hoodie","sweatshirt","sweatpant","tee ","t-shirt","crewneck","jacket","pants","pant ","shorts","short ","polo","jersey","vest ","pullover","fleece","bomber","balaclava","anorak","puffer"];
+    var isCloth=ck.some(function(k){return t.indexOf(k)>=0});
+    if(isCloth)return n===1;
+    return n<5;
+}
+function forceFullScan(){loadSingleImage();}
+function initFromHome(){
+    var d;try{d=JSON.parse(sessionStorage.getItem("kp_cache_v4")||"null")}catch(e){d=null}
+    if(!d||!d.P||!d.P.length)return false;
+    var cand=[];
+    for(var i=0;i<d.P.length;i++){var p=d.P[i];if(!_scanClassify(p))continue;
+        var sku=(p.variants&&p.variants[0])?p.variants[0].sku||"":"";
+        var img=(p.images&&p.images[0])?p.images[0].src||"":"";
+        cand.push({id:p.id,title:p.title,handle:p.handle,sku:sku,image_url:img});
+    }
+    if(!cand.length)return false;
+    products=cand;
+    var b=document.getElementById("btnLoad");
+    if(b){b.innerHTML="\u2713 "+products.length+" produits repris de l'accueil";b.style.background="#333";b.style.color="#00ff88";b.disabled=true;}
+    var ls=document.getElementById("loadStatus");
+    if(ls)ls.innerHTML="Liste reprise de l'accueil, aucun re-scan. <a href='#' onclick='forceFullScan();return false' style='color:#6c5ce7'>Forcer un scan complet</a>";
+    updateStats();renderGrid();
+    document.getElementById("step2").style.display="block";
+    return true;
+}
+initFromHome();
 </script>
 </body>
 </html>
