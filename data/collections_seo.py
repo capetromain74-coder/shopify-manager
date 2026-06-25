@@ -13,11 +13,56 @@ _P = '<p style="margin:0 0 16px 0">'
 
 COLLECTION_SEO = {
 
+    'saucony': {
+        'meta_title': 'Saucony - Sneakers Running & Lifestyle pour Homme et Femme',
+        'meta_description': "Toutes les Saucony sur KP SHOES. Shadow 6000, ProGrid Omni, Jazz... 100% authentiques.",
+        'description': f"{_S}{_H1}Saucony</h2>"
+            f"{_P}<strong>Saucony</strong>, marque americaine fondee en 1898 en Pennsylvanie, est une reference historique du running. Ses modeles <strong>Shadow 6000</strong>, <strong>ProGrid</strong> et <strong>Jazz</strong> melent heritage technique et silhouette retro, aujourd'hui tres prises dans le streetwear.</p>"
+            f"{_H2}L'histoire de Saucony</h2>"
+            f"{_P}Nee au bord de la riviere Saucony, la marque s'est d'abord imposee aupres des coureurs avant de seduire les amateurs de sneakers vintage. Le retour en grace du running des annees 80-90 et de nombreuses collaborations ont replace Saucony au coeur de la mode.</p>{_E}",
+    },
+
+    'vans': {
+        'meta_title': 'Vans - Old Skool, Sk8-Hi & Authentic pour Homme et Femme',
+        'meta_description': "Toutes les Vans sur KP SHOES. Old Skool, Sk8-Hi, Authentic, collaborations... 100% authentiques.",
+        'description': f"{_S}{_H1}Vans</h2>"
+            f"{_P}<strong>Vans</strong>, fondee en 1966 a Anaheim en Californie, est l'icone de la culture skate. La <strong>Old Skool</strong> et sa bande laterale, la <strong>Sk8-Hi</strong> et l'<strong>Authentic</strong> sont des silhouettes intemporelles, sous la devise Off The Wall.</p>"
+            f"{_H2}L'histoire de Vans</h2>"
+            f"{_P}Adoptee des ses debuts par les skateurs californiens pour sa semelle gaufree adherente, Vans est devenue un symbole de contre-culture, du skate a la musique punk. La marque multiplie les collaborations tout en gardant l'esprit authentique qui a fait sa legende.</p>{_E}",
+    },
+
+    'fear-of-god': {
+        'meta_title': 'Fear of God & Essentials - Streetwear Premium',
+        'meta_description': "Fear of God et Essentials sur KP SHOES. Hoodies, tees, pieces signature... 100% authentiques.",
+        'description': f"{_S}{_H1}Fear of God</h2>"
+            f"{_P}<strong>Fear of God</strong>, label fonde par Jerry Lorenzo en 2013 a Los Angeles, redefinit le luxe streetwear avec ses coupes amples et ses tons neutres. Sa ligne <strong>Essentials</strong> rend cet univers accessible avec des basiques eleves (hoodies, sweats, tees).</p>"
+            f"{_H2}L'histoire de Fear of God</h2>"
+            f"{_P}Inspiree par le grunge, le skate et la culture americaine des annees 90, la marque mise sur des matieres qualitatives et des silhouettes oversize devenues une signature. Essentials s'est imposee comme l'une des lignes streetwear les plus convoitees au monde.</p>{_E}",
+    },
+
+    'denim-tears': {
+        'meta_title': 'Denim Tears - Streetwear & Pieces Cotton Wreath',
+        'meta_description': "Denim Tears sur KP SHOES. Sweats, jeans et pieces Cotton Wreath... 100% authentiques.",
+        'description': f"{_S}{_H1}Denim Tears</h2>"
+            f"{_P}<strong>Denim Tears</strong>, label cree par Tremaine Emory en 2019, mele mode et message culturel. Son motif emblematique de <strong>couronne de coton</strong> (Cotton Wreath) evoque l'histoire afro-americaine et fait de chaque piece une declaration.</p>"
+            f"{_H2}L'histoire de Denim Tears</h2>"
+            f"{_P}Plus qu'une marque, Denim Tears est un projet narratif porte par Tremaine Emory. A travers des collaborations remarquees (Levi's, Converse, Dior), le label transforme le vetement en support de memoire et d'identite, tout en s'imposant dans le streetwear contemporain.</p>{_E}",
+    },
+
+    'the-north-face': {
+        'meta_title': 'The North Face - Doudounes, Vestes & Polaires',
+        'meta_description': "The North Face sur KP SHOES. Nuptse, Denali, vestes outdoor... 100% authentiques.",
+        'description': f"{_S}{_H1}The North Face</h2>"
+            f"{_P}<strong>The North Face</strong>, fondee en 1966 a San Francisco, est une reference de l'outdoor passee maitresse du streetwear. La doudoune <strong>Nuptse</strong> et la polaire <strong>Denali</strong> sont devenues des pieces cultes de la mode urbaine.</p>"
+            f"{_H2}L'histoire de The North Face</h2>"
+            f"{_P}Concue a l'origine pour l'alpinisme et l'expedition, la marque allie performance technique et durabilite. Portee par la tendance gorpcore et de nombreuses collaborations, elle s'est imposee bien au-dela des sentiers.</p>{_E}",
+    },
+
     # ══════════════════════════════════════════
     # JORDAN
     # ══════════════════════════════════════════
 
-    'jordan-1': {
+    'air-jordan': {
         'meta_title': 'Air Jordan - Sneakers Jordan pour Homme et Femme',
         'meta_description': "Toutes les Air Jordan sur KP SHOES. Jordan 1, 3, 4, 5, 11... Authentiques et livrées rapidement en France.",
         'description': f'{_S}{_H1}Air Jordan</h2>'
@@ -75,7 +120,7 @@ COLLECTION_SEO = {
     # NIKE
     # ══════════════════════════════════════════
 
-    'nike-1': {
+    'nike': {
         'meta_title': 'Nike - Sneakers & Baskets pour Homme et Femme',
         'meta_description': "Toutes les sneakers Nike sur KP SHOES. Dunk, Air Force 1, Air Max, Vomero, NOCTA... 100% authentiques.",
         'description': f'{_S}{_H1}Nike</h2>'
@@ -151,7 +196,7 @@ COLLECTION_SEO = {
     # ADIDAS
     # ══════════════════════════════════════════
 
-    'adidas-1': {
+    'adidas': {
         'meta_title': 'Adidas - Sneakers Adidas pour Homme et Femme',
         'meta_description': "Toutes les sneakers Adidas sur KP SHOES. Samba, Campus, Gazelle, Spezial, Forum, Superstar... 100% authentiques.",
         'description': f'{_S}{_H1}Adidas</h2>'
@@ -227,7 +272,7 @@ COLLECTION_SEO = {
     # YEEZY
     # ══════════════════════════════════════════
 
-    'yeezy-1': {
+    'yeezy': {
         'meta_title': 'Yeezy - Sneakers & Slides Yeezy pour Homme et Femme',
         'meta_description': "Toutes les Yeezy sur KP SHOES. 350, 500, 700, Slide, Foam Runner... 100% authentiques.",
         'description': f'{_S}{_H1}Yeezy</h2>'
@@ -276,7 +321,7 @@ COLLECTION_SEO = {
     # NEW BALANCE
     # ══════════════════════════════════════════
 
-    'new-balance-1': {
+    'new-balance': {
         'meta_title': 'New Balance - Sneakers pour Homme et Femme',
         'meta_description': "Toutes les New Balance sur KP SHOES. 550, 530, 2002R, 9060, 990... 100% authentiques.",
         'description': f'{_S}{_H1}New Balance</h2>'
@@ -343,7 +388,7 @@ COLLECTION_SEO = {
     # ASICS
     # ══════════════════════════════════════════
 
-    'asics-1': {
+    'asics': {
         'meta_title': 'ASICS - Sneakers & Running pour Homme et Femme',
         'meta_description': "Toutes les ASICS sur KP SHOES. Gel-1130, Gel-Kayano 14, Gel-NYC... 100% authentiques.",
         'description': f'{_S}{_H1}ASICS</h2>'
@@ -392,7 +437,7 @@ COLLECTION_SEO = {
     # UGG
     # ══════════════════════════════════════════
 
-    'ugg-1': {
+    'ugg': {
         'meta_title': 'UGG - Chaussons et Bottes pour Homme et Femme',
         'meta_description': "Tous les modèles UGG sur KP SHOES. Tasman, Tazz, Ultra Mini... 100% authentiques.",
         'description': f'{_S}{_H1}UGG</h2>'
@@ -459,7 +504,7 @@ COLLECTION_SEO = {
     # AUTRES MARQUES
     # ══════════════════════════════════════════
 
-    'puma-1': {
+    'puma': {
         'meta_title': 'Puma - Sneakers Puma pour Homme et Femme',
         'meta_description': "Toutes les Puma sur KP SHOES. Speedcat, Suede... 100% authentiques.",
         'description': f'{_S}{_H1}Puma</h2>'
@@ -468,7 +513,7 @@ COLLECTION_SEO = {
             f'{_P}Rudolf Dassler crée Puma après sa séparation avec son frère Adi en 1948. Pelé porte des Puma King en Coupe du monde 1970, Usain Bolt bat des records en Puma. La Suede (1968) devient un symbole du hip-hop. La Speedcat, inspirée des chaussures de pilotes F1, connaît un revival spectaculaire en 2024.</p>{_E}',
     },
 
-    'birkenstock-1': {
+    'birkenstock': {
         'meta_title': 'Birkenstock - Sandales et Mules pour Homme et Femme',
         'meta_description': "Toutes les Birkenstock sur KP SHOES. Boston, Arizona... 100% authentiques.",
         'description': f'{_S}{_H1}Birkenstock</h2>'

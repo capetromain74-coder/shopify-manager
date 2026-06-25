@@ -115,6 +115,8 @@ def extract_brand(title):
     if 'bape' in t or 'bathing ape' in t: return 'BAPE'
     if 'supreme' in t: return 'Supreme'
     if 'mschf' in t: return 'MSCHF'
+    if 'patta' in t: return 'Patta'
+    if 'north face' in t: return 'The North Face'
     brands = [
         ('Nike', ['nike', 'dunk', 'air force', 'air max', 'nocta', 'blazer', 'vomero', 'p-6000']),
         ('Adidas', ['adidas', 'samba', 'campus', 'gazelle', 'spezial', 'forum', 'sl 72', 'adilette']),
@@ -1148,25 +1150,38 @@ def _inject_collection_links(text, collections, title):
         'travis scott': 'travis-scott',
         'off-white': 'off-white',
         'supreme': 'supreme',
+        'sb dunk': 'nike-sb',
+        'nike sb': 'nike-sb',
+        'sacai': 'nike-sacai',
+        'new balance 740': 'new-balance-740',
+        'classic mini': 'ugg-classic-mini',
+        'lowmel': 'ugg-lowmel',
     }
 
     # Marques (priorité basse)
     brand_map = {
-        'nike': 'nike-1',
-        'adidas': 'adidas-1',
+        'nike': 'nike',
+        'adidas': 'adidas',
         'jordan': 'air-jordan',
-        'yeezy': 'yeezy-1',
-        'new balance': 'new-balance-1',
+        'yeezy': 'yeezy',
+        'new balance': 'new-balance',
         'asics': 'asics',
-        'ugg': 'ugg-1',
-        'puma': 'puma-1',
+        'ugg': 'ugg',
+        'puma': 'puma',
         'crocs': 'crocs',
-        'birkenstock': 'birkenstock-1',
+        'birkenstock': 'birkenstock',
         'converse': 'converse',
         'salomon': 'salomon',
         'timberland': 'timberland',
         'vans': 'vans',
         'saucony': 'saucony',
+        'bape': 'bape',
+        'dior': 'dior',
+        'denim tears': 'denim-tears',
+        'fear of god': 'fear-of-god',
+        'essentials': 'fear-of-god',
+        'patta': 'patta',
+        'north face': 'the-north-face',
     }
 
     # Construire la liste finale (modèles d'abord, puis marques)
