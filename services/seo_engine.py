@@ -130,6 +130,9 @@ def extract_brand(title):
         ('Vans', ['vans', 'old skool', 'sk8-hi']),
         ('Reebok', ['reebok']),
         ('On Running', ['on cloud', 'cloudmonster', 'cloudnova']),
+        ('Saucony', ['saucony']),
+        ('Mizuno', ['mizuno']),
+        ('Hoka', ['hoka']),
     ]
     for brand, kws in brands:
         for kw in kws:
@@ -503,7 +506,7 @@ def generate_meta_description(product, goat_slug=''):
 def extract_colorway(title):
     """Extrait le coloris/version spécifique du titre produit"""
     t = title
-    brands = ['Nike', 'Adidas', 'New Balance', 'Asics', 'Puma', 'Reebok', 'UGG', 'Crocs', 'Salomon', 'Birkenstock', 'Vans', 'Converse']
+    brands = ['Nike', 'Adidas', 'New Balance', 'Asics', 'Puma', 'Reebok', 'UGG', 'Crocs', 'Salomon', 'Birkenstock', 'Vans', 'Converse', 'Saucony', 'Mizuno', 'Hoka']
     for b in brands:
         if t.startswith(b + ' '):
             t = t[len(b)+1:]
@@ -1163,6 +1166,7 @@ def _inject_collection_links(text, collections, title):
         'salomon': 'salomon',
         'timberland': 'timberland',
         'vans': 'vans',
+        'saucony': 'saucony',
     }
 
     # Construire la liste finale (modèles d'abord, puis marques)
