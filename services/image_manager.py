@@ -260,43 +260,6 @@ def fix_product_images(product_id):
         files_to_rename.append({"id": media_gids[i], "filename": new_filename})
     
     if files_to_rename:
-        # ── Nettoyage des fichiers ORPHELINS qui bloquent le renommage ──
-        # Quand on remplace les images d'un produit, les anciens fichiers "Titre_N.jpg"
-        # se detachent mais RESTENT dans Files -> Shopify refuse le nouveau nom
-        # ("Le nom de fichier fourni existe deja"). On supprime ces orphelins d'abord.
-        try:
-            target_bases = {f['filename'].rsplit('.', 1)[0] for f in files_to_rename}
-            current_ids = set(media_gids)
-            files_q = """
-            query($q: String!) {
-                files(first: 50, query: $q) {
-                    edges { node { id ... on MediaImage { image { url } } } }
-                }
-            }
-            """
-            fres = shopify_graphql(files_q, {"q": f"filename:{title_for_filename}"})
-            orphan_ids = []
-            edges = (((fres or {}).get('data') or {}).get('files') or {}).get('edges') or []
-            for e in edges:
-                node = e.get('node') or {}
-                fid = node.get('id')
-                url = ((node.get('image') or {}) or {}).get('url') or ''
-                base = url.split('/')[-1].split('?')[0].rsplit('.', 1)[0]
-                # orphelin = nom cible exact MAIS pas une image actuelle du produit
-                if fid and base in target_bases and fid not in current_ids:
-                    orphan_ids.append(fid)
-            if orphan_ids:
-                del_q = """
-                mutation($ids: [ID!]!) {
-                    fileDelete(fileIds: $ids) { deletedFileIds userErrors { message } }
-                }
-                """
-                shopify_graphql(del_q, {"ids": orphan_ids})
-                log.info(f"[ImageFix] {title}: {len(orphan_ids)} fichiers orphelins supprimes (debloque le renommage)")
-                time.sleep(0.6)  # laisser Shopify liberer les noms
-        except Exception as e:
-            log.warning(f"[ImageFix] {title}: nettoyage orphelins echoue: {e}")
-
         # Un seul appel GraphQL pour renommer TOUTES les images
         rename_query = """
         mutation fileUpdate($files: [FileUpdateInput!]!) {
