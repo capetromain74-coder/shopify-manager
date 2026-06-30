@@ -493,6 +493,8 @@ function startBulkGoat(){
         if(idx>=products.length){
             btn.innerHTML="✅ Termin&eacute;!";btn.style.background="#00ff88";btn.style.color="#000";
             addLog("\n🏁 Termin\u00e9 : "+ok+" succ\u00e8s, "+fail+" erreurs, "+skipped+" ignor\u00e9s","#00ff88");
+            try{sessionStorage.removeItem("kp_cache_v4")}catch(e){}
+            addLog("↻ Cache vidé — clique « Actualiser » pour voir l'\u00e9tat \u00e0 jour.","#00d2d3");
             return;
         }
         var p=products[idx];
@@ -600,6 +602,8 @@ function startCorrection(){
             if(doImg)msg+=" ("+imgSkipped+" images déjà OK, sautées)";
             if(doHandle)msg+=" ("+fixed+" handles corrigés, "+skipped+" déjà OK)";
             if(errs)msg+=" ("+errs+" erreurs)";
+            msg+=" \u2014 clique \u00ab Actualiser \u00bb pour rafra\u00eechir la liste.";
+            try{sessionStorage.removeItem("kp_cache_v4")}catch(e){}
             status.textContent=msg;
             btn.textContent="\u2705 Termin\u00e9!";return;
         }
