@@ -289,7 +289,7 @@ function load(){
                 p._lk=b.indexOf("kpshoes.fr/collections/")>=0;
                 p._ds=(p.body_html||"").length>100;
                 var imgOk=true;
-                var titleFn=(p.title||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ /g,"_").replace(/[^\\w\\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+                var titleFn=(p.title||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ /g,"_").replace(/[^\w\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
                 if(p.images&&p.images.length>0){
                     for(var j=0;j<p.images.length;j++){
                         var alt=p.images[j].alt||"";
@@ -652,7 +652,7 @@ function runAnalysis(){
             if(!p._ds)azIssues.noDesc.push(p);
             else if(!p._lk)azIssues.noLink.push(p);
             if(!p._img&&p.images&&p.images.length>0){
-                var titleFn=(p.title||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ /g,"_").replace(/[^\\w\\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
+                var titleFn=(p.title||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ /g,"_").replace(/[^\w\-]/g,"_").replace(/_+/g,"_").replace(/^_|_$/g,"");
                 var bAlt=false,bFn=false;
                 for(var j=0;j<p.images.length;j++){
                     if((p.images[j].alt||"")!==p.title)bAlt=true;
