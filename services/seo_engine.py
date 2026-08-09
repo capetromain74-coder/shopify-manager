@@ -435,8 +435,14 @@ def generate_meta_description(product, goat_slug=''):
     return f'{short_title}{suffix}'
 
 
-_MOIS_FR = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet',
-            'aout', 'septembre', 'octobre', 'novembre', 'decembre']
+_MOIS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
+            'août', 'septembre', 'octobre', 'novembre', 'décembre']
+
+
+def _cap(txt):
+    """Majuscule sur la premiere lettre, sans toucher au reste."""
+    txt = (txt or '').strip()
+    return txt[0].upper() + txt[1:] if txt else txt
 
 
 def _format_release_date(raw):
@@ -1224,11 +1230,11 @@ def generate_body_html(product, collections, goat_slug=''):
         tech_items.append(f'<li><strong>Marque :</strong> {brand}</li>')
         tech_items.append(f'<li><strong>Type :</strong> {clothing_type.capitalize()}</li>')
         if goat_details and goat_details.get('composition'):
-            tech_items.append(f'<li><strong>Composition :</strong> {goat_details["composition"]}</li>')
+            tech_items.append(f'<li><strong>Composition :</strong> {_cap(goat_details["composition"])}</li>')
         if goat_details and goat_details.get('season'):
-            tech_items.append(f'<li><strong>Saison :</strong> {goat_details["season"]}</li>')
+            tech_items.append(f'<li><strong>Saison :</strong> {_cap(goat_details["season"])}</li>')
         if color:
-            tech_items.append(f'<li><strong>Coloris :</strong> {color}</li>')
+            tech_items.append(f'<li><strong>Coloris :</strong> {_cap(color)}</li>')
         if goat_details:
             release = _format_release_date(goat_details.get('release_date', ''))
             if release:
@@ -1285,23 +1291,23 @@ def generate_body_html(product, collections, goat_slug=''):
     tech_items.append(f'<li><strong>Marque :</strong> {brand}</li>')
     if colorway:
         if cw_type == 'collab':
-            tech_items.append(f'<li><strong>Édition :</strong> {colorway}</li>')
+            tech_items.append(f'<li><strong>Édition :</strong> {_cap(colorway)}</li>')
         else:
-            tech_items.append(f'<li><strong>Coloris :</strong> {colorway}</li>')
+            tech_items.append(f'<li><strong>Coloris :</strong> {_cap(colorway)}</li>')
 
     if goat_details:
         full_color = _translate_colors(goat_details.get('color', ''))
         if full_color and full_color.lower() != (colorway or '').lower():
-            tech_items.append(f'<li><strong>Couleur dominante :</strong> {full_color}</li>')
+            tech_items.append(f'<li><strong>Couleur dominante :</strong> {_cap(full_color)}</li>')
         upper = _translate_materials(goat_details.get('upper_material', ''))
         if upper:
-            tech_items.append(f'<li><strong>Matière :</strong> {upper}</li>')
+            tech_items.append(f'<li><strong>Matière :</strong> {_cap(upper)}</li>')
         midsole = _translate_materials(goat_details.get('midsole', ''))
         if midsole:
-            tech_items.append(f'<li><strong>Semelle :</strong> {midsole}</li>')
+            tech_items.append(f'<li><strong>Semelle :</strong> {_cap(midsole)}</li>')
         silhouette = (goat_details.get('silhouette', '') or '').strip()
         if silhouette:
-            tech_items.append(f'<li><strong>Silhouette :</strong> {silhouette}</li>')
+            tech_items.append(f'<li><strong>Silhouette :</strong> {_cap(silhouette)}</li>')
         release = _format_release_date(goat_details.get('release_date', ''))
         if release:
             tech_items.append(f'<li><strong>Date de sortie :</strong> {release}</li>')
