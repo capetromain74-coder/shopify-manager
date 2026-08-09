@@ -398,111 +398,66 @@ def generate_meta_title(product):
     return title
 
 
+# Arguments commerciaux communs, par ordre de priorite (retires si la meta deborde)
+_USP = [' \u2713 Livraison rapide', ' \u2713 Retours 14j', ' \u2713 Paiement 3x Klarna']
+META_MAX = 155
+
+
 def generate_meta_description(product, goat_slug=''):
-    title = product.get('title', '')
-    sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
-    brand = extract_brand(title)
-    colorway = extract_colorway(title)
+    """Meta description au gabarit fixe :
+    {Titre} ({Reference}) 100% authentique chez KP SHOES + arguments commerciaux.
 
-    # -- VETEMENTS --
-    if is_clothing(title):
-        clothing_type = get_clothing_type(title)
-        color = extract_clothing_color(title)
-        
-        goat_details = None
-        if sku or goat_slug:
-            goat_details = _fetch_goat_details(sku, goat_slug=goat_slug)
-        
-        ai_desc = generate_story_ai(title, brand, color or '', '', goat_data=goat_details)
-        if ai_desc:
-            max_len = 140 - len(SITE_NAME)
-            if len(ai_desc) > max_len:
-                cut = ai_desc[:max_len].rfind('.')
-                if cut > 90:
-                    ai_desc = ai_desc[:cut + 1]
-                else:
-                    cut = ai_desc[:max_len].rfind(',')
-                    if cut > 90:
-                        ai_desc = ai_desc[:cut] + '...'
-                    else:
-                        ai_desc = ai_desc[:max_len].rsplit(' ', 1)[0] + '...'
-            if len(ai_desc) < 120:
-                ai_desc = ai_desc + ' Disponible sur ' + SITE_NAME + '.'
-            if len(ai_desc) > 155:
-                ai_desc = ai_desc[:152].rsplit(' ', 1)[0] + '...'
-            return ai_desc
-        
-        if color:
-            desc = 'La ' + title + ' en coloris ' + color + '. Piece streetwear premium disponible sur ' + SITE_NAME + '. Authenticite garantie, livraison rapide.'
+    Le titre et la reference rendent chaque meta UNIQUE (fini les extraits de
+    description coupes en plein milieu) ; les arguments sont communs et donnent
+    un argument de clic. Si le titre est long, on retire les arguments les moins
+    prioritaires plutot que de tronquer une phrase.
+    """
+    title = (product.get('title', '') or '').strip()
+    sku = ''
+    if product.get('variants'):
+        sku = (product['variants'][0].get('sku', '') or '').strip()
+    sku = re.sub(r':\d+$', '', sku)  # enlever un suffixe de variante eventuel
+
+    base = f'{title} ({sku})' if sku else title
+    base += f' 100% authentique chez {SITE_NAME}'
+
+    # Garder le maximum d'arguments qui tient dans la limite
+    for n in range(len(_USP), -1, -1):
+        desc = base + ''.join(_USP[:n]) + '.'
+        if len(desc) <= META_MAX:
+            return desc
+
+    # Titre exceptionnellement long : on raccourcit le titre proprement
+    tail = f' ({sku})' if sku else ''
+    suffix = f'{tail} 100% authentique chez {SITE_NAME}.'
+    room = META_MAX - len(suffix)
+    short_title = title[:room].rsplit(' ', 1)[0] if room > 0 else title[:40]
+    return f'{short_title}{suffix}'
+
+
+_MOIS_FR = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet',
+            'aout', 'septembre', 'octobre', 'novembre', 'decembre']
+
+
+def _format_release_date(raw):
+    """Formate une date de sortie GOAT (ISO ou timestamp) en francais.
+    Retourne '' si la donnee est absente ou invalide (on n'invente rien)."""
+    if not raw:
+        return ''
+    try:
+        from datetime import datetime, timezone
+        if isinstance(raw, (int, float)) or (isinstance(raw, str) and raw.strip().isdigit()):
+            ts = int(raw)
+            if ts > 100000000000:  # millisecondes
+                ts = ts // 1000
+            dt = datetime.fromtimestamp(ts, tz=timezone.utc)
         else:
-            desc = 'La ' + title + ' disponible sur ' + SITE_NAME + '. Piece streetwear premium, authenticite garantie. Livraison rapide.'
-        if len(desc) > 155:
-            desc = desc[:152].rsplit(' ', 1)[0] + '...'
-        return desc
-
-    # -- SNEAKERS --
-    goat_desc = None
-    goat_details = None
-    if sku or goat_slug:
-        goat_details = _fetch_goat_details(sku, goat_slug=goat_slug)
-        if goat_details:
-            story = goat_details.get('story', '')
-            if story and len(story) > 40:
-                story_fr = translate_to_french(story.strip())
-                if story_fr and len(story_fr) > 40:
-                    max_len = 140 - len(SITE_NAME)
-                    if len(story_fr) > max_len:
-                        cut = story_fr[:max_len].rfind('.')
-                        if cut > 90:
-                            story_fr = story_fr[:cut + 1]
-                        else:
-                            cut = story_fr[:max_len].rfind(',')
-                            if cut > 90:
-                                story_fr = story_fr[:cut] + '...'
-                            else:
-                                story_fr = story_fr[:max_len].rsplit(' ', 1)[0] + '...'
-                    goat_desc = story_fr
-
-            if not goat_desc:
-                ai_story = generate_story_ai(title, brand, colorway, '', goat_data=goat_details)
-                if ai_story:
-                    max_len = 140 - len(SITE_NAME)
-                    if len(ai_story) > max_len:
-                        cut = ai_story[:max_len].rfind('.')
-                        if cut > 90:
-                            ai_story = ai_story[:cut + 1]
-                        else:
-                            cut = ai_story[:max_len].rfind(',')
-                            if cut > 90:
-                                ai_story = ai_story[:cut] + '...'
-                            else:
-                                ai_story = ai_story[:max_len].rsplit(' ', 1)[0] + '...'
-                    goat_desc = ai_story
-
-    if goat_desc:
-        if len(goat_desc) < 120:
-            goat_desc = goat_desc + ' Disponible sur ' + SITE_NAME + '.'
-        if len(goat_desc) > 155:
-            goat_desc = goat_desc[:152].rsplit(' ', 1)[0] + '...'
-        return goat_desc
-
-    collabs = ['Travis Scott', 'Off-White', 'Fragment', 'Union LA', 'Undefeated', 'A Ma Maniere',
-               'Sacai', 'CLOT', 'Stussy', 'Patta', 'Supreme', 'BAPE', 'Kith', 'Bad Bunny',
-               'Pharrell', 'Drake', 'NOCTA', 'The Simpsons', 'Mercedes AMG', 'Jacquemus', 'Nigo']
-    is_collab = any(c.lower() in title.lower() for c in collabs)
-
-    if is_collab:
-        desc = 'La ' + title + ', edition limitee disponible sur ' + SITE_NAME + '. Authenticite garantie, livraison rapide.'
-    elif colorway:
-        desc = 'La ' + title + ' en coloris ' + colorway + ' disponible sur ' + SITE_NAME + '. Authenticite garantie, livraison rapide.'
-    else:
-        desc = 'Achetez la ' + title + ' sur ' + SITE_NAME + '. Authenticite garantie par nos experts. Livraison rapide et paiement securise.'
-
-    if len(desc) > 155:
-        desc = desc[:152].rsplit(' ', 1)[0] + '...'
-    return desc
-
-
+            dt = datetime.fromisoformat(str(raw).strip().replace('Z', '+00:00'))
+        if dt.year < 1990 or dt.year > 2100:
+            return ''
+        return f'{dt.day} {_MOIS_FR[dt.month - 1]} {dt.year}'
+    except Exception:
+        return ''
 
 
 def extract_colorway(title):
@@ -1274,6 +1229,10 @@ def generate_body_html(product, collections, goat_slug=''):
             tech_items.append(f'<li><strong>Saison :</strong> {goat_details["season"]}</li>')
         if color:
             tech_items.append(f'<li><strong>Coloris :</strong> {color}</li>')
+        if goat_details:
+            release = _format_release_date(goat_details.get('release_date', ''))
+            if release:
+                tech_items.append(f'<li><strong>Date de sortie :</strong> {release}</li>')
         lines.append('<ul style="list-style:none;padding-left:0;">' + ''.join(tech_items) + '</ul>')
         
         return ''.join(lines)
@@ -1318,7 +1277,8 @@ def generate_body_html(product, collections, goat_slug=''):
         sentence_with_links = _inject_collection_links(color_sentence, collections, title)
         lines.append(f'<p>{sentence_with_links}</p>')
     
-    # 3. Infos produit
+    # 3. Infos produit - enrichies avec les donnees GOAT deja telechargees.
+    #    Chaque ligne n'apparait QUE si la donnee existe reellement (rien d'invente).
     tech_items = []
     if sku:
         tech_items.append(f'<li><strong>Référence :</strong> {sku}</li>')
@@ -1328,6 +1288,24 @@ def generate_body_html(product, collections, goat_slug=''):
             tech_items.append(f'<li><strong>Édition :</strong> {colorway}</li>')
         else:
             tech_items.append(f'<li><strong>Coloris :</strong> {colorway}</li>')
+
+    if goat_details:
+        full_color = _translate_colors(goat_details.get('color', ''))
+        if full_color and full_color.lower() != (colorway or '').lower():
+            tech_items.append(f'<li><strong>Couleur dominante :</strong> {full_color}</li>')
+        upper = _translate_materials(goat_details.get('upper_material', ''))
+        if upper:
+            tech_items.append(f'<li><strong>Matière :</strong> {upper}</li>')
+        midsole = _translate_materials(goat_details.get('midsole', ''))
+        if midsole:
+            tech_items.append(f'<li><strong>Semelle :</strong> {midsole}</li>')
+        silhouette = (goat_details.get('silhouette', '') or '').strip()
+        if silhouette:
+            tech_items.append(f'<li><strong>Silhouette :</strong> {silhouette}</li>')
+        release = _format_release_date(goat_details.get('release_date', ''))
+        if release:
+            tech_items.append(f'<li><strong>Date de sortie :</strong> {release}</li>')
+
     lines.append('<ul style="list-style:none;padding-left:0;">' + ''.join(tech_items) + '</ul>')
     
     return ''.join(lines)
