@@ -49,6 +49,7 @@ def _nav(active):
   <a class="{c('produits')}" href="/">&#128230; Produits</a>
   <a class="{c('collections')}" href="/collections">&#128450;&#65039; Collections</a>
   <a class="{c('scanner')}" href="/image-scanner">&#128247; Scanner images</a>
+  <a class="{c('descriptions')}" href="/description-scanner">&#128221; Scanner descriptions</a>
   <div class="kpdd">
     <span class="{c('outils')}">&#128736;&#65039; Outils &#9662;</span>
     <div class="kpdd-menu">
@@ -87,6 +88,11 @@ def collections_page():
 @pages_bp.route('/image-scanner')
 def image_scanner_page():
     return render_page('image_scanner.html', 'scanner')
+
+
+@pages_bp.route('/description-scanner')
+def description_scanner_page():
+    return render_page('description_scanner.html', 'descriptions')
 
 
 @pages_bp.route('/product-finder')

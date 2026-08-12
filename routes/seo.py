@@ -258,3 +258,98 @@ def api_fix_handle():
         return jsonify({'success': True, 'fixed': True, 'old': old_handle, 'handle': new_handle})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ══════════════════════════════════════════════════════════════
+# SCANNER DE DESCRIPTIONS
+# Repere les fiches dont la description est "basique" (generee sans les
+# donnees GOAT) et verifie si GOAT propose desormais des infos permettant
+# de la completer. Meme principe que le scanner de nouvelles images.
+# ══════════════════════════════════════════════════════════════
+
+# Marqueurs presents uniquement dans une description enrichie par GOAT
+GOAT_MARKERS = ['Matière :', 'Semelle :', 'Silhouette :',
+                'Date de sortie :', 'Composition :', 'Couleur dominante :']
+
+
+def _description_level(body_html):
+    """Classe une description : 'complete', 'basique' ou 'vide'."""
+    body = body_html or ''
+    if len(body.strip()) < 100:
+        return 'vide'
+    return 'complete' if any(m in body for m in GOAT_MARKERS) else 'basique'
+
+
+@seo_bp.route('/api/seo/descriptions-page')
+def api_descriptions_page():
+    """Une page de produits (250) avec le niveau de description de chacun.
+    Renvoie uniquement ceux a enrichir (basique ou vide)."""
+    since_id = request.args.get('since_id', '0')
+    r = shopify_request(
+        f'products.json?limit=250&since_id={since_id}'
+        '&fields=id,title,handle,images,variants,body_html'
+    )
+    if not r or not r.get('products'):
+        return jsonify({'products': [], 'has_more': False, 'next_since_id': '0',
+                        'page_total': 0, 'complete': 0})
+
+    products = r['products']
+    todo, complete = [], 0
+    for p in products:
+        level = _description_level(p.get('body_html', ''))
+        if level == 'complete':
+            complete += 1
+            continue
+        sku = ''
+        if p.get('variants'):
+            sku = p['variants'][0].get('sku', '') or ''
+        todo.append({
+            'id': p['id'],
+            'title': p['title'],
+            'handle': p.get('handle', ''),
+            'sku': sku,
+            'level': level,
+            'image_url': p['images'][0]['src'] if p.get('images') else '',
+        })
+
+    return jsonify({
+        'products': todo,
+        'page_total': len(products),
+        'complete': complete,
+        'has_more': len(products) >= 250,
+        'next_since_id': str(products[-1]['id']) if products else '0',
+    })
+
+
+@seo_bp.route('/api/seo/check-goat-details')
+def api_check_goat_details():
+    """Verifie si GOAT dispose d'infos exploitables pour ce SKU
+    (matiere, couleur, semelle, date de sortie, story...)."""
+    from services.goat_client import search as goat_search, get_product_details
+
+    sku = request.args.get('sku', '').strip()
+    title = request.args.get('title', '').strip()
+    if not sku and not title:
+        return jsonify({'error': 'sku ou title requis'}), 400
+
+    product = goat_search(sku, title=title or None) if sku else None
+    if not product or not product.get('slug'):
+        return jsonify({'found': False, 'fields': [], 'count': 0})
+
+    details = get_product_details(product['slug'])
+    if not details:
+        return jsonify({'found': False, 'slug': product['slug'], 'fields': [], 'count': 0})
+
+    labels = {
+        'upper_material': 'Matière', 'midsole': 'Semelle', 'color': 'Couleur',
+        'release_date': 'Date de sortie', 'silhouette': 'Silhouette',
+        'composition': 'Composition', 'story': 'Histoire', 'details': 'Détails',
+    }
+    fields = [label for key, label in labels.items() if details.get(key)]
+    return jsonify({
+        'found': bool(fields),
+        'slug': product['slug'],
+        'goat_name': product.get('name', ''),
+        'fields': fields,
+        'count': len(fields),
+    })
