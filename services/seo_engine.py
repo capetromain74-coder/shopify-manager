@@ -96,6 +96,13 @@ def find_collection(title, collections):
 
 def extract_brand(title):
     t = title.lower()
+    # Licences / objets de collection (prioritaires)
+    if 'pokemon' in t or 'pok\u00e9mon' in t: return 'Pok\u00e9mon'
+    if 'yu-gi-oh' in t or 'yugioh' in t: return 'Yu-Gi-Oh!'
+    if 'magic the gathering' in t: return 'Magic: The Gathering'
+    if 'funko' in t: return 'Funko'
+    if 'panini' in t: return 'Panini'
+    if 'topps' in t: return 'Topps'
     if 'fear of god' in t or 'essentials' in t: return 'Fear of God'
     if 'denim tears' in t: return 'Denim Tears'
     if 'stussy' in t or 'stüssy' in t: return 'Stüssy'
@@ -418,6 +425,9 @@ def generate_meta_description(product, goat_slug=''):
         sku = (product['variants'][0].get('sku', '') or '').strip()
     sku = re.sub(r':\d+$', '', sku)  # enlever un suffixe de variante eventuel
 
+    # Les collectibles ont un SKU interne (ex: 2026_3) sans interet pour le SEO
+    if sku and is_collectible(title):
+        sku = ''
     base = f'{title} ({sku})' if sku else title
     base += f' 100% authentique chez {SITE_NAME}'
 
@@ -437,6 +447,11 @@ def generate_meta_description(product, goat_slug=''):
 
 _MOIS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
             'août', 'septembre', 'octobre', 'novembre', 'décembre']
+
+
+_UL_OPEN = ('<ul style="list-style:none;padding-left:0;margin:16px 0 0 0;'
+            'font-size:inherit;line-height:inherit">')
+_LI_OPEN = '<li style="margin:0 0 6px 0;font-size:inherit;line-height:inherit">'
 
 
 def _cap(txt):
@@ -529,7 +544,7 @@ def extract_colorway(title):
 
 _ai_story_cache = {}
 
-def generate_story_ai(title, brand, colorway, model_desc, goat_data=None):
+def generate_story_ai(title, brand, colorway, model_desc, goat_data=None, kind=None):
     """Utilise Claude pour generer une description complete (story) enrichie.
     Utilise les donnees GOAT si disponibles pour ne pas inventer.
     Cache le resultat par titre pour eviter les appels doubles."""
@@ -572,7 +587,25 @@ def generate_story_ai(title, brand, colorway, model_desc, goat_data=None):
             if parts:
                 goat_context = "\n\nDonnees techniques confirmees (utilise-les, ne les contredis pas) :\n" + "\n".join(parts)
 
-        if is_clothing_product:
+        if kind == 'collectible':
+            prompt = (
+                "Tu es un expert en objets de collection et cartes a collectionner qui redige "
+                "des descriptions produits pour un site e-commerce francais (KP SHOES).\n\n"
+                "Produit : " + title + "\n"
+                "Licence / marque : " + brand + "\n"
+                + ("Type : " + colorway + "\n" if colorway else "")
+                + "\nEcris un paragraphe de 3 a 4 phrases presentant cet article de collection.\n"
+                "- Base-toi UNIQUEMENT sur le nom du produit ci-dessus\n"
+                "- N'INVENTE ABSOLUMENT AUCUN detail chiffre : pas de nombre de cartes, de "
+                "boosters, de cartes garanties, de dimensions, de tirage ni de contenu precis "
+                "s'il n'apparait pas dans le nom\n"
+                "- Parle de l'univers de la licence et de l'interet pour un collectionneur\n"
+                "- Precise que l'article est neuf et scelle uniquement si le nom l'indique\n"
+                "- Pas de prix ni de date de sortie\n"
+                "- Ne commence PAS par 'Decouvrez'\n"
+                "- Reponds UNIQUEMENT avec le paragraphe, rien d'autre."
+            )
+        elif is_clothing_product:
             prompt = (
                 "Tu es un expert streetwear qui redige des descriptions produits pour un site e-commerce francais (KP SHOES).\n\n"
                 "Produit : " + title + "\n"
@@ -782,6 +815,69 @@ def is_clothing(title):
                    'down jacket', 'parka', 'bomber', 'varsity', 'balaclava']
     t = title.lower()
     return any(kw in t for kw in clothing_kw)
+
+
+_COLLECTIBLE_KW = [
+    'pokemon', 'pok\u00e9mon', 'coffret', 'etb', 'booster', 'tripack', 'tri-pack',
+    'display', 'tcg', 'trading card', 'carte \u00e0 collectionner', 'dresseur d',
+    'elite trainer', 'yu-gi-oh', 'yugioh', 'magic the gathering', 'one piece card',
+    'panini', 'topps', 'funko', 'figurine', 'peluche', 'poster', 'artbook', 'amiibo',
+]
+
+
+def is_collectible(title):
+    """Detecte un objet de collection (Pokemon, TCG, figurine, poster...).
+    Ces produits n'existent pas sur GOAT : ils suivent un traitement dedie."""
+    t = (title or '').lower()
+    if 'carte cadeau' in t or 'gift card' in t:
+        return False
+    return any(kw in t for kw in _COLLECTIBLE_KW)
+
+
+def get_collectible_type(title):
+    """Type d'objet de collection, deduit du titre uniquement."""
+    t = (title or '').lower()
+    if 'etb' in t or 'dresseur d' in t or 'elite trainer' in t:
+        return 'coffret ETB'
+    if 'coffret' in t:
+        return 'coffret'
+    if 'tripack' in t or 'tri-pack' in t:
+        return 'tripack'
+    if 'display' in t:
+        return 'display'
+    if 'booster' in t:
+        return 'booster'
+    if 'funko' in t or 'figurine' in t:
+        return 'figurine'
+    if 'peluche' in t:
+        return 'peluche'
+    if 'poster' in t:
+        return 'poster'
+    if 'carte' in t:
+        return 'carte'
+    return 'objet de collection'
+
+
+def get_collectible_edition(title):
+    """Edition/serie = ce qui suit le dernier tiret separateur. '' si absent."""
+    for sep in [' - ', ' \u2013 ', ' \u2014 ']:
+        if sep in (title or ''):
+            part = title.split(sep)[-1].strip()
+            if 2 < len(part) < 60:
+                return part
+    return ''
+
+
+def get_collectible_language(title):
+    """Langue si elle est explicitement mentionnee dans le titre."""
+    t = (title or '').lower()
+    if 'fran\u00e7ais' in t or 'francais' in t or '(fr)' in t:
+        return 'Fran\u00e7ais'
+    if 'anglais' in t or 'english' in t or '(en)' in t:
+        return 'Anglais'
+    if 'japonais' in t or 'japanese' in t or '(jp)' in t:
+        return 'Japonais'
+    return ''
 
 
 def get_clothing_type(title):
@@ -1111,6 +1207,11 @@ def _inject_collection_links(text, collections, title):
         'travis scott': 'travis-scott',
         'off-white': 'off-white',
         'supreme': 'supreme',
+        'pokemon': 'collectibles',
+        'pokémon': 'collectibles',
+        'coffret': 'collectibles',
+        'booster': 'collectibles',
+        'funko': 'collectibles',
         'sb dunk': 'nike-sb',
         'nike sb': 'nike-sb',
         'sacai': 'nike-sacai',
@@ -1194,7 +1295,36 @@ def generate_body_html(product, collections, goat_slug=''):
     title = product.get('title', '')
     brand = extract_brand(title)
     sku = product['variants'][0].get('sku', '') if product.get('variants') else ''
-    
+
+    # ── OBJETS DE COLLECTION (Pokemon, TCG, figurines...) ──
+    # Ces produits n'existent pas sur GOAT : on n'interroge pas GOAT du tout
+    # et on s'appuie uniquement sur le titre (aucune donnee inventee).
+    if is_collectible(title):
+        ctype = get_collectible_type(title)
+        edition = get_collectible_edition(title)
+        langue = get_collectible_language(title)
+
+        lines = []
+        ai_desc = generate_story_ai(title, brand, ctype, '', kind='collectible')
+        if ai_desc:
+            lines.append(f'<p>{_inject_collection_links(ai_desc, collections, title)}</p>')
+        else:
+            fallback = (f'Ce {ctype} {brand} rejoint la sélection Collectibles de {SITE_NAME}. '
+                        f'Une pièce à collectionner pour les passionnés de l\'univers {brand}, '
+                        f'proposée neuve et soigneusement conservée.')
+            lines.append(f'<p>{_inject_collection_links(fallback, collections, title)}</p>')
+
+        tech_items = []
+        # SKU interne peu parlant pour un collectible : on ne l'affiche pas
+        tech_items.append(f'{_LI_OPEN}<strong>Licence :</strong> {brand}</li>')
+        tech_items.append(f'{_LI_OPEN}<strong>Type :</strong> {_cap(ctype)}</li>')
+        if edition:
+            tech_items.append(f'{_LI_OPEN}<strong>Édition :</strong> {_cap(edition)}</li>')
+        if langue:
+            tech_items.append(f'{_LI_OPEN}<strong>Langue :</strong> {langue}</li>')
+        lines.append(_UL_OPEN + ''.join(tech_items) + '</ul>')
+        return ''.join(lines)
+
     # ── VÊTEMENTS ──
     if is_clothing(title):
         clothing_type = get_clothing_type(title)

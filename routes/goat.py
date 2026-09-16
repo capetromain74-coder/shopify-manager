@@ -172,6 +172,14 @@ def api_goat_images():
     title = request.args.get('title', '').strip()
     if not sku:
         return jsonify({'error': 'SKU requis'}), 400
+    # Garde-fou : les objets de collection n'existent pas sur GOAT. Sans ce
+    # filtre, une recherche par SKU interne (ex: '2026_3') renvoie un produit
+    # sans aucun rapport et on collerait ses photos sur la fiche.
+    from services.seo_engine import is_collectible
+    if title and is_collectible(title):
+        log.info(f"[GOAT] Produit de collection ignore (hors GOAT) : {title[:60]}")
+        return jsonify({'error': 'Produit de collection : non disponible sur GOAT',
+                        'collectible': True}), 404
     log.info(f"[GOAT] Searching images for SKU: {sku}" + (f" (title: {title[:40]})" if title else ""))
     result = get_goat_images(sku, title=title if title else None)
     if not result:

@@ -3,6 +3,11 @@ KP SHOES - Mappings collections <-> modeles, extraction marques
 Handles = vrais handles Shopify (verifies via API le 2026-06-25)
 """
 MODEL_COLLECTIONS = {
+    # Objets de collection (priorite max : un 'Coffret Pokemon' ne doit pas
+    # etre rattache a une collection sneaker)
+    'collectibles': ['pokemon', 'pokémon', 'coffret', 'booster', 'tripack',
+                     'display', 'tcg', 'figurine', 'funko', 'peluche', 'poster',
+                     'yu-gi-oh', 'yugioh', 'panini', 'topps'],
     'jordan-4': ['jordan 4'], 'jordan-1-high': ['jordan 1 high'], 'jordan-1-low': ['jordan 1 low'],
     'jordan-1-mid': ['jordan 1 mid'],
     # nike-sb AVANT nike-dunk : un "Nike SB Dunk" doit pointer vers la collection SB, pas Dunk

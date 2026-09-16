@@ -269,7 +269,8 @@ def api_fix_handle():
 
 # Marqueurs presents uniquement dans une description enrichie par GOAT
 GOAT_MARKERS = ['Matière :', 'Semelle :', 'Silhouette :',
-                'Date de sortie :', 'Composition :', 'Couleur dominante :']
+                'Date de sortie :', 'Composition :', 'Couleur dominante :',
+                'Licence :', 'Langue :']
 
 
 def _description_level(body_html):
@@ -331,6 +332,15 @@ def api_check_goat_details():
     title = request.args.get('title', '').strip()
     if not sku and not title:
         return jsonify({'error': 'sku ou title requis'}), 400
+
+    # Les objets de collection ne sont pas sur GOAT, mais leur description
+    # peut quand meme etre generee (IA a partir du titre) : on les signale
+    # comme enrichissables pour qu'ils restent actionnables dans le scanner.
+    from services.seo_engine import is_collectible
+    if title and is_collectible(title):
+        return jsonify({'found': True, 'collectible': True,
+                        'fields': ['Objet de collection (description IA)'],
+                        'count': 1})
 
     product = goat_search(sku, title=title or None) if sku else None
     if not product or not product.get('slug'):

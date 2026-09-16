@@ -127,8 +127,15 @@ def api_products_single_image_page():
 def api_goat_check_new_images():
     """Vérifie si GOAT a plus d'images disponibles pour un SKU donné."""
     sku = request.args.get('sku', '').strip()
+    title = request.args.get('title', '').strip()
     if not sku:
         return jsonify({'error': 'SKU requis'}), 400
+
+    # Les objets de collection ne sont pas sur GOAT : on ne cherche pas
+    from services.seo_engine import is_collectible
+    if title and is_collectible(title):
+        return jsonify({'sku': sku, 'goat_found': False, 'goat_images': 0,
+                        'images': [], 'collectible': True})
 
     sku_clean = re.sub(r':\d+$', '', sku)
     result = get_goat_images(sku_clean)
