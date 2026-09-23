@@ -79,7 +79,10 @@ def find_collection(title, collections):
         col = next((c for c in collections if c['handle'] == 'streetwear'), None)
         if col: return {'handle': col['handle'], 'title': col['title'], 'url': f"https://{SITE_DOMAIN}/collections/{col['handle']}", 'type': 'model'}
     available = [c['handle'] for c in collections if c['handle'] not in EXCLUDED]
+    collectible = is_collectible(title)
     for handle, keywords in MODEL_COLLECTIONS.items():
+        if handle == 'collectibles' and not collectible:
+            continue
         if handle in available:
             for kw in keywords:
                 if kw in t:
@@ -97,7 +100,7 @@ def find_collection(title, collections):
 def extract_brand(title):
     t = title.lower()
     # Licences / objets de collection (prioritaires)
-    if 'pokemon' in t or 'pok\u00e9mon' in t: return 'Pok\u00e9mon'
+    if ('pokemon' in t or 'pok\u00e9mon' in t) and is_collectible(title): return 'Pok\u00e9mon'
     if 'yu-gi-oh' in t or 'yugioh' in t: return 'Yu-Gi-Oh!'
     if 'magic the gathering' in t: return 'Magic: The Gathering'
     if 'funko' in t: return 'Funko'
@@ -825,11 +828,26 @@ _COLLECTIBLE_KW = [
 ]
 
 
+# Marques de sneakers / mode : une collab sous licence (ex. "Adidas Samba
+# Pokemon Mewtwo") reste une paire vendue sur GOAT, pas un objet de collection.
+_WEARABLE_BRANDS = [
+    'adidas', 'nike', 'jordan', 'new balance', 'asics', 'puma', 'reebok',
+    'vans', 'converse', 'crocs', 'ugg', 'salomon', 'hoka', 'on running',
+    'yeezy', 'timberland', 'dr. martens', 'birkenstock', 'mizuno', 'saucony',
+    'veja', 'balenciaga', 'supreme', 'stussy', 'st\u00fcssy', 'bape', 'palace',
+    'kith', 'off-white', 'fear of god', 'essentials', 'the north face',
+]
+
+
 def is_collectible(title):
     """Detecte un objet de collection (Pokemon, TCG, figurine, poster...).
-    Ces produits n'existent pas sur GOAT : ils suivent un traitement dedie."""
+    Ces produits n'existent pas sur GOAT : ils suivent un traitement dedie.
+    Exception : une collab sous licence d'une marque sneaker/mode (Adidas x
+    Pokemon...) est une vraie paire -> pas un collectible."""
     t = (title or '').lower()
     if 'carte cadeau' in t or 'gift card' in t:
+        return False
+    if any(b in t for b in _WEARABLE_BRANDS):
         return False
     return any(kw in t for kw in _COLLECTIBLE_KW)
 
@@ -1247,7 +1265,10 @@ def _inject_collection_links(text, collections, title):
     }
 
     # Construire la liste finale (modèles d'abord, puis marques)
+    collectible = is_collectible(title)
     for kw, handle in sorted(model_map.items(), key=lambda x: -len(x[0])):
+        if handle == 'collectibles' and not collectible:
+            continue
         if handle in available_handles:
             keyword_to_handle.append((kw, handle))
     for kw, handle in sorted(brand_map.items(), key=lambda x: -len(x[0])):
