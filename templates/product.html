@@ -6,59 +6,59 @@
 <title>Produit - KP SHOES</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
-.hd{background:#111;padding:12px 20px;border-bottom:1px solid #222;display:flex;align-items:center;gap:20px}
-.hd a{color:#888;text-decoration:none}.hd a:hover{color:#fff}
-.hd-title{font-size:16px;font-weight:bold;color:#00ff88}
+body{font-family:system-ui;background:#f5f5f7;color:#1d1d1f;min-height:100vh}
+.hd{background:#ffffff;padding:12px 20px;border-bottom:1px solid #e5e5ea;display:flex;align-items:center;gap:20px}
+.hd a{color:#6e6e73;text-decoration:none}.hd a:hover{color:#1d1d1f}
+.hd-title{font-size:16px;font-weight:bold;color:#248a3d}
 .main{max-width:1200px;margin:0 auto;padding:20px}
 .top{display:grid;grid-template-columns:350px 1fr;gap:25px;margin-bottom:25px}
-.gallery{background:#111;border-radius:10px;overflow:hidden}
-.main-img{width:100%;height:350px;object-fit:contain;background:#1a1a2e}
+.gallery{background:#ffffff;border-radius:10px;overflow:hidden}
+.main-img{width:100%;height:350px;object-fit:contain;background:#ffffff}
 .thumbs{display:flex;gap:8px;padding:10px;overflow-x:auto}
 .thumb{width:50px;height:50px;object-fit:cover;border-radius:5px;cursor:pointer;border:2px solid transparent}
-.thumb:hover,.thumb.active{border-color:#00ff88}
+.thumb:hover,.thumb.active{border-color:#0071e3}
 .info{display:flex;flex-direction:column;gap:12px}
 .title{font-size:18px;font-weight:bold}
-.sku{color:#666;font-size:12px}
-.price{font-size:24px;font-weight:bold;color:#00ff88}
-.seo-box{display:flex;align-items:center;gap:15px;background:#111;padding:12px;border-radius:8px}
+.sku{color:#86868b;font-size:12px}
+.price{font-size:24px;font-weight:bold;color:#248a3d}
+.seo-box{display:flex;align-items:center;gap:15px;background:#ffffff;padding:12px;border-radius:8px}
 .score{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:bold}
-.score.excellent{background:#00ff8833;color:#00ff88;border:3px solid #00ff88}
-.score.good{background:#00cc6a33;color:#00cc6a;border:3px solid #00cc6a}
-.score.warning{background:#ffa50033;color:#ffa500;border:3px solid #ffa500}
-.score.poor{background:#ff475733;color:#ff4757;border:3px solid #ff4757}
+.score.excellent{background:#e9f6ec;color:#248a3d;border:3px solid #0071e3}
+.score.good{background:#e9f6ec;color:#248a3d;border:3px solid #0071e3}
+.score.warning{background:#fff4e5;color:#b25000;border:3px solid #ff9500}
+.score.poor{background:#fdecec;color:#d70015;border:3px solid #d70015}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
 .btn{padding:10px 16px;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:12px;text-decoration:none}
-.btn-p{background:#00ff88;color:#000}.btn-s{background:#333;color:#fff}.btn-o{background:#ff9500;color:#000}.btn-g{background:#3b82f6;color:#fff}
-.section{background:#111;border-radius:10px;padding:15px;margin-bottom:15px}
-.section-title{font-size:13px;font-weight:bold;margin-bottom:10px;color:#00ff88;display:flex;justify-content:space-between;align-items:center}
+.btn-p{background:#0071e3;color:#ffffff}.btn-s{background:#e8e8ed;color:#1d1d1f}.btn-o{background:#ff9500;color:#ffffff}.btn-g{background:#0071e3;color:#ffffff}
+.section{background:#ffffff;border-radius:10px;padding:15px;margin-bottom:15px}
+.section-title{font-size:13px;font-weight:bold;margin-bottom:10px;color:#248a3d;display:flex;justify-content:space-between;align-items:center}
 .checks{display:flex;flex-direction:column;gap:6px}
-.check{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#1a1a2e;border-radius:6px;cursor:pointer;border:2px solid transparent}
-.check:hover{border-color:#333}.check.selected{border-color:#00ff88;background:#00ff8815}
+.check{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#ffffff;border-radius:6px;cursor:pointer;border:2px solid transparent}
+.check:hover{border-color:#e5e5ea}.check.selected{border-color:#0071e3;background:#e9f6ec}
 .check-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px}
-.check-icon.success{background:#00ff8833;color:#00ff88}
-.check-icon.warning{background:#ffa50033;color:#ffa500}
-.check-icon.error{background:#ff475733;color:#ff4757}
-.check-info{flex:1}.check-name{font-weight:600;font-size:11px}.check-msg{font-size:9px;color:#888}
+.check-icon.success{background:#e9f6ec;color:#248a3d}
+.check-icon.warning{background:#fff4e5;color:#b25000}
+.check-icon.error{background:#fdecec;color:#d70015}
+.check-info{flex:1}.check-name{font-weight:600;font-size:11px}.check-msg{font-size:9px;color:#6e6e73}
 .check-pts{font-weight:bold;font-size:10px}
-.meta-box{background:#1a1a2e;border-radius:6px;padding:10px;margin-bottom:8px}
-.meta-label{font-size:9px;color:#666;margin-bottom:3px}
+.meta-box{background:#ffffff;border-radius:6px;padding:10px;margin-bottom:8px}
+.meta-label{font-size:9px;color:#86868b;margin-bottom:3px}
 .meta-value{font-size:11px;word-break:break-all}
 table{width:100%;border-collapse:collapse}
-th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #222;font-size:11px}
-th{background:#1a1a2e;font-size:9px;color:#888}
-.loading{text-align:center;padding:40px;color:#666}
-.spinner{width:30px;height:30px;border:3px solid #222;border-top-color:#00ff88;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 10px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #e5e5ea;font-size:11px}
+th{background:#ffffff;font-size:9px;color:#6e6e73}
+.loading{text-align:center;padding:40px;color:#86868b}
+.spinner{width:30px;height:30px;border:3px solid #e5e5ea;border-top-color:#0071e3;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 10px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:6px;font-size:12px;z-index:100}
-.toast.success{background:#00ff88;color:#000}.toast.error{background:#ff4757}
+.toast.success{background:#0071e3;color:#ffffff}.toast.error{background:#d70015}
 .goat-preview{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:200;overflow-y:auto;padding:20px}
 .goat-preview.show{display:block}
-.goat-content{max-width:800px;margin:0 auto;background:#111;border-radius:10px;padding:20px}
-.goat-close{position:absolute;top:20px;right:20px;background:#333;border:none;color:#fff;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px}
+.goat-content{max-width:800px;margin:0 auto;background:#ffffff;border-radius:10px;padding:20px}
+.goat-close{position:absolute;top:20px;right:20px;background:#e8e8ed;border:none;color:#1d1d1f;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px}
 .goat-images{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:20px 0}
-.goat-images img{width:100%;height:150px;object-fit:contain;background:#1a1a2e;border-radius:8px;border:2px solid transparent}
-.goat-images img.selected{border-color:#00ff88}
+.goat-images img{width:100%;height:150px;object-fit:contain;background:#ffffff;border-radius:8px;border:2px solid transparent}
+.goat-images img.selected{border-color:#0071e3}
 @media(max-width:800px){.top{grid-template-columns:1fr}}
 </style>
 </head>
@@ -74,7 +74,7 @@ th{background:#1a1a2e;font-size:9px;color:#888}
 <button class="goat-close" onclick="closeGoat()">×</button>
 <div class="goat-content">
 <h2 style="margin-bottom:10px">Photos GOAT</h2>
-<p id="goatStatus" style="color:#888;font-size:12px;margin-bottom:15px">Recherche en cours...</p>
+<p id="goatStatus" style="color:#6e6e73;font-size:12px;margin-bottom:15px">Recherche en cours...</p>
 <div class="goat-images" id="goatImages"></div>
 <div style="display:flex;gap:10px;margin-top:15px">
 <button class="btn btn-p" onclick="applyGoatImages()">Remplacer les photos</button>
@@ -110,7 +110,7 @@ function render(){
     h+="<div class='title'>"+esc(p.title)+"</div>";
     h+="<div class='sku'>SKU: "+sku+" | ID: "+p.id+"</div>";
     h+="<div class='price'>"+price+" EUR</div>";
-    h+="<div class='seo-box'><div class='score "+seo.status+"'>"+seo.score+"</div><div><div style='font-weight:bold'>Score SEO</div><div style='font-size:11px;color:#888'>"+getLabel(seo.status)+"</div></div></div>";
+    h+="<div class='seo-box'><div class='score "+seo.status+"'>"+seo.score+"</div><div><div style='font-weight:bold'>Score SEO</div><div style='font-size:11px;color:#6e6e73'>"+getLabel(seo.status)+"</div></div></div>";
     h+="<div class='btns'>";
     h+="<button class='btn btn-p' onclick='regenSelected()'>Modifier Selection</button>";
     h+="<button class='btn btn-s' onclick='regenAll()'>Tout Regenerer</button>";
@@ -118,7 +118,7 @@ function render(){
     h+="<a href='https://"+SHOP_URL+"/admin/products/"+p.id+"' target='_blank' class='btn btn-s'>Shopify</a>";
     h+="</div></div></div>";
     
-    h+="<div class='section'><div class='section-title'>Analyse SEO <span style='font-size:10px;color:#888;font-weight:normal'>Cliquez pour selectionner</span></div><div class='checks'>";
+    h+="<div class='section'><div class='section-title'>Analyse SEO <span style='font-size:10px;color:#6e6e73;font-weight:normal'>Cliquez pour selectionner</span></div><div class='checks'>";
     var fields=["meta_title","meta_description","body_html","","images_seo"];
     for(var i=0;i<seo.checks.length;i++){
         var c=seo.checks[i];
@@ -147,12 +147,12 @@ function render(){
         var fn=src.split("/").pop().split("?")[0];
         var altOk=(alt===p.title);
         var fnOk=(fn.indexOf(titleFn)>=0);
-        var borderColor=(altOk&&fnOk)?"#00ff88":(altOk||fnOk)?"#ff9500":"#ff4757";
-        h+="<div style='border:2px solid "+borderColor+";border-radius:8px;overflow:hidden;background:#1a1a2e'>";
+        var borderColor=(altOk&&fnOk)?"#248a3d":(altOk||fnOk)?"#b25000":"#d70015";
+        h+="<div style='border:2px solid "+borderColor+";border-radius:8px;overflow:hidden;background:#ffffff'>";
         h+="<img src='"+src+"' style='width:100%;height:100px;object-fit:contain'>";
         h+="<div style='padding:6px;font-size:10px'>";
-        h+="<div style='color:"+(altOk?"#00ff88":"#ff4757")+"'>Alt: "+(altOk?"✓":"✗ "+esc(alt||"vide").substring(0,25))+"</div>";
-        h+="<div style='color:"+(fnOk?"#00ff88":"#ff4757")+";overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>Nom: "+(fnOk?"✓":"✗ "+fn.substring(0,20))+"</div>";
+        h+="<div style='color:"+(altOk?"#248a3d":"#d70015")+"'>Alt: "+(altOk?"✓":"✗ "+esc(alt||"vide").substring(0,25))+"</div>";
+        h+="<div style='color:"+(fnOk?"#248a3d":"#d70015")+";overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>Nom: "+(fnOk?"✓":"✗ "+fn.substring(0,20))+"</div>";
         h+="</div></div>";
     }
     h+="</div>";
@@ -217,7 +217,7 @@ function openGoat(){
     if(!sku){toast("Pas de SKU","error");return;}
     
     document.getElementById("goatPreview").classList.add("show");
-    document.getElementById("goatStatus").innerHTML="🔍 Recherche pour <strong>"+sku+"</strong>...<br><small style='color:#888'>(peut prendre 30-60s si le serveur est en veille)</small>";
+    document.getElementById("goatStatus").innerHTML="🔍 Recherche pour <strong>"+sku+"</strong>...<br><small style='color:#6e6e73'>(peut prendre 30-60s si le serveur est en veille)</small>";
     document.getElementById("goatImages").innerHTML="<div class='spinner'></div>";
     goatImages=[];
     
@@ -225,12 +225,12 @@ function openGoat(){
         .then(function(r){return r.json();})
         .then(function(d){
             if(d.error){
-                document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ "+d.error+"</span>";
-                document.getElementById("goatImages").innerHTML="<div style='margin-top:12px;padding:15px;background:#1a1a2e;border-radius:8px;border:1px solid #333'>"
-                    +"<p style='color:#ccc;margin:0 0 8px 0;font-size:13px'>Colle le lien GOAT du produit :</p>"
+                document.getElementById("goatStatus").innerHTML="<span style='color:#d70015'>❌ "+d.error+"</span>";
+                document.getElementById("goatImages").innerHTML="<div style='margin-top:12px;padding:15px;background:#ffffff;border-radius:8px;border:1px solid #e5e5ea'>"
+                    +"<p style='color:#6e6e73;margin:0 0 8px 0;font-size:13px'>Colle le lien GOAT du produit :</p>"
                     +"<div style='display:flex;gap:8px'>"
-                    +"<input id='goatUrlInput' type='text' placeholder='https://www.goat.com/apparel/...' style='flex:1;padding:8px 12px;background:#0d0d1a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px'/>"
-                    +"<button onclick='searchGoatByUrl()' style='padding:8px 16px;background:#6c5ce7;border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:13px'>Chercher</button>"
+                    +"<input id='goatUrlInput' type='text' placeholder='https://www.goat.com/apparel/...' style='flex:1;padding:8px 12px;background:#f5f5f7;border:1px solid #e5e5ea;border-radius:6px;color:#1d1d1f;font-size:13px'/>"
+                    +"<button onclick='searchGoatByUrl()' style='padding:8px 16px;background:#0071e3;border:none;border-radius:6px;color:#ffffff;cursor:pointer;font-size:13px'>Chercher</button>"
                     +"</div></div>";
                 return;
             }
@@ -244,7 +244,7 @@ function openGoat(){
                     var count=results[t].images?results[t].images.length:0;
                     var label=results[t].sku+(results[t].name?" - "+results[t].name.substring(0,30):"")+" ("+count+" photos)";
                     var disabled=count===0;
-                    tabsHtml+="<button class='goat-tab"+(firstWithImages===-1&&!disabled?" active":"")+"' onclick='switchGoatTab("+t+")' "+(disabled?"disabled style='opacity:0.4;cursor:not-allowed;padding:8px 16px;background:#222;border:1px solid #333;border-radius:6px;color:#666;font-size:12px'":"style='padding:8px 16px;background:#1a1a2e;border:1px solid #333;border-radius:6px;color:#fff;font-size:12px;cursor:pointer'")+">"+label+"</button>";
+                    tabsHtml+="<button class='goat-tab"+(firstWithImages===-1&&!disabled?" active":"")+"' onclick='switchGoatTab("+t+")' "+(disabled?"disabled style='opacity:0.4;cursor:not-allowed;padding:8px 16px;background:#f2f2f7;border:1px solid #e5e5ea;border-radius:6px;color:#86868b;font-size:12px'":"style='padding:8px 16px;background:#ffffff;border:1px solid #e5e5ea;border-radius:6px;color:#1d1d1f;font-size:12px;cursor:pointer'")+">"+label+"</button>";
                     if(firstWithImages===-1&&!disabled)firstWithImages=t;
                 }
                 tabsHtml+="</div>";
@@ -257,28 +257,28 @@ function openGoat(){
                 if(firstWithImages>=0){
                     switchGoatTab(firstWithImages);
                 }else{
-                    document.getElementById("goatImages").innerHTML="<p style='color:#666;text-align:center'>Aucune image trouvée pour ces SKU</p>";
+                    document.getElementById("goatImages").innerHTML="<p style='color:#86868b;text-align:center'>Aucune image trouvée pour ces SKU</p>";
                 }
                 return;
             }
             
             // Single SKU
             goatImages=d.images||[];
-            document.getElementById("goatStatus").innerHTML="✅ <strong>"+d.name+"</strong> - "+goatImages.length+" photos trouvées<br><small style='color:#888'>Cliquez sur une image pour la désélectionner</small>";
+            document.getElementById("goatStatus").innerHTML="✅ <strong>"+d.name+"</strong> - "+goatImages.length+" photos trouvées<br><small style='color:#6e6e73'>Cliquez sur une image pour la désélectionner</small>";
             var html="";
             for(var i=0;i<goatImages.length;i++){
                 html+="<img src='"+goatImages[i]+"' class='selected' onclick='toggleGoatImg(this,"+i+")'>";
             }
-            html+="<div style='margin-top:12px;padding:12px;background:#1a1a2e;border-radius:8px;border:1px solid #333'>"
-                +"<p style='color:#999;margin:0 0 6px 0;font-size:12px'>Mauvaises photos ? Colle le bon lien GOAT :</p>"
+            html+="<div style='margin-top:12px;padding:12px;background:#ffffff;border-radius:8px;border:1px solid #e5e5ea'>"
+                +"<p style='color:#6e6e73;margin:0 0 6px 0;font-size:12px'>Mauvaises photos ? Colle le bon lien GOAT :</p>"
                 +"<div style='display:flex;gap:8px'>"
-                +"<input id='goatUrlInput' type='text' placeholder='https://www.goat.com/sneakers/...' style='flex:1;padding:8px 12px;background:#0d0d1a;border:1px solid #444;border-radius:6px;color:#fff;font-size:13px'/>"
-                +"<button onclick='searchGoatByUrl()' style='padding:8px 16px;background:#6c5ce7;border:none;border-radius:6px;color:#fff;cursor:pointer;font-size:13px'>Chercher</button>"
+                +"<input id='goatUrlInput' type='text' placeholder='https://www.goat.com/sneakers/...' style='flex:1;padding:8px 12px;background:#f5f5f7;border:1px solid #e5e5ea;border-radius:6px;color:#1d1d1f;font-size:13px'/>"
+                +"<button onclick='searchGoatByUrl()' style='padding:8px 16px;background:#0071e3;border:none;border-radius:6px;color:#ffffff;cursor:pointer;font-size:13px'>Chercher</button>"
                 +"</div></div>";
             document.getElementById("goatImages").innerHTML=html;
         })
         .catch(function(e){
-            document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+e.message+"</span>";
+            document.getElementById("goatStatus").innerHTML="<span style='color:#d70015'>❌ Erreur: "+e.message+"</span>";
             document.getElementById("goatImages").innerHTML="";
         });
 }
@@ -289,7 +289,7 @@ function searchGoatByUrl(){
     // Extraire le slug depuis l'URL GOAT (ex: https://www.goat.com/apparel/denim-tears-...-grey)
     var match=url.match(/goat\.com\/(?:apparel|sneakers|fr-fr\/apparel|fr-fr\/sneakers|en-us\/apparel)\/([a-z0-9\-]+)/i);
     if(!match){
-        document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ URL GOAT invalide</span>";
+        document.getElementById("goatStatus").innerHTML="<span style='color:#d70015'>❌ URL GOAT invalide</span>";
         return;
     }
     var slug=match[1];
@@ -300,13 +300,13 @@ function searchGoatByUrl(){
         .then(function(r){return r.json();})
         .then(function(d){
             if(d.error){
-                document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ "+d.error+"</span>";
+                document.getElementById("goatStatus").innerHTML="<span style='color:#d70015'>❌ "+d.error+"</span>";
                 document.getElementById("goatImages").innerHTML="";
                 return;
             }
             goatImages=d.images||[];
             goatOverrideSlug=slug;
-            document.getElementById("goatStatus").innerHTML="✅ "+goatImages.length+" images trouvées pour <strong>"+d.name.substring(0,50)+"</strong><br><small style='color:#888'>Cliquez sur une image pour la désélectionner. Le SEO utilisera aussi ce produit GOAT.</small>";
+            document.getElementById("goatStatus").innerHTML="✅ "+goatImages.length+" images trouvées pour <strong>"+d.name.substring(0,50)+"</strong><br><small style='color:#6e6e73'>Cliquez sur une image pour la désélectionner. Le SEO utilisera aussi ce produit GOAT.</small>";
             var html="";
             for(var i=0;i<goatImages.length;i++){
                 html+="<img src='"+goatImages[i]+"' class='selected' onclick='toggleGoatImg(this,"+i+")'>";
@@ -314,7 +314,7 @@ function searchGoatByUrl(){
             document.getElementById("goatImages").innerHTML=html;
         })
         .catch(function(e){
-            document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+e+"</span>";
+            document.getElementById("goatStatus").innerHTML="<span style='color:#d70015'>❌ Erreur: "+e+"</span>";
         });
 }
 
@@ -325,8 +325,8 @@ function switchGoatTab(idx){
     // Update active tab
     var tabs=document.querySelectorAll(".goat-tab");
     for(var i=0;i<tabs.length;i++){
-        tabs[i].style.borderColor=i===idx?"#00ff88":"#333";
-        tabs[i].style.background=i===idx?"#00ff8822":"#1a1a2e";
+        tabs[i].style.borderColor=i===idx?"#248a3d":"#aeaeb2";
+        tabs[i].style.background=i===idx?"#e9f6ec":"#ffffff";
     }
     
     goatImages=results[idx].images||[];
@@ -367,20 +367,20 @@ function applyGoatImages(){
     .then(function(r){return r.json();})
     .then(function(d){
         if(d.success){
-            document.getElementById("goatStatus").innerHTML="<span style='color:#00ff88;font-size:16px'>✅ "+d.added+" photos remplacées avec succès!</span>";
+            document.getElementById("goatStatus").innerHTML="<span style='color:#248a3d;font-size:16px'>✅ "+d.added+" photos remplacées avec succès!</span>";
             btn.innerHTML="✅ Terminé!";
-            btn.style.background="#00ff88";
+            btn.style.background="#0071e3";
             toast("Photos remplacees! Rechargement...","success");
             setTimeout(function(){location.reload();},2000);
         }else{
-            document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+d.error+"</span>";
+            document.getElementById("goatStatus").innerHTML="<span style='color:#d70015'>❌ Erreur: "+d.error+"</span>";
             btn.disabled=false;
             btn.innerHTML="Remplacer les photos";
             toast("Erreur: "+d.error,"error");
         }
     })
     .catch(function(e){
-        document.getElementById("goatStatus").innerHTML="<span style='color:#ff4757'>❌ Erreur: "+e.message+"</span>";
+        document.getElementById("goatStatus").innerHTML="<span style='color:#d70015'>❌ Erreur: "+e.message+"</span>";
         btn.disabled=false;
         btn.innerHTML="Remplacer les photos";
         toast("Erreur: "+e.message,"error");
@@ -391,23 +391,23 @@ function toast(m,t){var e=document.createElement("div");e.className="toast "+t;e
 
 function fixImages(){
     var el=document.getElementById("imgFixResult");
-    el.innerHTML="<div style='padding:10px;background:#333;border-radius:8px;font-size:13px;color:#aaa'><span class='spinner' style='width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:8px'></span>Correction des images...</div>";
+    el.innerHTML="<div style='padding:10px;background:#e8e8ed;border-radius:8px;font-size:13px;color:#6e6e73'><span class='spinner' style='width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:8px'></span>Correction des images...</div>";
     fetch("/api/images/fix",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pid})})
     .then(function(r){return r.json();})
     .then(function(d){
         if(d.success){
             var msg="&#9989; "+d.fixed+" images corrig&eacute;es sur "+d.total;
             if(d.rename_errors){
-                msg+="<br><span style='color:#ff9500'>&#9888;&#65039; Erreur renommage: "+JSON.stringify(d.rename_errors)+"</span>";
-                if(d.attempted_filenames)msg+="<br><small style='color:#888'>Noms tent&eacute;s: "+d.attempted_filenames.join(", ")+"</small>";
+                msg+="<br><span style='color:#b25000'>&#9888;&#65039; Erreur renommage: "+JSON.stringify(d.rename_errors)+"</span>";
+                if(d.attempted_filenames)msg+="<br><small style='color:#6e6e73'>Noms tent&eacute;s: "+d.attempted_filenames.join(", ")+"</small>";
             }
-            el.innerHTML="<div style='padding:10px;background:#00ff8822;border-radius:8px;font-size:13px;color:#00ff88'>"+msg+"</div>";
+            el.innerHTML="<div style='padding:10px;background:#e9f6ec;border-radius:8px;font-size:13px;color:#248a3d'>"+msg+"</div>";
             if(!d.rename_errors)setTimeout(function(){location.reload();},1500);
         }else{
-            el.innerHTML="<div style='padding:10px;background:#ff475722;border-radius:8px;font-size:13px;color:#ff4757'>&#10060; Erreur: "+(d.error||"Inconnue")+"</div>";
+            el.innerHTML="<div style='padding:10px;background:#fdecec;border-radius:8px;font-size:13px;color:#d70015'>&#10060; Erreur: "+(d.error||"Inconnue")+"</div>";
         }
     }).catch(function(e){
-        el.innerHTML="<div style='padding:10px;background:#ff475722;border-radius:8px;font-size:13px;color:#ff4757'>&#10060; "+e.message+"</div>";
+        el.innerHTML="<div style='padding:10px;background:#fdecec;border-radius:8px;font-size:13px;color:#d70015'>&#10060; "+e.message+"</div>";
     });
 }
 

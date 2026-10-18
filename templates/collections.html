@@ -6,67 +6,67 @@
 <title>Collections SEO - KP SHOES</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
-.hd{background:#111;padding:15px 20px;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center}
-.logo{font-size:20px;font-weight:bold;color:#00ff88;text-decoration:none}
-.stats{display:flex;gap:15px;padding:15px 20px;background:#0d0d14;flex-wrap:wrap}
-.st{background:#1a1a2e;padding:12px 20px;border-radius:8px;text-align:center;min-width:100px}
+body{font-family:system-ui;background:#f5f5f7;color:#1d1d1f;min-height:100vh}
+.hd{background:#ffffff;padding:15px 20px;border-bottom:1px solid #e5e5ea;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:20px;font-weight:bold;color:#248a3d;text-decoration:none}
+.stats{display:flex;gap:15px;padding:15px 20px;background:#f5f5f7;flex-wrap:wrap}
+.st{background:#ffffff;padding:12px 20px;border-radius:8px;text-align:center;min-width:100px}
 .st .v{font-size:24px;font-weight:bold}
-.st .l{font-size:10px;color:#666;margin-top:3px}
+.st .l{font-size:10px;color:#86868b;margin-top:3px}
 .main{max-width:1200px;margin:0 auto;padding:20px}
 .toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
-.search{flex:1;min-width:200px;padding:10px 15px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:#fff}
+.search{flex:1;min-width:200px;padding:10px 15px;background:#ffffff;border:1px solid #e5e5ea;border-radius:8px;color:#1d1d1f}
 .btn{padding:10px 20px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px}
-.filter-btn{padding:6px 14px;background:#1a1a2e;border:1px solid #333;color:#888;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600}
-.filter-btn.active{background:#00ff8833;color:#00ff88;border-color:#00ff88}
-.filter-btn.red.active{background:#ff475733;color:#ff4757;border-color:#ff4757}
-.filter-btn.orange.active{background:#ff9f4333;color:#ff9f43;border-color:#ff9f43}
+.filter-btn{padding:6px 14px;background:#ffffff;border:1px solid #e5e5ea;color:#6e6e73;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600}
+.filter-btn.active{background:#e9f6ec;color:#248a3d;border-color:#0071e3}
+.filter-btn.red.active{background:#fdecec;color:#d70015;border-color:#d70015}
+.filter-btn.orange.active{background:#fff4e5;color:#b25000;border-color:#ff9500}
 .msg{padding:12px 20px;border-radius:8px;margin-bottom:15px;font-size:13px;display:none}
-.msg.on{display:block}.msg.ok{background:#00ff8815;color:#00ff88}.msg.err{background:#ff475715;color:#ff4757}
+.msg.on{display:block}.msg.ok{background:#e9f6ec;color:#248a3d}.msg.err{background:#fdecec;color:#d70015}
 table{width:100%;border-collapse:collapse;margin-top:10px}
-th{text-align:left;padding:12px 15px;background:#1a1a2e;color:#888;font-size:11px;text-transform:uppercase;border-bottom:1px solid #333}
-td{padding:12px 15px;border-bottom:1px solid #1a1a2e;font-size:13px;vertical-align:middle}
-tr:hover{background:#111}
-.handle{color:#666;font-size:11px;font-family:monospace}
+th{text-align:left;padding:12px 15px;background:#ffffff;color:#6e6e73;font-size:11px;text-transform:uppercase;border-bottom:1px solid #e5e5ea}
+td{padding:12px 15px;border-bottom:1px solid #e5e5ea;font-size:13px;vertical-align:middle}
+tr:hover{background:#ffffff}
+.handle{color:#86868b;font-size:11px;font-family:monospace}
 .score-circle{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px}
-.score-0{background:#ff475733;color:#ff4757}
-.score-35{background:#ff9f4333;color:#ff9f43}
-.score-70{background:#ffd93d33;color:#ffd93d}
-.score-100{background:#00ff8833;color:#00ff88}
+.score-0{background:#fdecec;color:#d70015}
+.score-35{background:#fff4e5;color:#b25000}
+.score-70{background:#fff4e5;color:#b25000}
+.score-100{background:#e9f6ec;color:#248a3d}
 .badge{display:inline-block;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:600;margin-right:4px}
-.badge.ok{background:#00ff8833;color:#00ff88}
-.badge.miss{background:#ff475733;color:#ff4757}
-.badge.nodef{background:#33333366;color:#666}
-.btn-apply{padding:6px 14px;background:#00ff88;color:#000;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:11px}
+.badge.ok{background:#e9f6ec;color:#248a3d}
+.badge.miss{background:#fdecec;color:#d70015}
+.badge.nodef{background:#f2f2f7;color:#86868b}
+.btn-apply{padding:6px 14px;background:#0071e3;color:#ffffff;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:11px}
 .btn-apply:disabled{opacity:0.4;cursor:not-allowed}
-.btn-apply:hover:not(:disabled){background:#00cc6a}
-.btn-apply.applied{background:#333;color:#00ff88}
-.spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid #333;border-top-color:#00ff88;border-radius:50%;animation:spin 1s linear infinite}
+.btn-apply:hover:not(:disabled){background:#0071e3}
+.btn-apply.applied{background:#e8e8ed;color:#248a3d}
+.spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid #e5e5ea;border-top-color:#0071e3;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .detail-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9999;overflow-y:auto}
-.detail-box{max-width:750px;margin:40px auto;background:#1a1a2e;border-radius:12px;padding:30px;color:#fff}
+.detail-box{max-width:750px;margin:40px auto;background:#ffffff;border-radius:12px;padding:30px;color:#1d1d1f}
 .detail-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-.detail-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer}
+.detail-close{background:none;border:none;color:#1d1d1f;font-size:24px;cursor:pointer}
 .detail-section{margin-bottom:20px}
-.detail-section h3{font-size:13px;color:#888;text-transform:uppercase;margin-bottom:8px}
-.detail-section .val{background:#111;padding:12px;border-radius:8px;font-size:13px;line-height:1.6;color:#ccc;word-break:break-word}
+.detail-section h3{font-size:13px;color:#6e6e73;text-transform:uppercase;margin-bottom:8px}
+.detail-section .val{background:#ffffff;padding:12px;border-radius:8px;font-size:13px;line-height:1.6;color:#6e6e73;word-break:break-word}
 .check-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px}
-.check-ok{color:#00ff88}.check-miss{color:#ff4757}
-.prog-bar{background:#333;border-radius:6px;overflow:hidden;height:8px;margin:15px 0}
-.prog-fill{width:0%;height:100%;background:linear-gradient(90deg,#00ff88,#00cc6a);transition:width .3s}
+.check-ok{color:#248a3d}.check-miss{color:#d70015}
+.prog-bar{background:#e8e8ed;border-radius:6px;overflow:hidden;height:8px;margin:15px 0}
+.prog-fill{width:0%;height:100%;background:linear-gradient(90deg,#0071e3,#0071e3);transition:width .3s}
 </style>
 </head>
 <body>
 <header class="hd">
 <a href="/" class="logo">&larr; KP SHOES</a>
-<span style="color:#aaa;font-size:13px">Gestion des Collections</span>
+<span style="color:#6e6e73;font-size:13px">Gestion des Collections</span>
 </header>
 <div class="stats">
-<div class="st"><div class="v" style="color:#fff" id="totalCol">-</div><div class="l">COLLECTIONS</div></div>
-<div class="st"><div class="v" style="color:#00ff88" id="seo100">-</div><div class="l">SEO 100%</div></div>
-<div class="st"><div class="v" style="color:#ff9f43" id="seoPartial">-</div><div class="l">PARTIEL</div></div>
-<div class="st"><div class="v" style="color:#ff4757" id="seo0">-</div><div class="l">SANS SEO</div></div>
-<div class="st"><div class="v" style="color:#666" id="noSEODef">-</div><div class="l">PAS D&Eacute;FINI</div></div>
+<div class="st"><div class="v" style="color:#1d1d1f" id="totalCol">-</div><div class="l">COLLECTIONS</div></div>
+<div class="st"><div class="v" style="color:#248a3d" id="seo100">-</div><div class="l">SEO 100%</div></div>
+<div class="st"><div class="v" style="color:#b25000" id="seoPartial">-</div><div class="l">PARTIEL</div></div>
+<div class="st"><div class="v" style="color:#d70015" id="seo0">-</div><div class="l">SANS SEO</div></div>
+<div class="st"><div class="v" style="color:#86868b" id="noSEODef">-</div><div class="l">PAS D&Eacute;FINI</div></div>
 </div>
 <main class="main">
 <div class="msg" id="msg"></div>
@@ -75,15 +75,15 @@ tr:hover{background:#111}
 <button class="filter-btn active" id="fAll" onclick="setFilter('all')">Toutes</button>
 <button class="filter-btn red" id="fTodo" onclick="setFilter('todo')">&#192; faire</button>
 <button class="filter-btn orange" id="fPartial" onclick="setFilter('partial')">Partiel</button>
-<button class="btn" style="background:#00ff88;color:#000" onclick="applyAll()">&#128640; Appliquer tout</button>
+<button class="btn" style="background:#0071e3;color:#ffffff" onclick="applyAll()">Appliquer tout</button>
 </div>
 <div id="batchProg" style="display:none;margin-bottom:15px">
 <div class="prog-bar"><div class="prog-fill" id="batchBar"></div></div>
-<div id="batchTxt" style="text-align:center;font-size:12px;color:#aaa;margin-top:6px"></div>
+<div id="batchTxt" style="text-align:center;font-size:12px;color:#6e6e73;margin-top:6px"></div>
 </div>
 <table>
 <thead><tr><th>Collection</th><th>Handle</th><th>Score</th><th>Statut</th><th>Action</th></tr></thead>
-<tbody id="tbody"><tr><td colspan="5" style="text-align:center;padding:40px;color:#666"><span class="spinner-sm"></span> Analyse en cours...</td></tr></tbody>
+<tbody id="tbody"><tr><td colspan="5" style="text-align:center;padding:40px;color:#86868b"><span class="spinner-sm"></span> Analyse en cours...</td></tr></tbody>
 </table>
 </main>
 
@@ -95,8 +95,8 @@ tr:hover{background:#111}
 </div>
 <div id="detailContent"></div>
 <div style="display:flex;gap:10px;margin-top:20px">
-<button id="detailApplyBtn" class="btn" style="flex:1;padding:12px;background:#00ff88;color:#000;font-size:14px" onclick="applyFromDetail()">&#128640; Appliquer le SEO</button>
-<a id="detailLink" href="#" target="_blank" class="btn" style="padding:12px 20px;background:#333;color:#fff;text-decoration:none;text-align:center">Voir sur le site &#8599;</a>
+<button id="detailApplyBtn" class="btn" style="flex:1;padding:12px;background:#0071e3;color:#ffffff;font-size:14px" onclick="applyFromDetail()">Appliquer le SEO</button>
+<a id="detailLink" href="#" target="_blank" class="btn" style="padding:12px 20px;background:#e8e8ed;color:#1d1d1f;text-decoration:none;text-align:center">Voir sur le site &#8599;</a>
 </div>
 </div>
 </div>
@@ -176,7 +176,7 @@ function filterCols(){
         html+="<td><button class='"+btnClass+"' onclick='event.stopPropagation();applySeo("+c.id+",this)' "+btnDisabled+">"+btnText+"</button></td>";
         html+="</tr>";
     }
-    if(!html)html="<tr><td colspan='5' style='text-align:center;padding:40px;color:#666'>Aucune collection</td></tr>";
+    if(!html)html="<tr><td colspan='5' style='text-align:center;padding:40px;color:#86868b'>Aucune collection</td></tr>";
     tb.innerHTML=html;
 }
 
@@ -186,8 +186,8 @@ function showDetail(idx){
     document.getElementById("detailLink").href="https://kpshoes.fr/collections/"+c.handle;
     var html="";
     html+="<div class='detail-section'><h3>V\u00e9rification SEO</h3><div class='val'>";
-    html+="<div class='check-row'><span class='"+(c.checks.meta_title?"check-ok":"check-miss")+"'>"+(c.checks.meta_title?"\u2713":"\u2717")+"</span> <strong>Meta Title</strong>"+(c.live_meta_title?" &mdash; <span style='color:#888;font-size:11px'>"+c.live_meta_title.substring(0,60)+"</span>":"")+"</div>";
-    html+="<div class='check-row'><span class='"+(c.checks.meta_description?"check-ok":"check-miss")+"'>"+(c.checks.meta_description?"\u2713":"\u2717")+"</span> <strong>Meta Description</strong>"+(c.live_meta_description?" &mdash; <span style='color:#888;font-size:11px'>"+c.live_meta_description.substring(0,70)+"...</span>":"")+"</div>";
+    html+="<div class='check-row'><span class='"+(c.checks.meta_title?"check-ok":"check-miss")+"'>"+(c.checks.meta_title?"\u2713":"\u2717")+"</span> <strong>Meta Title</strong>"+(c.live_meta_title?" &mdash; <span style='color:#6e6e73;font-size:11px'>"+c.live_meta_title.substring(0,60)+"</span>":"")+"</div>";
+    html+="<div class='check-row'><span class='"+(c.checks.meta_description?"check-ok":"check-miss")+"'>"+(c.checks.meta_description?"\u2713":"\u2717")+"</span> <strong>Meta Description</strong>"+(c.live_meta_description?" &mdash; <span style='color:#6e6e73;font-size:11px'>"+c.live_meta_description.substring(0,70)+"...</span>":"")+"</div>";
     html+="<div class='check-row'><span class='"+(c.checks.body_html?"check-ok":"check-miss")+"'>"+(c.checks.body_html?"\u2713":"\u2717")+"</span> <strong>Description Body HTML</strong></div>";
     html+="</div></div>";
     if(c.has_seo_def){
@@ -198,7 +198,7 @@ function showDetail(idx){
         document.getElementById("detailApplyBtn").style.display="block";
         document.getElementById("detailApplyBtn").setAttribute("data-id",c.id);
     }else{
-        html+="<div style='padding:15px;background:#ff475715;border-radius:8px;color:#ff9f43;font-size:13px'>Aucun SEO d\u00e9fini pour <strong>"+c.handle+"</strong>.</div>";
+        html+="<div style='padding:15px;background:#fdecec;border-radius:8px;color:#b25000;font-size:13px'>Aucun SEO d\u00e9fini pour <strong>"+c.handle+"</strong>.</div>";
         document.getElementById("detailApplyBtn").style.display="none";
     }
     document.getElementById("detailContent").innerHTML=html;
@@ -212,7 +212,7 @@ function applySeo(cid,btn){
     btn.innerHTML="<span class='spinner-sm'></span>";btn.disabled=true;
     fetch("/api/collections/"+cid+"/seo",{method:"POST",headers:{"Content-Type":"application/json"}}).then(function(r){return r.json()}).then(function(d){
         if(d.success){btn.innerHTML="\u2713 OK";btn.className="btn-apply applied";showMsg("Collection mise \u00e0 jour !","ok")}
-        else{btn.innerHTML="Erreur";btn.style.background="#ff4757";btn.style.color="#fff";showMsg("Erreur: "+(d.error||"inconnue"),"err")}
+        else{btn.innerHTML="Erreur";btn.style.background="#d70015";btn.style.color="#1d1d1f";showMsg("Erreur: "+(d.error||"inconnue"),"err")}
         setTimeout(function(){btn.disabled=false},2000);
     }).catch(function(e){btn.innerHTML=old;btn.disabled=false;showMsg("Erreur: "+e.message,"err")});
 }
@@ -222,9 +222,9 @@ function applyFromDetail(){
     var btn=document.getElementById("detailApplyBtn");
     btn.innerHTML="<span class='spinner-sm'></span> Application...";btn.disabled=true;
     fetch("/api/collections/"+cid+"/seo",{method:"POST",headers:{"Content-Type":"application/json"}}).then(function(r){return r.json()}).then(function(d){
-        if(d.success){btn.innerHTML="\u2713 SEO appliqu\u00e9 !";btn.style.background="#00cc6a";showMsg("Collection mise \u00e0 jour !","ok")}
-        else{btn.innerHTML="Erreur";btn.style.background="#ff4757";showMsg("Erreur: "+(d.error||"inconnue"),"err")}
-        setTimeout(function(){btn.innerHTML="\ud83d\ude80 Appliquer le SEO";btn.disabled=false;btn.style.background="#00ff88"},2000);
+        if(d.success){btn.innerHTML="\u2713 SEO appliqu\u00e9 !";btn.style.background="#0071e3";showMsg("Collection mise \u00e0 jour !","ok")}
+        else{btn.innerHTML="Erreur";btn.style.background="#d70015";showMsg("Erreur: "+(d.error||"inconnue"),"err")}
+        setTimeout(function(){btn.innerHTML="\ud83d\ude80 Appliquer le SEO";btn.disabled=false;btn.style.background="#0071e3"},2000);
     });
 }
 
@@ -242,7 +242,7 @@ function applyAll(){
             document.getElementById("batchTxt").innerHTML=txt;
             if(fail>0){
                 document.getElementById("batchTxt").innerHTML+=
-                    "<br><span style='color:#ff4757;font-size:11px'>Erreurs: "+errors.join(", ")+"</span>";
+                    "<br><span style='color:#d70015;font-size:11px'>Erreurs: "+errors.join(", ")+"</span>";
                 showMsg(ok+" OK, "+fail+" erreurs. Relance pour les rat\u00e9es.","err");
             }else{
                 showMsg(ok+" collections mises \u00e0 jour !","ok");

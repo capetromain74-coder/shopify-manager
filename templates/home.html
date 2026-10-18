@@ -5,154 +5,102 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>KP SHOES - Gestion</title>
 <style>
-:root{
-  --bg:#0a0a0f; --surface:#13131c; --surface-2:#1a1a26; --surface-3:#20202e;
-  --border:#262636; --border-2:#33334a;
-  --text:#eaeaf2; --muted:#8b8b9c; --muted-2:#6a6a7a;
-  --accent:#00ff88; --accent-d:#00cc6a; --accent-soft:rgba(0,255,136,.12);
-  --blue:#3b82f6; --purple:#9b59b6; --danger:#ff4757; --warn:#ffa500;
-  --radius:12px; --radius-sm:8px; --shadow:0 8px 30px rgba(0,0,0,.4);
-}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
-  background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
-a{color:inherit}
-::selection{background:var(--accent-soft)}
-
-/* Stats */
-.stats{display:flex;gap:12px;padding:18px 20px 4px;max-width:1400px;margin:0 auto;flex-wrap:wrap}
-.st{flex:1;min-width:130px;background:var(--surface);padding:14px 18px;border-radius:var(--radius);
-  border:1px solid var(--border);text-align:left;transition:border-color .15s,transform .15s}
-.st:hover{border-color:var(--border-2)}
-.st[onclick]{cursor:pointer}.st[onclick]:hover{border-color:var(--accent);transform:translateY(-2px)}
-.st .v{font-size:26px;font-weight:800;color:var(--accent);line-height:1}
-.st .l{font-size:10px;color:var(--muted);margin-top:6px;letter-spacing:.6px;font-weight:600}
-
-/* Layout */
-.main{max-width:1400px;margin:0 auto;padding:16px 20px 40px}
-.toolbar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
-.search{flex:1;min-width:220px;padding:11px 15px;background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius-sm);color:var(--text);font-size:14px;transition:border-color .15s,box-shadow .15s}
-.search::placeholder{color:var(--muted-2)}
-.search:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.filter{padding:11px 13px;background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius-sm);color:var(--text);font-size:13px;cursor:pointer}
-.filter:focus{outline:none;border-color:var(--accent)}
-
-/* Buttons */
-.btn{padding:11px 18px;border:none;border-radius:var(--radius-sm);font-weight:700;cursor:pointer;
-  font-size:13px;transition:transform .12s,filter .15s,background .15s;display:inline-flex;align-items:center;gap:6px}
-.btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
-.btn:active{transform:translateY(0)}
-.btn-s{background:var(--surface-3);color:var(--text);border:1px solid var(--border)}
-.btn-s:hover{background:var(--surface-2)}
-.btn-p{background:linear-gradient(135deg,var(--accent),var(--accent-d));color:#04140c}
-
-/* Grid + cards */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  overflow:hidden;cursor:pointer;transition:transform .18s,border-color .18s,box-shadow .18s}
-.card:hover{border-color:var(--accent);transform:translateY(-4px);box-shadow:var(--shadow)}
-.card img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:var(--surface-2);transition:transform .35s ease}
-.card:hover img{transform:scale(1.06)}
-.card-body{padding:13px 14px}
-.card-title{font-size:13px;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card-sku{font-size:10.5px;color:var(--muted);margin-bottom:10px;font-family:ui-monospace,monospace}
-.card-meta{display:flex;justify-content:space-between;align-items:center}
-.card-price{font-size:15px;font-weight:800;color:var(--accent)}
-.badge{padding:4px 9px;border-radius:20px;font-size:9.5px;font-weight:700;letter-spacing:.3px}
-.badge.excellent{background:rgba(0,255,136,.18);color:var(--accent)}
-.badge.good{background:rgba(0,204,106,.18);color:var(--accent-d)}
-.badge.warning{background:rgba(255,165,0,.18);color:var(--warn)}
-.badge.poor{background:rgba(255,71,87,.18);color:var(--danger)}
-
-/* States */
-.loading{text-align:center;padding:70px;color:var(--muted)}
-.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);
-  border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px}
+.page-head{max-width:1200px;margin:0 auto;padding:40px 24px 0}
+.page-head h1{font-size:34px;font-weight:700;letter-spacing:-.03em}
+.page-head p{color:#6e6e73;font-size:15px;margin-top:6px}
+.st-link{display:inline-block;margin-top:10px;font-size:13px;color:#0071e3;text-decoration:none}
+.st-link:hover{text-decoration:underline}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+.tb-left{display:flex;gap:10px;flex:1;min-width:280px}
+.tb-left .search{flex:1;min-width:160px}
+.tb-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toolbar .btn{padding:8px 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.card{cursor:pointer;position:relative}
+.card img{width:100%;aspect-ratio:4/3;object-fit:contain;display:block;padding:14px}
+.card-body{padding:2px 16px 16px}
+.card-title{font-size:14px;line-height:1.35;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:38px}
+.card-sku{font-size:12px;margin-bottom:12px;font-family:"SF Mono",ui-monospace,Menlo,monospace}
+.card-meta{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.card-price{font-size:15px;font-weight:600;color:#1d1d1f;white-space:nowrap}
+.badge{white-space:nowrap}
+.badge{padding:3px 9px}
+#selectCount{background:#eef5ff!important;color:#0071e3!important;border-radius:12px!important}
+.loading{text-align:center;padding:80px}
+.spinner{width:28px;height:28px;border:3px solid;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 14px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.msg{padding:12px 18px;background:var(--accent-soft);color:var(--accent);border-radius:var(--radius-sm);
-  margin-bottom:16px;display:none;font-size:13px;border:1px solid rgba(0,255,136,.2)}
-.msg.on{display:block}
-
-/* Modals */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
-  z-index:9999;overflow-y:auto}
-.modal-box{max-width:650px;margin:48px auto;background:var(--surface);border:1px solid var(--border-2);
-  border-radius:16px;padding:28px;color:var(--text);box-shadow:var(--shadow)}
-.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
-.modal-close{background:none;border:none;color:var(--muted);font-size:26px;cursor:pointer;line-height:1;transition:color .15s}
-.modal-close:hover{color:var(--text)}
+.msg{padding:12px 16px;margin-bottom:16px;display:none;font-size:14px}.msg.on{display:block}
+.modal-bg{display:none;position:fixed;inset:0;z-index:9999;overflow-y:auto}
+.modal-box{max-width:620px;margin:56px auto;padding:28px}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-head h2{font-size:20px!important;font-weight:600}
+.modal-close{background:none;border:none;font-size:26px;cursor:pointer;line-height:1}
 .opt-group{margin-bottom:20px}
-.opt-label{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;letter-spacing:.5px}
-.opt-radio,.opt-check{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:14px;
-  padding:11px 13px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);
-  margin-bottom:7px;transition:border-color .15s}
-.opt-radio:hover,.opt-check:hover{border-color:var(--border-2)}
-.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-left:8px}
-.opt-sub{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px;
-  background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm)}
-.prog-bar{background:var(--surface-3);border-radius:6px;overflow:hidden;height:9px}
-.prog-fill{width:0%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-d));transition:width .3s}
-.issue-row{display:flex;align-items:center;gap:10px;padding:11px;background:var(--surface-2);
-  border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:7px}
-.issue-bar{background:var(--surface-3);border-radius:4px;height:6px;margin-top:4px}
-
-@media(max-width:640px){
-  .main{padding:14px}
-  .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
-  .modal-box{margin:16px;padding:20px}
-  .st .v{font-size:22px}
-}
-.ministat-btn{display:inline-block;margin-top:8px;font-size:10px;font-weight:700;color:var(--accent);
-  background:var(--accent-soft);border:1px solid rgba(0,255,136,.25);padding:5px 9px;border-radius:6px;
-  text-decoration:none;transition:background .15s}
-.ministat-btn:hover{background:rgba(0,255,136,.2)}
+.opt-label{margin-bottom:8px}
+.opt-radio,.opt-check{display:block;cursor:pointer;font-size:14px;padding:11px 14px;margin-bottom:6px;line-height:1.45}
+.opt-radio input,.opt-check input{margin-right:10px;vertical-align:-2px}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.opt-sub{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:10px 12px}
+.prog-bar{overflow:hidden}
+.prog-fill{width:0%;height:100%;transition:width .3s}
+.issue-row{display:flex;align-items:center;gap:10px;padding:12px;background:#f2f2f7;border-radius:10px;margin-bottom:6px}
+.issue-bar{background:#e8e8ed;border-radius:3px;height:6px;margin-top:4px}
+@media(max-width:640px){.grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.modal-box{margin:12px;padding:20px}.page-head h1{font-size:28px}}
 </style>
 </head>
 <body>
 <header class="hd">
 <div class="logo">KP SHOES</div>
 <div style="display:flex;gap:10px;align-items:center">
-<a href="/image-scanner" style="background:linear-gradient(135deg,#e67e22 0%,#f39c12 100%);color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600">&#128247; Scanner Images</a>
-<span style="color:#666;font-size:12px">V8</span>
+<a href="/image-scanner" style="background:linear-gradient(135deg,#ff9500 0%,#ff9500 100%);color:#ffffff;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600">Scanner Images</a>
+<span style="color:#86868b;font-size:12px">V8</span>
 </div>
 </header>
+<header class="page-head">
+<h1>Produits</h1>
+<p>L&rsquo;&eacute;tat de tes fiches en un coup d&rsquo;&oelig;il.</p>
+</header>
 <div class="stats">
-<div class="st"><div class="v" id="totalP">-</div><div class="l">PRODUITS</div></div>
-<div class="st"><div class="v" id="statReady">-</div><div class="l">PR&Ecirc;TS (essentiels OK)</div></div>
-<div class="st"><div class="v" id="statHD">-</div><div class="l">100% EN HD</div></div>
-<div class="st"><div class="v" id="statOne">-</div><div class="l">1 SEULE PHOTO</div><a href="/image-scanner" class="ministat-btn">&#128269; Chercher de nouvelles images</a></div>
-<div class="st" style="cursor:pointer" onclick="window.location='/collections'"><div class="v" id="totalC">-</div><div class="l">COLLECTIONS &#8594;</div></div>
+<div class="st"><div class="v" id="totalP">&ndash;</div><div class="l">Produits</div></div>
+<div class="st"><div class="v" id="statReady">&ndash;</div><div class="l">Pr&ecirc;ts</div></div>
+<div class="st"><div class="v" id="statHD">&ndash;</div><div class="l">Photos 100&nbsp;% HD</div></div>
+<div class="st"><div class="v" id="statOne">&ndash;</div><div class="l">Une seule photo</div><a href="/image-scanner" class="st-link">Chercher des photos &rsaquo;</a></div>
 </div>
 <main class="main">
 <div class="msg" id="msg"></div>
 <div class="toolbar">
-<input type="text" class="search" id="q" placeholder="Rechercher un produit...">
+<div class="tb-left">
+<input type="text" class="search" id="q" placeholder="Rechercher un produit">
 <select class="filter" id="f">
 <option value="">Tous les produits</option>
-<option value="ready">&#10004;&#65039; Pr&ecirc;ts (essentiels OK)</option>
-<option value="nodesc">&#128221; Sans description</option>
-<option value="nolink">&#128279; Sans lien interne</option>
-<option value="imgfix">&#128444;&#65039; Images &agrave; corriger (alt/nom)</option>
-<option value="nohd">&#10071; Pas 100% en HD</option>
-<option value="fewphotos">&#128247; Moins de 8 photos</option>
-<option value="onephoto">&#9888;&#65039; 1 seule photo</option>
-<option value="nosku">&#127991;&#65039; Sans SKU</option>
+<option value="ready">Pr&ecirc;ts</option>
+<optgroup label="&Agrave; compl&eacute;ter">
+<option value="nodesc">Sans description</option>
+<option value="imgfix">Photos &agrave; renommer (alt / nom)</option>
+<option value="nohd">Photos pas toutes en HD</option>
+<option value="fewphotos">Moins de 8 photos</option>
+<option value="onephoto">Une seule photo</option>
+<option value="nosku">Sans SKU</option>
+<option value="nolink">Sans lien interne</option>
+</optgroup>
 </select>
-<button class="btn btn-s" onclick="reload()">&#8635; Actualiser</button>
-<button class="btn btn-s" onclick="selectAll()">&#9745; Cocher la page</button>
-<button class="btn" style="background:#00ff88;color:#000" onclick="openCorrector()">&#128295; Corriger<span id="selBadge"></span></button>
-<button class="btn" style="background:#9b59b6;color:#fff" onclick="openBulkGoat()">&#128247; Photos GOAT<span id="goatBadge"></span></button>
-<button class="btn" style="background:#3b82f6;color:#fff" onclick="openAnalyzer()">&#128270; Analyser</button>
 </div>
-<div id="selectCount" style="display:none;align-items:center;gap:10px;padding:8px 15px;background:#00ff8822;border-radius:8px;margin-bottom:15px;font-size:13px;color:#00ff88"></div>
+<div class="tb-right">
+<button class="btn btn-ghost" onclick="reload()">Actualiser</button>
+<button class="btn btn-ghost" onclick="selectAll()">Tout s&eacute;lectionner</button>
+<button class="btn" onclick="openAnalyzer()">Analyser</button>
+<button class="btn" onclick="openBulkGoat()">Photos GOAT<span id="goatBadge"></span></button>
+<button class="btn btn-primary" onclick="openCorrector()">Corriger<span id="selBadge"></span></button>
+</div>
+</div>
+<div id="selectCount" style="display:none;align-items:center;gap:10px;padding:8px 15px;background:#e9f6ec;border-radius:8px;margin-bottom:15px;font-size:13px;color:#248a3d"></div>
 
 <!-- ══════ MODAL PHOTOS GOAT BULK ══════ -->
 <div class="modal-bg" id="bulkGoatModal">
 <div class="modal-box" style="max-width:600px">
 <div class="modal-head">
-<h2 style="margin:0;font-size:20px">&#128247; Remplacer les photos GOAT</h2>
+<h2 style="margin:0;font-size:20px">Remplacer les photos GOAT</h2>
 <button class="modal-close" onclick="closeBulkGoat()">&times;</button>
 </div>
 
@@ -161,30 +109,30 @@ a{color:inherit}
 <label class="opt-radio"><input type="radio" name="goatScope" value="selection" checked> S&eacute;lection uniquement (<span id="goatSel">0</span> coch&eacute;s)</label>
 <label class="opt-radio"><input type="radio" name="goatScope" value="all"> Tous les produits (<span id="goatTotal">0</span>)</label>
 <label class="opt-radio"><input type="radio" name="goatScope" value="incomplete"> R&eacute;parer les incomplets &mdash; moins de
-<input type="number" id="goatThreshold" value="8" min="1" max="12" style="width:48px;padding:2px 4px;margin:0 4px;background:#222;color:#fff;border:1px solid #444;border-radius:4px"> photos</label>
-<label class="opt-radio" style="color:#9b59b6"><input type="checkbox" id="goatSkipDone" checked> Sauter les produits d&eacute;j&agrave; finis (tag goat_hd, ou set complet en haute r&eacute;solution)</label>
-<label class="opt-radio" style="color:#feca57"><input type="checkbox" id="goatTrustTag"> Se fier au tag goat_hd (plus rapide). <b>D&eacute;coch&eacute;</b> = re-v&eacute;rifier TOUT par le nombre r&eacute;el de photos (recommand&eacute; pour un nettoyage final)</label>
+<input type="number" id="goatThreshold" value="8" min="1" max="12" style="width:48px;padding:2px 4px;margin:0 4px;background:#f2f2f7;color:#1d1d1f;border:1px solid #e5e5ea;border-radius:4px"> photos</label>
+<label class="opt-radio" style="color:#0071e3"><input type="checkbox" id="goatSkipDone" checked> Sauter les produits d&eacute;j&agrave; finis (tag goat_hd, ou set complet en haute r&eacute;solution)</label>
+<label class="opt-radio" style="color:#b25000"><input type="checkbox" id="goatTrustTag"> Se fier au tag goat_hd (plus rapide). <b>D&eacute;coch&eacute;</b> = re-v&eacute;rifier TOUT par le nombre r&eacute;el de photos (recommand&eacute; pour un nettoyage final)</label>
 </div>
 
-<div style="padding:15px 20px;font-size:13px;color:#aaa;line-height:1.6">
+<div style="padding:15px 20px;font-size:13px;color:#6e6e73;line-height:1.6">
 <p style="margin:0 0 10px">Pour chaque produit, le bot va :</p>
 <p style="margin:0 0 5px">1. R&eacute;cup&eacute;rer le SKU du produit</p>
 <p style="margin:0 0 5px">2. Chercher les images sur GOAT</p>
 <p style="margin:0 0 5px">3. Remplacer toutes les photos par celles de GOAT</p>
-<p style="margin:10px 0 0;color:#ff9f43">&#9888; Les produits sans SKU seront ignor&eacute;s</p>
-<p style="margin:5px 0 0;color:#00d2d3">&#8635; Reprise auto : si tu recharges, les produits d&eacute;j&agrave; faits dans cette session sont saut&eacute;s.</p>
-<p style="margin:5px 0 0;color:#ff6b6b">&#9888; Apr&egrave;s un red&eacute;ploiement Render, <b>recharge la page (Cmd+R)</b> AVANT de relancer, sinon la liste ne conna&icirc;t pas les derniers tags.</p>
+<p style="margin:10px 0 0;color:#b25000">Les produits sans SKU sont ignor&eacute;s.</p>
+<p style="margin:5px 0 0;color:#0071a4">&#8635; Reprise auto : si tu recharges, les produits d&eacute;j&agrave; faits dans cette session sont saut&eacute;s.</p>
+<p style="margin:5px 0 0;color:#d70015">Apr&egrave;s un red&eacute;ploiement, <b>recharge la page (Cmd+R)</b> AVANT de relancer, sinon la liste ne conna&icirc;t pas les derniers tags.</p>
 </div>
 
 <div id="bulkGoatStatus" style="display:none;padding:10px 20px">
 <div class="prog-bar"><div class="prog-fill" id="bulkGoatBar"></div></div>
-<div id="bulkGoatTxt" style="text-align:center;font-size:12px;color:#aaa;margin-top:8px"></div>
-<div id="bulkGoatLog" style="max-height:200px;overflow-y:auto;margin-top:10px;font-size:11px;color:#888;font-family:monospace"></div>
+<div id="bulkGoatTxt" style="text-align:center;font-size:12px;color:#6e6e73;margin-top:8px"></div>
+<div id="bulkGoatLog" style="max-height:200px;overflow-y:auto;margin-top:10px;font-size:11px;color:#6e6e73;font-family:monospace"></div>
 </div>
 
 <div style="padding:15px 20px;display:flex;gap:10px">
-<button class="btn btn-p" id="bulkGoatBtn" onclick="startBulkGoat()" style="flex:1;padding:14px;font-size:15px;background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff;font-weight:700;border:none;border-radius:8px;cursor:pointer">&#128247; Lancer le remplacement</button>
-<button class="btn" onclick="closeBulkGoat()" style="padding:14px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer">Annuler</button>
+<button class="btn btn-p" id="bulkGoatBtn" onclick="startBulkGoat()" style="flex:1;padding:14px;font-size:15px;background:linear-gradient(135deg,#0071e3,#0071e3);color:#ffffff;font-weight:700;border:none;border-radius:8px;cursor:pointer">Lancer le remplacement</button>
+<button class="btn" onclick="closeBulkGoat()" style="padding:14px 20px;background:#e8e8ed;color:#1d1d1f;border:none;border-radius:8px;cursor:pointer">Annuler</button>
 </div>
 </div>
 </div>
@@ -193,7 +141,7 @@ a{color:inherit}
 <div class="modal-bg" id="correctorModal">
 <div class="modal-box">
 <div class="modal-head">
-<h2 style="margin:0;font-size:20px">&#128295; Corriger le site</h2>
+<h2 style="margin:0;font-size:20px">Corriger les fiches</h2>
 <button class="modal-close" onclick="closeCorrector()">&times;</button>
 </div>
 
@@ -205,27 +153,27 @@ a{color:inherit}
 
 <div class="opt-group">
 <div class="opt-label">QUE CORRIGER ?</div>
-<label class="opt-check" style="margin-bottom:8px"><input type="checkbox" id="corAll" onchange="toggleCorAll()" style="accent-color:#00ff88;width:18px;height:18px"> <strong>Tout s&eacute;lectionner</strong></label>
+<label class="opt-check" style="margin-bottom:8px"><input type="checkbox" id="corAll" onchange="toggleCorAll()" style="accent-color:#0071e3;width:18px;height:18px"> <strong>Tout s&eacute;lectionner</strong></label>
 <div class="opt-grid">
-<label class="opt-sub"><input type="checkbox" class="corF" value="body_html" style="accent-color:#00ff88"> &#128221; Description</label>
-<label class="opt-sub"><input type="checkbox" class="corF" value="meta_title" style="accent-color:#00ff88"> &#127991;&#65039; Meta Title</label>
-<label class="opt-sub"><input type="checkbox" class="corF" value="meta_description" style="accent-color:#00ff88"> &#128203; Meta Description</label>
-<label class="opt-sub"><input type="checkbox" class="corF" value="images_alt" style="accent-color:#00ff88"> &#128444;&#65039; Alt Photos</label>
-<label class="opt-sub"><input type="checkbox" class="corF" value="images_filename" style="accent-color:#00ff88"> &#128193; Nom Photos</label>
-<label class="opt-sub"><input type="checkbox" class="corF" value="handle" style="accent-color:#00ff88"> &#128279; Handle (URL)</label>
-<label class="opt-sub"><input type="checkbox" class="corF" value="color" style="accent-color:#00ff88"> &#127912; Couleur (filtre)</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="body_html" style="accent-color:#0071e3"> Description</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="meta_title" style="accent-color:#0071e3"> Titre SEO</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="meta_description" style="accent-color:#0071e3"> M&eacute;ta-description</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="images_alt" style="accent-color:#0071e3"> Texte alt des photos</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="images_filename" style="accent-color:#0071e3"> Noms des fichiers photos</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="handle" style="accent-color:#0071e3"> URL (handle)</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="color" style="accent-color:#0071e3"> Couleur (filtre)</label>
 </div>
-<label class="opt-check" style="margin-top:8px;font-size:12px;color:#aaa"><input type="checkbox" id="corColorOverwrite" style="accent-color:#ff9f43"> Couleur : &eacute;craser aussi les couleurs d&eacute;j&agrave; renseign&eacute;es (sinon, seules les fiches sans couleur sont compl&eacute;t&eacute;es)</label>
+<label class="opt-check" style="margin-top:8px;font-size:12px;color:#6e6e73"><input type="checkbox" id="corColorOverwrite" style="accent-color:#0071e3"> Couleur : &eacute;craser aussi les couleurs d&eacute;j&agrave; renseign&eacute;es (sinon, seules les fiches sans couleur sont compl&eacute;t&eacute;es)</label>
 </div>
 
 <div id="corStatus" style="display:none;margin:15px 0;padding:12px;border-radius:8px;font-size:13px"></div>
 <div id="corProg" style="display:none;margin:15px 0">
 <div class="prog-bar"><div class="prog-fill" id="corBar"></div></div>
-<div id="corTxt" style="text-align:center;font-size:12px;color:#aaa;margin-top:6px"></div>
+<div id="corTxt" style="text-align:center;font-size:12px;color:#6e6e73;margin-top:6px"></div>
 </div>
 <div style="display:flex;gap:10px">
-<button id="corBtn" onclick="startCorrection()" style="flex:1;padding:14px;background:#00ff88;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">&#128640; Lancer la correction</button>
-<button onclick="closeCorrector()" style="padding:14px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer">Fermer</button>
+<button id="corBtn" onclick="startCorrection()" style="flex:1;padding:14px;background:#0071e3;color:#ffffff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">Lancer la correction</button>
+<button onclick="closeCorrector()" style="padding:14px 20px;background:#e8e8ed;color:#1d1d1f;border:none;border-radius:8px;cursor:pointer">Fermer</button>
 </div>
 </div>
 </div>
@@ -234,12 +182,12 @@ a{color:inherit}
 <div class="modal-bg" id="analyzerModal">
 <div class="modal-box" style="max-width:600px">
 <div class="modal-head">
-<h2 style="margin:0;font-size:20px">&#128270; Analyse SEO du site</h2>
+<h2 style="margin:0;font-size:20px">Analyse SEO</h2>
 <button class="modal-close" onclick="closeAnalyzer()">&times;</button>
 </div>
 <div id="azContent"></div>
 <div style="display:flex;gap:10px;margin-top:15px">
-<button onclick="closeAnalyzer()" style="padding:12px 20px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer;width:100%">Fermer</button>
+<button onclick="closeAnalyzer()" style="padding:12px 20px;background:#e8e8ed;color:#1d1d1f;border:none;border-radius:8px;cursor:pointer;width:100%">Fermer</button>
 </div>
 </div>
 </div>
@@ -348,6 +296,7 @@ function filter(){
     filteredList=L;render(L);
 }
 
+function fmtPrice(v){var n=parseFloat(v);if(isNaN(n))return v+" \u20ac";try{return n.toLocaleString("fr-FR",{style:"currency",currency:"EUR"})}catch(e){return n.toFixed(2).replace(".",",")+" \u20ac"}}
 function render(L){
     var el=document.getElementById("grid");
     if(!L.length&&!loading){el.innerHTML="<div class='loading'>Aucun produit</div>";return}
@@ -357,10 +306,10 @@ function render(L){
         var price=(p.variants&&p.variants[0])?p.variants[0].price:"0";
         var chk=selectedPids.indexOf(p.id)>=0?" checked":"";
         html+="<div class='card' style='position:relative' data-id='"+p.id+"'>";
-        html+="<input type='checkbox'"+chk+" onclick='event.stopPropagation();toggleSel("+p.id+")' style='position:absolute;top:8px;left:8px;width:20px;height:20px;z-index:2;cursor:pointer;accent-color:#00ff88'>";
+        html+="<input type='checkbox'"+chk+" onclick='event.stopPropagation();toggleSel("+p.id+")' style='position:absolute;top:8px;left:8px;width:20px;height:20px;z-index:2;cursor:pointer;accent-color:#0071e3'>";
         html+="<img src='"+img+"' onclick='go("+p.id+")'><div class='card-body' onclick='go("+p.id+")'>";
         html+="<div class='card-title'>"+esc(p.title)+"</div><div class='card-sku'>"+sku+"</div>";
-        html+="<div class='card-meta'><span class='card-price'>"+price+" EUR</span><span class='badge "+p._seo+"'>"+(p._statusLabel||"")+"</span></div>";
+        html+="<div class='card-meta'><span class='card-price'>"+fmtPrice(price)+"</span><span class='badge "+p._seo+"'>"+(p._statusLabel||"")+"</span></div>";
         html+="</div></div>";
     }
     el.innerHTML=html;updateSelCount();
@@ -375,7 +324,7 @@ function updateSelCount(){
     var goatBadge=document.getElementById("goatBadge");
     if(selectedPids.length>0){
         el.style.display="flex";
-        el.innerHTML="<span>"+selectedPids.length+" produit"+(selectedPids.length>1?"s":"")+" coch&eacute;"+(selectedPids.length>1?"s":"")+"</span><button onclick='deselectAll()' style='background:none;border:none;color:#ff4757;cursor:pointer;font-size:12px;text-decoration:underline;margin-left:10px'>D&eacute;s&eacute;lectionner</button>";
+        el.innerHTML="<span>"+selectedPids.length+" produit"+(selectedPids.length>1?"s":"")+" coch&eacute;"+(selectedPids.length>1?"s":"")+"</span><button onclick='deselectAll()' style='background:none;border:none;color:#d70015;cursor:pointer;font-size:12px;text-decoration:underline;margin-left:10px'>D&eacute;s&eacute;lectionner</button>";
         badge.textContent=" ("+selectedPids.length+")";
         if(goatBadge)goatBadge.textContent=" ("+selectedPids.length+")";
     }else{el.style.display="none";badge.textContent="";if(goatBadge)goatBadge.textContent=""}
@@ -393,8 +342,8 @@ function openBulkGoat(){
     document.getElementById("goatTotal").textContent=P.length;
     document.getElementById("bulkGoatStatus").style.display="none";
     var btn=document.getElementById("bulkGoatBtn");btn.disabled=false;
-    btn.innerHTML="&#128247; Lancer le remplacement";
-    btn.style.background="linear-gradient(135deg,#9b59b6,#8e44ad)";
+    btn.innerHTML="Lancer le remplacement";
+    btn.style.background="";
     if(selectedPids.length>0)document.querySelector('input[name="goatScope"][value="selection"]').checked=true;
     else document.querySelector('input[name="goatScope"][value="all"]').checked=true;
 }
@@ -487,16 +436,16 @@ function startBulkGoat(){
     
     function addLog(msg,color){
         var log=document.getElementById("bulkGoatLog");
-        log.innerHTML+="<div style='color:"+(color||"#888")+"'>"+msg+"</div>";
+        log.innerHTML+="<div style='color:"+(color||"#6e6e73")+"'>"+msg+"</div>";
         log.scrollTop=log.scrollHeight;
     }
     
     function processNext(idx){
         if(idx>=products.length){
-            btn.innerHTML="✅ Termin&eacute;!";btn.style.background="#00ff88";btn.style.color="#000";
-            addLog("\n🏁 Termin\u00e9 : "+ok+" succ\u00e8s, "+fail+" erreurs, "+skipped+" ignor\u00e9s","#00ff88");
+            btn.innerHTML="✅ Termin&eacute;!";btn.style.background="#0071e3";btn.style.color="#1d1d1f";
+            addLog("\n🏁 Termin\u00e9 : "+ok+" succ\u00e8s, "+fail+" erreurs, "+skipped+" ignor\u00e9s","#248a3d");
             try{sessionStorage.removeItem("kp_cache_v4")}catch(e){}
-            addLog("↻ Cache vidé — clique « Actualiser » pour voir l'\u00e9tat \u00e0 jour.","#00d2d3");
+            addLog("↻ Cache vidé — clique « Actualiser » pour voir l'\u00e9tat \u00e0 jour.","#0071a4");
             return;
         }
         var p=products[idx];
@@ -507,7 +456,7 @@ function startBulkGoat(){
         .then(function(r){return r.json()})
         .then(function(d){
             if(d.error||!d.images||!d.images.length){
-                addLog("  ⏭ Pas d'images GOAT trouv\u00e9es","#ff9f43");
+                addLog("  ⏭ Pas d'images GOAT trouv\u00e9es","#b25000");
                 skipped++;done++;updateProgress();
                 setTimeout(function(){processNext(idx+1)},300);
                 return;
@@ -523,37 +472,37 @@ function startBulkGoat(){
             .then(function(r){
                 if(r.skipped_throttle){
                     // GOAT a renvoyé moins de photos que l'existant -> on a gardé l'ancien, à retenter
-                    addLog("  ⏸ GOAT bloqué ("+r.got+" vs "+r.had+" existantes) — gardé, à retenter","#ff9f43");
+                    addLog("  ⏸ GOAT bloqué ("+r.got+" vs "+r.had+" existantes) — gardé, à retenter","#b25000");
                     skipped++;
                 }else if(r.success&&r.complete){
                     goatMarkDone(p.id);   // marqué fait UNIQUEMENT si set complet
-                    addLog("  ✅ "+(r.real_count||r.added)+" photos confirm\u00e9es","#00ff88");
+                    addLog("  ✅ "+(r.real_count||r.added)+" photos confirm\u00e9es","#248a3d");
                     ok++;
                 }else if(r.success){
                     // remplacé mais incomplet -> on NE marque PAS fait, sera repassé
-                    addLog("  ⚠ "+(r.real_count||r.added)+"/"+(r.expected||"?")+" photos seulement (incomplet, sera repris)","#ff9f43");
+                    addLog("  ⚠ "+(r.real_count||r.added)+"/"+(r.expected||"?")+" photos seulement (incomplet, sera repris)","#b25000");
                     ok++;
                 }else{
-                    addLog("  ❌ "+(r.error||"erreur"),"#ff4757");
+                    addLog("  ❌ "+(r.error||"erreur"),"#d70015");
                     fail++;
                 }
                 done++;updateProgress();
                 setTimeout(function(){processNext(idx+1)},500);
             })
             .catch(function(e){
-                addLog("  ❌ "+e.message,"#ff4757");
+                addLog("  ❌ "+e.message,"#d70015");
                 fail++;done++;updateProgress();
                 setTimeout(function(){processNext(idx+1)},500);
             });
         })
         .catch(function(e){
-            addLog("  ❌ "+e.message,"#ff4757");
+            addLog("  ❌ "+e.message,"#d70015");
             fail++;done++;updateProgress();
             setTimeout(function(){processNext(idx+1)},500);
         });
     }
     
-    addLog("🚀 D\u00e9marrage : "+products.length+" produits à traiter"+(skippedDone?(" ("+skippedDone+" déjà faits, sautés)"):""),"#9b59b6");
+    addLog("🚀 D\u00e9marrage : "+products.length+" produits à traiter"+(skippedDone?(" ("+skippedDone+" déjà faits, sautés)"):""),"#0071e3");
     processNext(0);
 }
 
@@ -594,14 +543,14 @@ function startCorrection(){
     var bar=document.getElementById("corBar");
     var txt=document.getElementById("corTxt");
     btn.disabled=true;btn.textContent="Correction en cours...";
-    status.style.display="block";status.style.background="#333";status.style.color="#aaa";
+    status.style.display="block";status.style.background="#e8e8ed";status.style.color="#6e6e73";
     document.getElementById("corProg").style.display="block";bar.style.width="0%";
 
     var done=0,errs=0,fixed=0,skipped=0,imgSkipped=0,colorOk=0,colorSkip=0,colorCat=0;
     function next(){
         if(done>=pids.length){
             bar.style.width="100%";txt.textContent=done+"/"+pids.length;
-            status.style.background="#00ff8822";status.style.color="#00ff88";
+            status.style.background="#e9f6ec";status.style.color="#248a3d";
             var msg="\u2705 "+done+" produits traités";
             if(doImg)msg+=" ("+imgSkipped+" images déjà OK, sautées)";
             if(doColor)msg+=" (couleur : "+colorOk+" posées"+(colorCat?", dont "+colorCat+" avec catégorie ajoutée":"")+", "+colorSkip+" ignorées)";
@@ -661,7 +610,7 @@ function closeAnalyzer(){document.getElementById("analyzerModal").style.display=
 
 function runAnalysis(){
     var el=document.getElementById("azContent");
-    el.innerHTML="<div style='text-align:center;padding:30px'><div class='spinner'></div><p style='color:#888;margin-top:10px'>Analyse de "+P.length+" produits...</p></div>";
+    el.innerHTML="<div style='text-align:center;padding:30px'><div class='spinner'></div><p style='color:#6e6e73;margin-top:10px'>Analyse de "+P.length+" produits...</p></div>";
     setTimeout(function(){
         azIssues={noDesc:[],noLink:[],badAlt:[],badFn:[],noSku:[]};
         for(var i=0;i<P.length;i++){
@@ -687,45 +636,45 @@ function runAnalysis(){
         var totalTasks=azIssues.noDesc.length+azIssues.noLink.length+azIssues.badAlt.length+azIssues.badFn.length;
 
         var h="<div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px'>";
-        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:28px;font-weight:bold;color:#00ff88'>"+total+"</div><div style='font-size:11px;color:#888'>Total produits</div></div>";
-        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:28px;font-weight:bold;color:#00ff88'>"+perfect+"</div><div style='font-size:11px;color:#888'>SEO parfait (85%+)</div></div>";
-        h+="<div style='background:#111;padding:15px;border-radius:8px;text-align:center'><div style='font-size:28px;font-weight:bold;color:"+(totalTasks>0?"#ff4757":"#00ff88")+"'>"+totalTasks+"</div><div style='font-size:11px;color:#888'>Tâches à faire</div></div>";
+        h+="<div style='background:#ffffff;padding:15px;border-radius:8px;text-align:center'><div style='font-size:28px;font-weight:bold;color:#248a3d'>"+total+"</div><div style='font-size:11px;color:#6e6e73'>Total produits</div></div>";
+        h+="<div style='background:#ffffff;padding:15px;border-radius:8px;text-align:center'><div style='font-size:28px;font-weight:bold;color:#248a3d'>"+perfect+"</div><div style='font-size:11px;color:#6e6e73'>SEO parfait (85%+)</div></div>";
+        h+="<div style='background:#ffffff;padding:15px;border-radius:8px;text-align:center'><div style='font-size:28px;font-weight:bold;color:"+(totalTasks>0?"#d70015":"#248a3d")+"'>"+totalTasks+"</div><div style='font-size:11px;color:#6e6e73'>Tâches à faire</div></div>";
         h+="</div>";
 
         var cats=[
-            {k:"noDesc",icon:"📝",name:"Descriptions manquantes",desc:"Bio produit absente ou trop courte",col:"#ff4757",auto:true},
-            {k:"noLink",icon:"🔗",name:"Liens collection manquants",desc:"Description sans lien vers la collection",col:"#ff9500",auto:true},
-            {k:"badAlt",icon:"🖼",name:"Alt images incorrect",desc:"Texte alternatif des photos ne correspond pas au titre",col:"#ff4757",auto:true},
-            {k:"badFn",icon:"📁",name:"Noms fichiers images",desc:"Nom de fichier photo non optimise pour le SEO",col:"#ff4757",auto:true},
-            {k:"noSku",icon:"🏷",name:"SKU manquants",desc:"Pas de reference produit (ajout manuel requis)",col:"#666",auto:false}
+            {k:"noDesc",icon:"📝",name:"Descriptions manquantes",desc:"Bio produit absente ou trop courte",col:"#d70015",auto:true},
+            {k:"noLink",icon:"🔗",name:"Liens collection manquants",desc:"Description sans lien vers la collection",col:"#b25000",auto:true},
+            {k:"badAlt",icon:"🖼",name:"Alt images incorrect",desc:"Texte alternatif des photos ne correspond pas au titre",col:"#d70015",auto:true},
+            {k:"badFn",icon:"📁",name:"Noms fichiers images",desc:"Nom de fichier photo non optimise pour le SEO",col:"#d70015",auto:true},
+            {k:"noSku",icon:"🏷",name:"SKU manquants",desc:"Pas de reference produit (ajout manuel requis)",col:"#86868b",auto:false}
         ];
 
         for(var c=0;c<cats.length;c++){
             var cat=cats[c];var count=azIssues[cat.k].length;
-            var statusCol=count===0?"#00ff88":cat.col;
+            var statusCol=count===0?"#248a3d":cat.col;
             var statusTxt=count===0?"\u2705 OK":count+" produit"+(count>1?"s":"");
-            h+="<div style='display:flex;align-items:center;gap:12px;padding:14px;background:#111;border-radius:8px;margin-bottom:8px;border-left:3px solid "+statusCol+"'>";
+            h+="<div style='display:flex;align-items:center;gap:12px;padding:14px;background:#ffffff;border-radius:8px;margin-bottom:8px;border-left:3px solid "+statusCol+"'>";
             h+="<span style='font-size:22px'>"+cat.icon+"</span>";
             h+="<div style='flex:1'><div style='font-size:14px;font-weight:600'>"+cat.name+"</div>";
-            h+="<div style='font-size:11px;color:#666;margin-top:2px'>"+cat.desc+"</div></div>";
+            h+="<div style='font-size:11px;color:#86868b;margin-top:2px'>"+cat.desc+"</div></div>";
             h+="<div style='text-align:right'><div style='font-size:18px;font-weight:bold;color:"+statusCol+"'>"+statusTxt+"</div>";
-            if(count>0&&!cat.auto)h+="<div style='font-size:10px;color:#555'>Manuel</div>";
+            if(count>0&&!cat.auto)h+="<div style='font-size:10px;color:#86868b'>Manuel</div>";
             h+="</div></div>";
         }
 
         if(totalTasks===0){
-            h+="<div style='text-align:center;padding:25px;color:#00ff88;font-size:15px;margin-top:10px'>\u2705 Tout est parfait ! Aucune correction nécessaire.</div>";
+            h+="<div style='text-align:center;padding:25px;color:#248a3d;font-size:15px;margin-top:10px'>\u2705 Tout est parfait ! Aucune correction nécessaire.</div>";
         }
 
         h+="<div id='azActions' style='margin-top:20px;display:flex;gap:10px;align-items:center'>";
         if(totalTasks>0){
-            h+="<button class='btn btn-p' onclick='runAutoFix()' style='flex:1;padding:14px;font-size:15px;background:linear-gradient(135deg,#00ff88,#00cc6a);color:#000;font-weight:700;border:none;border-radius:8px;cursor:pointer'>&#128640; Corriger "+totalTasks+" t&acirc;ches automatiquement</button>";
+            h+="<button class='btn btn-p' onclick='runAutoFix()' style='flex:1;padding:14px;font-size:15px;background:linear-gradient(135deg,#0071e3,#0071e3);color:#ffffff;font-weight:700;border:none;border-radius:8px;cursor:pointer'>&#128640; Corriger "+totalTasks+" t&acirc;ches automatiquement</button>";
         }
         h+="</div>";
         h+="<div id='azProgress' style='display:none;margin-top:15px'>";
-        h+="<div style='display:flex;justify-content:space-between;margin-bottom:8px'><span id='azProgressTxt' style='font-size:12px;color:#888'>Préparation...</span><span id='azProgressPct' style='font-size:12px;color:#00ff88'>0%</span></div>";
-        h+="<div style='background:#222;border-radius:6px;height:8px;overflow:hidden'><div id='azBar' style='background:#00ff88;height:100%;width:0%;border-radius:6px;transition:width 0.3s'></div></div>";
-        h+="<div id='azLog' style='margin-top:12px;max-height:200px;overflow-y:auto;font-size:11px;color:#666'></div>";
+        h+="<div style='display:flex;justify-content:space-between;margin-bottom:8px'><span id='azProgressTxt' style='font-size:12px;color:#6e6e73'>Préparation...</span><span id='azProgressPct' style='font-size:12px;color:#248a3d'>0%</span></div>";
+        h+="<div style='background:#f2f2f7;border-radius:6px;height:8px;overflow:hidden'><div id='azBar' style='background:#0071e3;height:100%;width:0%;border-radius:6px;transition:width 0.3s'></div></div>";
+        h+="<div id='azLog' style='margin-top:12px;max-height:200px;overflow-y:auto;font-size:11px;color:#86868b'></div>";
         h+="</div>";
 
         el.innerHTML=h;
@@ -757,9 +706,9 @@ function runAutoFix(){
     function next(){
         if(done>=tasks.length){
             bar.style.width="100%";pct.textContent="100%";
-            txt.innerHTML="<span style='color:#00ff88;font-weight:600'>\u2705 Terminé ! "+ok+" corrections réussies"+(errs>0?", "+errs+" erreurs":"")+"</span>";
-            if(btn){btn.textContent="\u2705 Terminé !";btn.style.background="#00ff88";}
-            log.innerHTML+="<div style='color:#00ff88;margin-top:8px;font-weight:600'>Rechargement dans 3s...</div>";
+            txt.innerHTML="<span style='color:#248a3d;font-weight:600'>\u2705 Terminé ! "+ok+" corrections réussies"+(errs>0?", "+errs+" erreurs":"")+"</span>";
+            if(btn){btn.textContent="\u2705 Terminé !";btn.style.background="#0071e3";}
+            log.innerHTML+="<div style='color:#248a3d;margin-top:8px;font-weight:600'>Rechargement dans 3s...</div>";
             setTimeout(function(){try{sessionStorage.removeItem("kp_cache_v4")}catch(e){}location.reload();},3000);
             return;
         }
@@ -776,10 +725,10 @@ function runAutoFix(){
         }
         promise.then(function(r){return r.json()}).then(function(d){
             if(d.success||d.fixed>=0){ok++;log.innerHTML+="<div>\u2705 #"+t.pid+" "+t.label+" OK</div>"}
-            else{errs++;log.innerHTML+="<div style='color:#ff4757'>\u274C #"+t.pid+" "+t.label+": "+(d.error||"erreur")+"</div>"}
+            else{errs++;log.innerHTML+="<div style='color:#d70015'>\u274C #"+t.pid+" "+t.label+": "+(d.error||"erreur")+"</div>"}
             done++;log.scrollTop=log.scrollHeight;setTimeout(next,100);
         }).catch(function(e){
-            errs++;log.innerHTML+="<div style='color:#ff4757'>\u274C #"+t.pid+" "+t.label+": "+e.message+"</div>";
+            errs++;log.innerHTML+="<div style='color:#d70015'>\u274C #"+t.pid+" "+t.label+": "+e.message+"</div>";
             done++;log.scrollTop=log.scrollHeight;setTimeout(next,100);
         });
     }

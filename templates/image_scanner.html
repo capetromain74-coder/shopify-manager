@@ -6,88 +6,88 @@
 <title>Scanner d'images - KP SHOES</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
-.hd{background:#111;padding:15px 20px;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center}
-.logo{font-size:20px;font-weight:bold;color:#00ff88;text-decoration:none}
-.stats{display:flex;gap:15px;padding:15px 20px;background:#0d0d14;flex-wrap:wrap}
-.st{background:#1a1a2e;padding:12px 20px;border-radius:8px;text-align:center;min-width:100px}
+body{font-family:system-ui;background:#f5f5f7;color:#1d1d1f;min-height:100vh}
+.hd{background:#ffffff;padding:15px 20px;border-bottom:1px solid #e5e5ea;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:20px;font-weight:bold;color:#248a3d;text-decoration:none}
+.stats{display:flex;gap:15px;padding:15px 20px;background:#f5f5f7;flex-wrap:wrap}
+.st{background:#ffffff;padding:12px 20px;border-radius:8px;text-align:center;min-width:100px}
 .st .v{font-size:24px;font-weight:bold}
-.st .l{font-size:10px;color:#666;margin-top:3px}
+.st .l{font-size:10px;color:#86868b;margin-top:3px}
 .main{max-width:1200px;margin:0 auto;padding:20px}
 .btn{padding:10px 20px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px}
 .btn:disabled{opacity:0.4;cursor:not-allowed}
 .msg{padding:12px 20px;border-radius:8px;margin-bottom:15px;font-size:13px;display:none}
-.msg.on{display:block}.msg.ok{background:#00ff8815;color:#00ff88}.msg.err{background:#ff475715;color:#ff4757}
-.prog-bar{background:#333;border-radius:6px;overflow:hidden;height:8px;margin:15px 0}
-.prog-fill{width:0%;height:100%;background:linear-gradient(90deg,#00ff88,#00cc6a);transition:width .3s}
-.spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid #333;border-top-color:#00ff88;border-radius:50%;animation:spin 1s linear infinite}
+.msg.on{display:block}.msg.ok{background:#e9f6ec;color:#248a3d}.msg.err{background:#fdecec;color:#d70015}
+.prog-bar{background:#e8e8ed;border-radius:6px;overflow:hidden;height:8px;margin:15px 0}
+.prog-fill{width:0%;height:100%;background:linear-gradient(90deg,#0071e3,#0071e3);transition:width .3s}
+.spinner-sm{display:inline-block;width:14px;height:14px;border:2px solid #e5e5ea;border-top-color:#0071e3;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.step{background:#1a1a2e;border-radius:12px;padding:20px;margin-bottom:15px}
-.step h3{font-size:15px;margin-bottom:12px;color:#fff}
-.step p{font-size:13px;color:#888;margin-bottom:12px}
+.step{background:#ffffff;border-radius:12px;padding:20px;margin-bottom:15px}
+.step h3{font-size:15px;margin-bottom:12px;color:#1d1d1f}
+.step p{font-size:13px;color:#6e6e73;margin-bottom:12px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:15px}
-.card{background:#111;border:1px solid #222;border-radius:10px;overflow:hidden;position:relative}
-.card img{width:100%;height:160px;object-fit:contain;background:#0a0a0f}
+.card{background:#ffffff;border:1px solid #e5e5ea;border-radius:10px;overflow:hidden;position:relative}
+.card img{width:100%;height:160px;object-fit:contain;background:#f5f5f7}
 .card-body{padding:12px}
 .card-title{font-size:12px;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card-sku{font-size:11px;color:#666;font-family:monospace}
+.card-sku{font-size:11px;color:#86868b;font-family:monospace}
 .card-badge{position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600}
-.badge-wait{background:#333;color:#888}
-.badge-scan{background:#6c5ce733;color:#6c5ce7}
-.badge-new{background:#00ff8833;color:#00ff88}
-.badge-same{background:#33333366;color:#666}
-.badge-err{background:#ff475733;color:#ff4757}
-.new-count{font-size:11px;color:#00ff88;margin-top:4px;font-weight:600}
-.card.has-new{border-color:#00ff88}
-.card-actions{padding:8px 12px;border-top:1px solid #1a1a2e;display:none}
+.badge-wait{background:#e8e8ed;color:#6e6e73}
+.badge-scan{background:#eef5ff;color:#0071e3}
+.badge-new{background:#e9f6ec;color:#248a3d}
+.badge-same{background:#f2f2f7;color:#86868b}
+.badge-err{background:#fdecec;color:#d70015}
+.new-count{font-size:11px;color:#248a3d;margin-top:4px;font-weight:600}
+.card.has-new{border-color:#0071e3}
+.card-actions{padding:8px 12px;border-top:1px solid #e5e5ea;display:none}
 .card.has-new .card-actions{display:block}
 .btn-sm{padding:5px 12px;font-size:11px;border:none;border-radius:6px;cursor:pointer;font-weight:600}
-.btn-apply-img{background:#00ff88;color:#000}
-.btn-apply-img:hover{background:#00cc6a}
-.results-bar{display:flex;gap:10px;align-items:center;padding:12px 16px;background:#111;border-radius:8px;margin-top:15px;flex-wrap:wrap}
+.btn-apply-img{background:#0071e3;color:#ffffff}
+.btn-apply-img:hover{background:#0071e3}
+.results-bar{display:flex;gap:10px;align-items:center;padding:12px 16px;background:#ffffff;border-radius:8px;margin-top:15px;flex-wrap:wrap}
 </style>
 </head>
 <body>
 <header class="hd">
 <a href="/" class="logo">&larr; KP SHOES</a>
-<span style="color:#aaa;font-size:13px">Scanner d'images</span>
+<span style="color:#6e6e73;font-size:13px">Scanner d'images</span>
 </header>
 <div class="stats">
-<div class="st"><div class="v" style="color:#fff" id="totalSingle">-</div><div class="l">1 SEULE IMAGE</div></div>
-<div class="st"><div class="v" style="color:#6c5ce7" id="scannedCount">-</div><div class="l">SCANN&Eacute;S</div></div>
-<div class="st"><div class="v" style="color:#00ff88" id="newCount">-</div><div class="l">NOUVELLES IMAGES</div></div>
-<div class="st"><div class="v" style="color:#666" id="sameCount">-</div><div class="l">INCHANG&Eacute;S</div></div>
+<div class="st"><div class="v" style="color:#1d1d1f" id="totalSingle">-</div><div class="l">1 SEULE IMAGE</div></div>
+<div class="st"><div class="v" style="color:#0071e3" id="scannedCount">-</div><div class="l">SCANN&Eacute;S</div></div>
+<div class="st"><div class="v" style="color:#248a3d" id="newCount">-</div><div class="l">NOUVELLES IMAGES</div></div>
+<div class="st"><div class="v" style="color:#86868b" id="sameCount">-</div><div class="l">INCHANG&Eacute;S</div></div>
 </div>
 <main class="main">
 <div class="msg" id="msg"></div>
 
 <div class="step" id="step1">
-<h3>&#x1F50D; &Eacute;tape 1 : Trouver les produits avec 1 seule image</h3>
+<h3>&Eacute;tape 1 : Trouver les produits avec 1 seule image</h3>
 <p>Le bot parcourt tous vos produits Shopify page par page et liste ceux qui n'ont qu'une seule photo.</p>
-<button class="btn" style="background:#6c5ce7;color:#fff" id="btnLoad" onclick="loadSingleImage()">Charger les produits</button>
-<span id="loadStatus" style="margin-left:10px;font-size:12px;color:#888"></span>
+<button class="btn" style="background:#0071e3;color:#ffffff" id="btnLoad" onclick="loadSingleImage()">Charger les produits</button>
+<span id="loadStatus" style="margin-left:10px;font-size:12px;color:#6e6e73"></span>
 <div id="loadProg" style="display:none">
 <div class="prog-bar"><div class="prog-fill" id="loadBar"></div></div>
 </div>
 </div>
 
 <div class="step" id="step2" style="display:none">
-<h3>&#x1F4F7; &Eacute;tape 2 : Scanner GOAT pour de nouvelles images</h3>
+<h3>&Eacute;tape 2 : Scanner GOAT pour de nouvelles images</h3>
 <p>Le bot v&eacute;rifie sur GOAT si de nouvelles images sont disponibles pour chaque produit.</p>
 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-<button class="btn" style="background:#00ff88;color:#000" id="btnScan" onclick="startScan()">&#128640; Lancer le scan</button>
-<button class="btn" style="background:#ff9f43;color:#000;display:none" id="btnStop" onclick="stopScan()">&#9724; Stopper</button>
-<button class="btn" style="background:#6c5ce7;color:#fff;display:none" id="btnApplyAll" onclick="applyAllNew()">&#x2705; Appliquer toutes les nouvelles images</button>
+<button class="btn" style="background:#0071e3;color:#ffffff" id="btnScan" onclick="startScan()">Lancer le scan</button>
+<button class="btn" style="background:#ff9500;color:#ffffff;display:none" id="btnStop" onclick="stopScan()">Stopper</button>
+<button class="btn" style="background:#0071e3;color:#ffffff;display:none" id="btnApplyAll" onclick="applyAllNew()">&#x2705; Appliquer toutes les nouvelles images</button>
 </div>
 <div id="scanProg" style="display:none;margin-top:12px">
 <div class="prog-bar"><div class="prog-fill" id="scanBar"></div></div>
-<div id="scanTxt" style="text-align:center;font-size:12px;color:#aaa;margin-top:4px"></div>
+<div id="scanTxt" style="text-align:center;font-size:12px;color:#6e6e73;margin-top:4px"></div>
 </div>
 </div>
 
 <div id="resultsBar" class="results-bar" style="display:none">
-<span style="font-size:13px;color:#fff;font-weight:600">R&eacute;sultats :</span>
-<span id="summaryTxt" style="font-size:12px;color:#aaa"></span>
+<span style="font-size:13px;color:#1d1d1f;font-weight:600">R&eacute;sultats :</span>
+<span id="summaryTxt" style="font-size:12px;color:#6e6e73"></span>
 </div>
 <div class="grid" id="productGrid"></div>
 </main>
@@ -133,7 +133,7 @@ function loadSingleImage(){
                     document.getElementById("loadBar").style.width="100%";
                     document.getElementById("loadStatus").textContent=totalScanned+" produits analysés";
                     btn.innerHTML="\u2713 "+products.length+" produits trouvés";
-                    btn.style.background="#333";btn.style.color="#00ff88";
+                    btn.style.background="#e8e8ed";btn.style.color="#248a3d";
 
                     if(products.length===0){
                         showMsg("Aucun produit avec 1 seule image !","ok");
@@ -144,7 +144,7 @@ function loadSingleImage(){
                 }
             })
             .catch(function(e){
-                btn.innerHTML="Erreur";btn.style.background="#ff4757";
+                btn.innerHTML="Erreur";btn.style.background="#d70015";
                 showMsg("Erreur: "+e.message,"err");
             });
     }
@@ -263,14 +263,14 @@ function applyOne(pid){
         .then(function(r){return r.json()})
         .then(function(d){
             if(d.success){
-                if(btn){btn.textContent="\u2713 OK";btn.style.background="#333";btn.style.color="#00ff88";}
+                if(btn){btn.textContent="\u2713 OK";btn.style.background="#e8e8ed";btn.style.color="#248a3d";}
                 var badge=document.querySelector("#card-"+pid+" .card-badge");
                 if(badge){badge.textContent="\u2713 Appliqué";}
             }else{
-                if(btn){btn.textContent="Erreur";btn.style.background="#ff4757";btn.disabled=false;}
+                if(btn){btn.textContent="Erreur";btn.style.background="#d70015";btn.disabled=false;}
             }
         })
-        .catch(function(){if(btn){btn.textContent="Erreur";btn.style.background="#ff4757";btn.disabled=false;}});
+        .catch(function(){if(btn){btn.textContent="Erreur";btn.style.background="#d70015";btn.disabled=false;}});
 }
 
 function applyAllNew(){
@@ -292,7 +292,7 @@ function applyAllNew(){
         fetch("/api/goat/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:p.id,images:p._goat_images})})
             .then(function(r){return r.json()})
             .then(function(d){
-                if(d.success){ok++;var b=document.querySelector("#card-"+p.id+" .card-badge");if(b)b.textContent="\u2713 Appliqué";var ab=document.querySelector("#card-"+p.id+" .btn-apply-img");if(ab){ab.textContent="\u2713 OK";ab.disabled=true;ab.style.background="#333";ab.style.color="#00ff88";}}
+                if(d.success){ok++;var b=document.querySelector("#card-"+p.id+" .card-badge");if(b)b.textContent="\u2713 Appliqué";var ab=document.querySelector("#card-"+p.id+" .btn-apply-img");if(ab){ab.textContent="\u2713 OK";ab.disabled=true;ab.style.background="#e8e8ed";ab.style.color="#248a3d";}}
                 else fail++;
                 done++;setTimeout(next,1500);
             })
@@ -325,9 +325,9 @@ function initFromHome(){
     if(!cand.length)return false;
     products=cand;
     var b=document.getElementById("btnLoad");
-    if(b){b.innerHTML="\u2713 "+products.length+" produits repris de l'accueil";b.style.background="#333";b.style.color="#00ff88";b.disabled=true;}
+    if(b){b.innerHTML="\u2713 "+products.length+" produits repris de l'accueil";b.style.background="#e8e8ed";b.style.color="#248a3d";b.disabled=true;}
     var ls=document.getElementById("loadStatus");
-    if(ls)ls.innerHTML="Liste reprise de l'accueil, aucun re-scan. <a href='#' onclick='forceFullScan();return false' style='color:#6c5ce7'>Forcer un scan complet</a>";
+    if(ls)ls.innerHTML="Liste reprise de l'accueil, aucun re-scan. <a href='#' onclick='forceFullScan();return false' style='color:#0071e3'>Forcer un scan complet</a>";
     updateStats();renderGrid();
     document.getElementById("step2").style.display="block";
     return true;

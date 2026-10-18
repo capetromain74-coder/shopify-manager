@@ -6,62 +6,62 @@
 <title>Fix Handles - KP SHOES</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui;background:#0a0a0f;color:#fff;min-height:100vh}
-.hd{background:#111;padding:15px 20px;border-bottom:1px solid #222;display:flex;justify-content:space-between;align-items:center}
-.logo{font-size:20px;font-weight:bold;color:#00ff88;text-decoration:none}
+body{font-family:system-ui;background:#f5f5f7;color:#1d1d1f;min-height:100vh}
+.hd{background:#ffffff;padding:15px 20px;border-bottom:1px solid #e5e5ea;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:20px;font-weight:bold;color:#248a3d;text-decoration:none}
 .main{max-width:1200px;margin:0 auto;padding:20px}
-.hero{background:linear-gradient(135deg,#e67e2222,#f39c1222);border:1px solid #e67e2244;border-radius:12px;padding:25px;margin-bottom:20px}
-.hero h1{font-size:22px;margin-bottom:8px;background:linear-gradient(135deg,#e67e22,#f39c12);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero p{color:#888;font-size:13px;line-height:1.6}
-.section{background:#111;border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid #222}
+.hero{background:linear-gradient(135deg,#fff4e5,#fff4e5);border:1px solid #d2d2d7;border-radius:12px;padding:25px;margin-bottom:20px}
+.hero h1{font-size:22px;margin-bottom:8px;background:linear-gradient(135deg,#ff9500,#ff9500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:#6e6e73;font-size:13px;line-height:1.6}
+.section{background:#ffffff;border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid #e5e5ea}
 .btn{padding:12px 24px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;transition:all .2s}
 .btn:disabled{opacity:0.4;cursor:not-allowed}
-.btn-scan{background:linear-gradient(135deg,#e67e22,#f39c12);color:#fff;font-size:15px;padding:14px 30px}
-.btn-fix{background:#00ff88;color:#000;padding:8px 16px;font-size:12px}
-.btn-fix:hover:not(:disabled){background:#00cc6a}
-.btn-sm{padding:6px 14px;font-size:11px;border:none;border-radius:6px;cursor:pointer;font-weight:600;background:#333;color:#fff}
-.prog-bar{background:#333;border-radius:6px;overflow:hidden;height:8px;margin:15px 0}
-.prog-fill{width:0%;height:100%;background:linear-gradient(90deg,#e67e22,#f39c12);transition:width .3s}
-.spinner-sm{display:inline-block;width:16px;height:16px;border:2px solid #333;border-top-color:#e67e22;border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle}
+.btn-scan{background:linear-gradient(135deg,#ff9500,#ff9500);color:#ffffff;font-size:15px;padding:14px 30px}
+.btn-fix{background:#0071e3;color:#ffffff;padding:8px 16px;font-size:12px}
+.btn-fix:hover:not(:disabled){background:#0071e3}
+.btn-sm{padding:6px 14px;font-size:11px;border:none;border-radius:6px;cursor:pointer;font-weight:600;background:#e8e8ed;color:#1d1d1f}
+.prog-bar{background:#e8e8ed;border-radius:6px;overflow:hidden;height:8px;margin:15px 0}
+.prog-fill{width:0%;height:100%;background:linear-gradient(90deg,#ff9500,#ff9500);transition:width .3s}
+.spinner-sm{display:inline-block;width:16px;height:16px;border:2px solid #e5e5ea;border-top-color:#ff9500;border-radius:50%;animation:spin 1s linear infinite;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 .msg{padding:12px 20px;border-radius:8px;margin-bottom:15px;font-size:13px;display:none}
-.msg.on{display:block}.msg.ok{background:#00ff8815;color:#00ff88}.msg.err{background:#ff475715;color:#ff4757}
+.msg.on{display:block}.msg.ok{background:#e9f6ec;color:#248a3d}.msg.err{background:#fdecec;color:#d70015}
 .stats{display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap}
-.st{background:#1a1a2e;padding:14px 20px;border-radius:8px;text-align:center;min-width:120px;border:1px solid #222}
+.st{background:#ffffff;padding:14px 20px;border-radius:8px;text-align:center;min-width:120px;border:1px solid #e5e5ea}
 .st .v{font-size:26px;font-weight:bold}
-.st .l{font-size:10px;color:#666;margin-top:3px}
+.st .l{font-size:10px;color:#86868b;margin-top:3px}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th{text-align:left;padding:10px;color:#888;border-bottom:1px solid #333;font-size:11px}
-td{padding:10px;border-bottom:1px solid #1a1a2e;vertical-align:middle}
-tr:hover{background:#1a1a2e}
-.handle-old{color:#ff4757;font-family:monospace;font-size:11px;word-break:break-all}
-.handle-new{color:#00ff88;font-family:monospace;font-size:11px;word-break:break-all}
-.handle-ok{color:#00ff88}
-.handle-diff{color:#ff4757}
-.search{padding:10px 15px;background:#1a1a2e;border:1px solid #333;border-radius:8px;color:#fff;font-size:13px;width:100%;max-width:400px;margin-bottom:15px}
+th{text-align:left;padding:10px;color:#6e6e73;border-bottom:1px solid #e5e5ea;font-size:11px}
+td{padding:10px;border-bottom:1px solid #e5e5ea;vertical-align:middle}
+tr:hover{background:#ffffff}
+.handle-old{color:#d70015;font-family:monospace;font-size:11px;word-break:break-all}
+.handle-new{color:#248a3d;font-family:monospace;font-size:11px;word-break:break-all}
+.handle-ok{color:#248a3d}
+.handle-diff{color:#d70015}
+.search{padding:10px 15px;background:#ffffff;border:1px solid #e5e5ea;border-radius:8px;color:#1d1d1f;font-size:13px;width:100%;max-width:400px;margin-bottom:15px}
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:15px}
 .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
-.badge-diff{background:#ff475722;color:#ff4757}
-.badge-ok{background:#00ff8822;color:#00ff88}
+.badge-diff{background:#fdecec;color:#d70015}
+.badge-ok{background:#e9f6ec;color:#248a3d}
 </style>
 </head>
 <body>
 <header class="hd">
 <a href="/" class="logo">&larr; KP SHOES</a>
-<span style="color:#aaa;font-size:13px">Fix Handles (URLs)</span>
+<span style="color:#6e6e73;font-size:13px">Fix Handles (URLs)</span>
 </header>
 <main class="main">
 <div class="msg" id="msg"></div>
 
 <div class="hero">
-<h1>&#128279; Corriger les URLs produits</h1>
+<h1>URLs des fiches</h1>
 <p>Scanne tous les produits et d&eacute;tecte ceux dont le handle (URL) ne correspond pas au titre. Par exemple "dunk-low-paisley-black" au lieu de "nike-dunk-low-paisley-black".</p>
 </div>
 
 <div class="section">
 <div style="display:flex;align-items:center;gap:15px;flex-wrap:wrap">
-<button class="btn btn-scan" id="btnScan" onclick="startScan()">&#128270; Scanner les handles</button>
-<span id="scanStatus" style="font-size:13px;color:#888"></span>
+<button class="btn btn-scan" id="btnScan" onclick="startScan()">Scanner les handles</button>
+<span id="scanStatus" style="font-size:13px;color:#6e6e73"></span>
 </div>
 <div id="scanProg" style="display:none;margin-top:10px">
 <div class="prog-bar"><div class="prog-fill" id="scanBar"></div></div>
@@ -70,20 +70,20 @@ tr:hover{background:#1a1a2e}
 
 <div id="resultsSection" style="display:none">
 <div class="stats">
-<div class="st"><div class="v" style="color:#6c5ce7" id="totalScanned">0</div><div class="l">SCANN&Eacute;S</div></div>
-<div class="st"><div class="v" style="color:#ff4757" id="totalMismatch">0</div><div class="l">À CORRIGER</div></div>
-<div class="st"><div class="v" style="color:#00ff88" id="totalOk">0</div><div class="l">D&Eacute;J&Agrave; OK</div></div>
+<div class="st"><div class="v" style="color:#0071e3" id="totalScanned">0</div><div class="l">SCANN&Eacute;S</div></div>
+<div class="st"><div class="v" style="color:#d70015" id="totalMismatch">0</div><div class="l">À CORRIGER</div></div>
+<div class="st"><div class="v" style="color:#248a3d" id="totalOk">0</div><div class="l">D&Eacute;J&Agrave; OK</div></div>
 </div>
 
 <div class="section">
 <div class="toolbar">
 <input type="text" class="search" id="q" placeholder="Rechercher..." oninput="filterTable()">
-<button class="btn btn-fix" id="btnFixAll" onclick="fixAll()">&#128295; Corriger tout (<span id="fixCount">0</span>)</button>
-<button class="btn btn-sm" id="btnStopFix" onclick="stopFix()" style="display:none">&#9724; Stop</button>
+<button class="btn btn-fix" id="btnFixAll" onclick="fixAll()">Corriger tout (<span id="fixCount">0</span>)</button>
+<button class="btn btn-sm" id="btnStopFix" onclick="stopFix()" style="display:none">Stop</button>
 </div>
 <div id="fixProg" style="display:none">
-<div class="prog-bar"><div class="prog-fill" id="fixBar" style="background:linear-gradient(90deg,#00ff88,#00cc6a)"></div></div>
-<div id="fixStatus" style="font-size:12px;color:#888;margin-top:6px;text-align:center"></div>
+<div class="prog-bar"><div class="prog-fill" id="fixBar" style="background:linear-gradient(90deg,#0071e3,#0071e3)"></div></div>
+<div id="fixStatus" style="font-size:12px;color:#6e6e73;margin-top:6px;text-align:center"></div>
 </div>
 <div style="overflow-x:auto">
 <table id="resultTable">
@@ -172,8 +172,8 @@ function startScan() {
                     document.getElementById("fixCount").textContent = mismatchProducts.length;
 
                     btn.innerHTML = "&#9989; " + mismatchProducts.length + " à corriger";
-                    btn.style.background = "#333";
-                    btn.style.color = mismatchProducts.length > 0 ? "#ff4757" : "#00ff88";
+                    btn.style.background = "#e8e8ed";
+                    btn.style.color = mismatchProducts.length > 0 ? "#d70015" : "#248a3d";
 
                     document.getElementById("resultsSection").style.display = "block";
                     displayCount = 100;
@@ -212,7 +212,7 @@ function filterTable() {
         html += '<td><button class="btn btn-sm" onclick="fixOne(' + p.id + ')" id="btn-' + p.id + '">Corriger</button></td>';
         html += '</tr>';
     }
-    document.getElementById("resultBody").innerHTML = html || '<tr><td colspan="4" style="text-align:center;color:#666;padding:30px">Aucun produit à corriger</td></tr>';
+    document.getElementById("resultBody").innerHTML = html || '<tr><td colspan="4" style="text-align:center;color:#86868b;padding:30px">Aucun produit à corriger</td></tr>';
     document.getElementById("loadMore").style.display = filtered.length > displayCount ? "block" : "none";
 }
 
@@ -234,19 +234,19 @@ function fixOne(pid) {
     .then(function(d) {
         if (d.success) {
             btn.innerHTML = "&#9989;";
-            btn.style.color = "#00ff88";
+            btn.style.color = "#248a3d";
             var row = document.getElementById("row-" + pid);
             if (row) row.style.opacity = "0.4";
             p.mismatch = false;
         } else {
             btn.innerHTML = "&#10060;";
-            btn.style.color = "#ff4757";
+            btn.style.color = "#d70015";
             showMsg("Erreur: " + (d.error || "inconnu"), "err");
         }
     })
     .catch(function(e) {
         btn.innerHTML = "&#10060;";
-        btn.style.color = "#ff4757";
+        btn.style.color = "#d70015";
     });
 }
 
@@ -291,18 +291,18 @@ function fixAll() {
             if (d.success) {
                 ok++;
                 p.mismatch = false;
-                if (btn) { btn.innerHTML = "&#9989;"; btn.style.color = "#00ff88"; }
+                if (btn) { btn.innerHTML = "&#9989;"; btn.style.color = "#248a3d"; }
                 var row = document.getElementById("row-" + p.id);
                 if (row) row.style.opacity = "0.4";
             } else {
                 fail++;
-                if (btn) { btn.innerHTML = "&#10060;"; btn.style.color = "#ff4757"; }
+                if (btn) { btn.innerHTML = "&#10060;"; btn.style.color = "#d70015"; }
             }
             setTimeout(function() { next(idx + 1); }, 500);
         })
         .catch(function(e) {
             done++; fail++;
-            if (btn) { btn.innerHTML = "&#10060;"; btn.style.color = "#ff4757"; }
+            if (btn) { btn.innerHTML = "&#10060;"; btn.style.color = "#d70015"; }
             setTimeout(function() { next(idx + 1); }, 500);
         });
     }
