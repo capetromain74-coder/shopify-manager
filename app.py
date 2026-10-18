@@ -54,7 +54,39 @@ def create_app():
     app.register_blueprint(competitor_bp)
     app.register_blueprint(price_bp)
 
+    _install_password_protection(app)
     return app
+
+
+# Routes laissees accessibles sans mot de passe : celles appelees par le cron
+# du price tracker (qui a deja sa propre protection par CRON_TOKEN) et deux
+# routes de lecture seule.
+_PUBLIC_PATHS = ('/api/price/run', '/api/price/status', '/api/price/last-run')
+
+
+def _install_password_protection(app):
+    """Protege toute l'app par mot de passe (HTTP Basic).
+
+    Inactif tant que la variable d'environnement APP_PASSWORD n'est pas definie
+    -> aucun risque de se bloquer en deployant. Une fois definie, le navigateur
+    demande l'identifiant une seule fois puis le renvoie automatiquement pour
+    toutes les pages et appels de l'app (n'importe quel nom d'utilisateur,
+    seul le mot de passe compte).
+    """
+    import hmac
+    from flask import request, Response
+
+    @app.before_request
+    def _require_password():
+        password = os.environ.get('APP_PASSWORD', '')
+        if not password or request.path in _PUBLIC_PATHS:
+            return None
+        auth = request.authorization
+        if auth and auth.password and hmac.compare_digest(
+                auth.password.encode('utf-8'), password.encode('utf-8')):
+            return None
+        return Response('Acces reserve.', 401,
+                        {'WWW-Authenticate': 'Basic realm="KP SHOES", charset="UTF-8"'})
 
 
 # Instance au niveau module pour Render (gunicorn app:app fonctionne directement)
