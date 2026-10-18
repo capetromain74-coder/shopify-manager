@@ -54,6 +54,11 @@ def create_app():
     app.register_blueprint(competitor_bp)
     app.register_blueprint(price_bp)
 
+    @app.route('/health')
+    def health():
+        """Ping de maintien en eveil (cron-job.org) : public, leger, n'expose rien."""
+        return 'ok', 200, {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store'}
+
     _install_password_protection(app)
     return app
 
@@ -61,7 +66,7 @@ def create_app():
 # Routes laissees accessibles sans mot de passe : celles appelees par le cron
 # du price tracker (qui a deja sa propre protection par CRON_TOKEN) et deux
 # routes de lecture seule.
-_PUBLIC_PATHS = ('/api/price/run', '/api/price/status', '/api/price/last-run')
+_PUBLIC_PATHS = ('/health', '/api/price/run', '/api/price/status', '/api/price/last-run')
 
 
 def _install_password_protection(app):
