@@ -218,23 +218,26 @@ function scanNext(idx){
     var badge=document.querySelector("#card-"+p.id+" .card-badge");
     if(badge){badge.className="card-badge badge-scan";badge.textContent="Scan...";}
 
-    fetch("/api/goat/check-new-images?sku="+encodeURIComponent(p.sku)+"&title="+encodeURIComponent(p.title))
+    fetch("/api/goat/check-new-images?sku="+encodeURIComponent(p.sku)+"&title="+encodeURIComponent(p.title)+"&current="+(p.image_count||1))
         .then(function(r){return r.json()})
         .then(function(d){
             scanned++;
             var card=document.getElementById("card-"+p.id);
             var info=document.getElementById("info-"+p.id);
 
-            if(d.has_new && d.goat_images>1){
+            var cur=p.image_count||1;
+            if(d.has_new && d.goat_images>cur){
                 withNew++;
-                if(badge){badge.className="card-badge badge-new";badge.textContent=d.goat_images+" photos";}
-                if(info) info.textContent="\u2705 "+d.goat_images+" images disponibles";
+                if(badge){badge.className="card-badge badge-new";badge.textContent=cur+" \u2192 "+d.goat_images+" photos";}
+                if(info) info.textContent="\u2705 "+(d.goat_images-cur)+" photo(s) en plus sur GOAT ("+cur+" actuellement)";
                 if(card) card.className="card has-new";
                 p._goat_images=d.images;
                 p._goat_name=d.goat_name||"";
             }else if(d.goat_found){
+                // GOAT n'a pas plus de photos que la fiche : elle est deja complete
                 unchanged++;
-                if(badge){badge.className="card-badge badge-same";badge.textContent="1 seule";}
+                if(badge){badge.className="card-badge badge-same";badge.textContent="\u00c0 jour ("+cur+"/"+d.goat_images+")";}
+                if(info) info.textContent="GOAT n'a que "+d.goat_images+" photo(s) pour ce produit";
             }else{
                 unchanged++;
                 if(badge){badge.className="card-badge badge-err";badge.textContent="Pas sur GOAT";}
@@ -317,7 +320,7 @@ function initFromHome(){
     for(var i=0;i<d.P.length;i++){var p=d.P[i];if(!_scanClassify(p))continue;
         var sku=(p.variants&&p.variants[0])?p.variants[0].sku||"":"";
         var img=(p.images&&p.images[0])?p.images[0].src||"":"";
-        cand.push({id:p.id,title:p.title,handle:p.handle,sku:sku,image_url:img});
+        cand.push({id:p.id,title:p.title,handle:p.handle,sku:sku,image_url:img,image_count:(p.imgCount||0)});
     }
     if(!cand.length)return false;
     products=cand;

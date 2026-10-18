@@ -110,6 +110,7 @@ def api_products_single_image_page():
             'handle': p.get('handle', ''),
             'sku': sku,
             'image_url': p['images'][0]['src'] if p.get('images') else '',
+            'image_count': img_count,
         })
 
     has_more = len(products) >= 250
@@ -144,13 +145,21 @@ def api_goat_check_new_images():
         return jsonify({'sku': sku, 'goat_found': False, 'goat_images': 0, 'images': []})
 
     images = result.get('images', [])
+    # "Nouvelles photos" = GOAT en propose PLUS que la fiche n'en a deja.
+    # (Avant : on comparait a 1, donc une fiche a 2 photos pour laquelle GOAT
+    # n'en a que 2 etait annoncee a tort comme ayant de nouvelles photos.)
+    try:
+        current = int(request.args.get('current', '1') or 1)
+    except ValueError:
+        current = 1
     return jsonify({
         'sku': sku,
         'goat_found': True,
         'goat_name': result.get('name', ''),
         'goat_images': len(images),
+        'current_images': current,
         'images': images,
-        'has_new': len(images) > 1
+        'has_new': len(images) > current
     })
 
 

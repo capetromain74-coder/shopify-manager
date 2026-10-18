@@ -363,3 +363,21 @@ def api_check_goat_details():
         'fields': fields,
         'count': len(fields),
     })
+
+
+# ══════════════════════════════════════════════════════════════
+# COULEUR AUTOMATIQUE (filtre "Couleur" de la boutique)
+# ══════════════════════════════════════════════════════════════
+@seo_bp.route('/api/color/apply', methods=['POST'])
+def api_color_apply():
+    """Pose la couleur Shopify d'un produit (et sa categorie si absente).
+    Body: {product_id, overwrite: bool}"""
+    from services.color_manager import apply_color
+    data = request.json or {}
+    pid = data.get('product_id')
+    if not pid:
+        return jsonify({'status': 'error', 'message': 'product_id requis'}), 400
+    try:
+        return jsonify(apply_color(pid, overwrite=bool(data.get('overwrite'))))
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500

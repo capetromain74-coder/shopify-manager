@@ -213,7 +213,9 @@ a{color:inherit}
 <label class="opt-sub"><input type="checkbox" class="corF" value="images_alt" style="accent-color:#00ff88"> &#128444;&#65039; Alt Photos</label>
 <label class="opt-sub"><input type="checkbox" class="corF" value="images_filename" style="accent-color:#00ff88"> &#128193; Nom Photos</label>
 <label class="opt-sub"><input type="checkbox" class="corF" value="handle" style="accent-color:#00ff88"> &#128279; Handle (URL)</label>
+<label class="opt-sub"><input type="checkbox" class="corF" value="color" style="accent-color:#00ff88"> &#127912; Couleur (filtre)</label>
 </div>
+<label class="opt-check" style="margin-top:8px;font-size:12px;color:#aaa"><input type="checkbox" id="corColorOverwrite" style="accent-color:#ff9f43"> Couleur : &eacute;craser aussi les couleurs d&eacute;j&agrave; renseign&eacute;es (sinon, seules les fiches sans couleur sont compl&eacute;t&eacute;es)</label>
 </div>
 
 <div id="corStatus" style="display:none;margin:15px 0;padding:12px;border-radius:8px;font-size:13px"></div>
@@ -579,11 +581,13 @@ function startCorrection(){
     var pids=(scope==="selection")?selectedPids.slice():P.map(function(p){return p.id});
     if(!pids.length){alert("Aucun produit.");return}
 
-    var seoFields=fields.filter(function(f){return f!=="images_alt"&&f!=="images_filename"&&f!=="handle"});
+    var seoFields=fields.filter(function(f){return f!=="images_alt"&&f!=="images_filename"&&f!=="handle"&&f!=="color"});
     var doImg=fields.indexOf("images_alt")>=0||fields.indexOf("images_filename")>=0;
     var doHandle=fields.indexOf("handle")>=0;
     // Delay adapté : plus lent si handle (3 appels Shopify par produit)
-    var delay=doHandle?800:50;
+    var doColor=fields.indexOf("color")>=0;
+    var colorOverwrite=document.getElementById("corColorOverwrite").checked;
+    var delay=doHandle?800:(doColor?400:50);
 
     var btn=document.getElementById("corBtn");
     var status=document.getElementById("corStatus");
@@ -593,13 +597,14 @@ function startCorrection(){
     status.style.display="block";status.style.background="#333";status.style.color="#aaa";
     document.getElementById("corProg").style.display="block";bar.style.width="0%";
 
-    var done=0,errs=0,fixed=0,skipped=0,imgSkipped=0;
+    var done=0,errs=0,fixed=0,skipped=0,imgSkipped=0,colorOk=0,colorSkip=0,colorCat=0;
     function next(){
         if(done>=pids.length){
             bar.style.width="100%";txt.textContent=done+"/"+pids.length;
             status.style.background="#00ff8822";status.style.color="#00ff88";
             var msg="\u2705 "+done+" produits traités";
             if(doImg)msg+=" ("+imgSkipped+" images déjà OK, sautées)";
+            if(doColor)msg+=" (couleur : "+colorOk+" posées"+(colorCat?", dont "+colorCat+" avec catégorie ajoutée":"")+", "+colorSkip+" ignorées)";
             if(doHandle)msg+=" ("+fixed+" handles corrigés, "+skipped+" déjà OK)";
             if(errs)msg+=" ("+errs+" erreurs)";
             msg+=" \u2014 clique \u00ab Actualiser \u00bb pour rafra\u00eechir la liste.";
@@ -626,6 +631,18 @@ function startCorrection(){
                 fetch("/api/seo/fix-handle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done],handle:expected})})
                 .then(function(r){return r.json()})
                 .then(function(d){if(d.fixed)fixed++;else skipped++;return d;})
+            );
+        }
+        if(doColor){
+            promises.push(
+                fetch("/api/color/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:pids[done],overwrite:colorOverwrite})})
+                .then(function(r){return r.json()})
+                .then(function(d){
+                    if(d.status==="ok"){colorOk++;if(d.category_set)colorCat++;}
+                    else if(d.status==="error"){errs++;}
+                    else{colorSkip++;}
+                    return d;
+                })
             );
         }
         Promise.all(promises).then(function(){done++;setTimeout(next,delay)}).catch(function(){errs++;done++;setTimeout(next,delay)});
