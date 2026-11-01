@@ -28,38 +28,61 @@ def translate_to_french(text):
     french_count = sum(1 for ind in french_indicators if ind in text_lower)
     if french_count >= 3:
         return text
-    try:
-        import urllib.parse, urllib.request, json as _json
-        protected = {}
-        protected_text = text
-        brands = ['Air Jordan', 'Air Force', 'Air Max', 'Dunk Low', 'Dunk High',
-                  'New Balance', 'Nike SB', 'adidas', 'Adidas', 'Campus', 'SL 72',
-                  'Samba', 'Gazelle', 'Yeezy', 'Forum', 'Superstar', 'Stan Smith',
-                  'Fragment', 'Travis Scott', 'Off-White', 'Sacai', 'Trefoil',
-                  'Primeknit', 'Flyknit', 'Gore-Tex', 'CAMPUS', 'Boost', 'React',
-                  'Jordan', 'Nike', 'Puma', 'Reebok', 'Converse', 'Vans']
-        bx = 0
-        for brand in brands:
-            if brand in protected_text:
-                placeholder = 'XBRAND' + str(bx) + 'X'
-                protected[placeholder] = brand
-                protected_text = protected_text.replace(brand, placeholder)
-                bx += 1
-        encoded = urllib.parse.quote(protected_text[:2000])
-        turl = ('https://translate.googleapis.com/translate_a/single'
-                '?client=gtx&sl=en&tl=fr&dt=t&q=' + encoded)
-        req = urllib.request.Request(turl, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            data = _json.loads(resp.read().decode('utf-8'))
-            translated = ''.join([s[0] for s in data[0] if s[0]])
+    import urllib.parse, urllib.request, json as _json, time as _time
+    protected = {}
+    protected_text = text
+    brands = ['Air Jordan', 'Air Force', 'Air Max', 'Dunk Low', 'Dunk High',
+              'New Balance', 'Nike SB', 'adidas', 'Adidas', 'Campus', 'SL 72',
+              'Samba', 'Gazelle', 'Yeezy', 'Forum', 'Superstar', 'Stan Smith',
+              'Fragment', 'Travis Scott', 'Off-White', 'Sacai', 'Trefoil',
+              'Primeknit', 'Flyknit', 'Gore-Tex', 'CAMPUS', 'Boost', 'React',
+              'Jordan', 'Nike', 'Puma', 'Reebok', 'Converse', 'Vans',
+              'Salomon', 'Quicklace', 'Contagrip', 'Asics', 'Hoka', 'UGG']
+    bx = 0
+    for brand in brands:
+        if brand in protected_text:
+            placeholder = 'XBRAND' + str(bx) + 'X'
+            protected[placeholder] = brand
+            protected_text = protected_text.replace(brand, placeholder)
+            bx += 1
+    encoded = urllib.parse.quote(protected_text[:2000])
+    turl = ('https://translate.googleapis.com/translate_a/single'
+            '?client=gtx&sl=en&tl=fr&dt=t&q=' + encoded)
+    # Le service gratuit de Google limite les requetes pendant les gros lots :
+    # on retente, et en cas d'echec on renvoie None (l'appelant bascule alors
+    # sur une description redigee en francais) au lieu du texte anglais.
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(turl, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = _json.loads(resp.read().decode('utf-8'))
+            translated = ''.join([seg[0] for seg in data[0] if seg[0]])
             if translated and len(translated) > 10:
                 for placeholder, original in protected.items():
                     translated = translated.replace(placeholder, original)
                     translated = translated.replace(placeholder.lower(), original)
-                return translated
-    except Exception as e:
-        log.error('[Translate] Error: ' + str(e))
-    return text
+                if not looks_english(translated):
+                    return translated
+        except Exception as e:
+            log.warning(f'[Translate] tentative {attempt + 1}/3 echouee : {e}')
+        _time.sleep(1.5 * (attempt + 1))
+    log.error('[Translate] traduction impossible, texte anglais ecarte')
+    return None
+
+
+_EN_WORDS = {'the', 'and', 'with', 'its', 'this', 'that', 'features', 'upper', 'from',
+             'on', 'of', 'an', 'is', 'are', 'by', 'for', 'while', 'which', 'atop', 'sole'}
+_FR_WORDS = {'le', 'la', 'les', 'des', 'une', 'un', 'est', 'avec', 'et', 'sur', 'pour',
+             'du', 'de', 'dans', 'qui', 'cette', 'ce', 'sont', 'en', 'au', 'aux'}
+
+
+def looks_english(text):
+    """Vrai si le texte est manifestement en anglais (plus de mots-outils anglais
+    que francais). Garde-fou avant toute publication."""
+    words = re.findall(r"[a-z\u00e0-\u00ff']+", (text or '').lower())
+    en = sum(1 for w in words if w in _EN_WORDS)
+    fr = sum(1 for w in words if w in _FR_WORDS)
+    return en >= 3 and en > fr
 
 
 def title_to_filename(title):
@@ -529,7 +552,7 @@ def extract_colorway(title):
         'Classic Clog', 'Classic Slide',
         'Old Skool', 'Sk8-Hi', 'Era', 'Authentic',
         'Chuck Taylor', 'Chuck 70',
-        'XT-6', 'XT-4', 'ACS Pro',
+        'XT-6 Advanced', 'XT-6 Adv', 'XT-6', 'XT-4', 'ACS Pro',
     ]
     
     colorway = t
@@ -1061,7 +1084,10 @@ def build_goat_description(goat_details, title, colorway):
             else:
                 story_clean = story_clean[:400] + '...'
         story_fr = translate_to_french(story_clean)
-        return story_fr, 'goat_story'
+        if story_fr:
+            return story_fr, 'goat_story'
+        # Traduction impossible : on n'utilise pas l'anglais -> description IA en francais
+        return None, None
 
     colors_fr = _translate_colors(color_raw)
     materials_fr = _translate_materials(materials)
@@ -1415,6 +1441,13 @@ def generate_body_html(product, collections, goat_slug=''):
             goat_sentence = ai_story
             cw_type = 'ai_story'
             log.info(f"[SEO] Using AI story for {title}")
+
+    # Garde-fou : jamais de texte anglais publie, quel que soit le chemin
+    if goat_sentence and looks_english(goat_sentence):
+        log.warning(f"[SEO] Texte anglais detecte pour {title}, remplacement par la description IA")
+        ai_story = generate_story_ai(title, brand, colorway, model_desc, goat_data=goat_details)
+        goat_sentence = ai_story if (ai_story and not looks_english(ai_story)) else None
+        cw_type = 'ai_story' if goat_sentence else 'color'
 
     color_sentence = goat_sentence
     if not color_sentence and colorway:
