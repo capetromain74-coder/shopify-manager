@@ -547,6 +547,7 @@ function startCorrection(){
     document.getElementById("corProg").style.display="block";bar.style.width="0%";
 
     var done=0,errs=0,fixed=0,skipped=0,imgSkipped=0,colorOk=0,colorSkip=0,colorCat=0;
+    var colorWhy={};
     function next(){
         if(done>=pids.length){
             bar.style.width="100%";txt.textContent=done+"/"+pids.length;
@@ -554,6 +555,7 @@ function startCorrection(){
             var msg="\u2705 "+done+" produits traités";
             if(doImg)msg+=" ("+imgSkipped+" images déjà OK, sautées)";
             if(doColor)msg+=" (couleur : "+colorOk+" posées"+(colorCat?", dont "+colorCat+" avec catégorie ajoutée":"")+", "+colorSkip+" ignorées)";
+            if(doColor){var why=Object.keys(colorWhy).sort(function(a,b){return colorWhy[b]-colorWhy[a]}).slice(0,3).map(function(k){return colorWhy[k]+" × "+k});if(why.length)msg+=" [détail : "+why.join(" ; ")+"]";}
             if(doHandle)msg+=" ("+fixed+" handles corrigés, "+skipped+" déjà OK)";
             if(errs)msg+=" ("+errs+" erreurs)";
             msg+=" \u2014 clique \u00ab Actualiser \u00bb pour rafra\u00eechir la liste.";
@@ -588,8 +590,8 @@ function startCorrection(){
                 .then(function(r){return r.json()})
                 .then(function(d){
                     if(d.status==="ok"){colorOk++;if(d.category_set)colorCat++;}
-                    else if(d.status==="error"){errs++;}
-                    else{colorSkip++;}
+                    else if(d.status==="error"){errs++;colorWhy[d.message||"erreur"]=(colorWhy[d.message||"erreur"]||0)+1;}
+                    else{colorSkip++;colorWhy[d.reason||"?"]=(colorWhy[d.reason||"?"]||0)+1;}
                     return d;
                 })
             );

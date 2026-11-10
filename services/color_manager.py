@@ -136,6 +136,20 @@ def detect_colors(text):
 # ── Couleurs existantes dans la boutique (cache 1 h) ────────────────────────
 _SWATCH_CACHE = {'map': None, 'ts': 0}
 
+# Couleurs de la boutique (releve du 2026-10-18). Sert quand l'app n'a pas le
+# droit `read_metaobjects` : sans cette table, la lecture echouait en silence
+# et TOUTES les fiches etaient ignorees ("couleur absente de la boutique").
+_M = 'gid://shopify/Metaobject/'
+FALLBACK_COLORS = {
+    'rouge': _M + '112516497756', 'vert': _M + '112518660444', 'gris': _M + '112524165468',
+    'noir': _M + '112525508956', 'marron': _M + '112611131740', 'blanc': _M + '112612311388',
+    'beige': _M + '112640065884', 'bleu': _M + '113588306268', 'rose': _M + '114044404060',
+    'animal': _M + '114443125084', 'marine': _M + '285266149724', 'camouflage': _M + '285275619676',
+    'argent': _M + '291778756956', 'jaune': _M + '293291884892', 'orange': _M + '299980882268',
+    'violet': _M + '310250242396', 'leopard': _M + '529644126556', 'multicolore': _M + '663348969820',
+    'dore': _M + '663349002588',
+}
+
 
 def get_store_colors():
     """{handle: gid} des couleurs definies dans la boutique."""
@@ -156,8 +170,10 @@ def get_store_colors():
         if not (data.get('pageInfo') or {}).get('hasNextPage'):
             break
         after = data['pageInfo']['endCursor']
-    if colors:
-        _SWATCH_CACHE.update(map=colors, ts=time.time())
+    if not colors:
+        log.warning("[Color] Lecture des couleurs refusee (droit read_metaobjects absent ?) -> table de secours")
+        colors = dict(FALLBACK_COLORS)
+    _SWATCH_CACHE.update(map=colors, ts=time.time())
     return colors
 
 
@@ -243,8 +259,12 @@ def apply_color(product_id, overwrite=False):
         'type': 'list.metaobject_reference', 'value': json.dumps(gids),
     }]})
     errs = ((((m or {}).get('data') or {}).get('metafieldsSet') or {}).get('userErrors')) or []
-    if errs or not m:
-        return {'status': 'error', 'message': 'couleur refusee: ' + str(errs)}
+    top = (m or {}).get('errors') or []
+    if errs or top or not m:
+        detail = '; '.join(e.get('message', '') for e in (errs or top)) or 'pas de reponse Shopify'
+        if 'access' in detail.lower() or 'scope' in detail.lower():
+            detail += " -> ajouter le droit read_metaobjects a l'app Shopify 'Product Manager'"
+        return {'status': 'error', 'message': 'couleur refusee: ' + detail}
 
     log.info(f"[Color] {title}: {labels} (source {source})" +
              (f", categorie posee: {category_set}" if category_set else ''))
