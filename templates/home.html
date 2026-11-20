@@ -368,10 +368,14 @@ function startDrop257(){
     function upd(){document.getElementById("dropBar").style.width=Math.round(done/total*100)+"%";
         document.getElementById("dropTxt").textContent=done+"/"+total+" — "+ok+" nettoyées, "+skip+" sautées, "+fail+" erreurs";}
     function log(m,c){logEl.innerHTML+="<div style='color:"+(c||"#6e6e73")+"'>"+m+"</div>";logEl.scrollTop=logEl.scrollHeight;}
-    var streak=0;
+    var streak=0,pauses=0;
     function next(i,attempt){
         attempt=attempt||0;
-        if(streak>=8){btn.disabled=false;btn.textContent="Reprendre";log("⏸ Pause : 8 erreurs d'affilée (serveur indisponible ?). Attends 1 minute, recharge la page et relance : les fiches faites seront sautées.","#d70015");return;}
+        if(streak>=5){
+            pauses++;
+            if(pauses>15){btn.disabled=false;btn.textContent="Reprendre";log("⏹ Arrêt : le serveur ne répond plus depuis longtemps. Recharge la page et relance plus tard, les fiches faites seront sautées.","#d70015");return;}
+            streak=0;log("⏸ Serveur indisponible — reprise automatique dans 2 minutes (pause "+pauses+"/15)","#d70015");
+            setTimeout(function(){next(i)},120000);return;}
         if(i>=list.length){btn.textContent="Terminé";log("Terminé : "+ok+" nettoyées, "+skip+" sautées, "+fail+" erreurs","#248a3d");
             try{sessionStorage.removeItem("kp_cache_v4")}catch(e){}log("Cache vidé — clique « Actualiser ».","#0071a4");return;}
         var p=list[i];
