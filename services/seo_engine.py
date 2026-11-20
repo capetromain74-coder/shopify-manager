@@ -164,7 +164,8 @@ def extract_brand(title):
         ('Converse', ['converse', 'chuck taylor']),
         ('Vans', ['vans', 'old skool', 'sk8-hi']),
         ('Reebok', ['reebok']),
-        ('On Running', ['on cloud', 'cloudmonster', 'cloudnova']),
+        ('On Running', ['on running', 'on cloud', 'cloudmonster', 'cloudnova', 'cloudtilt', 'cloudsurfer',
+                        'cloudswift', 'cloudrunner', 'cloudaway', 'cloudventure', 'cloudrock', 'cloudhorizon']),
         ('Saucony', ['saucony']),
         ('Mizuno', ['mizuno']),
         ('Hoka', ['hoka']),
@@ -511,7 +512,7 @@ def _format_release_date(raw):
 def extract_colorway(title):
     """Extrait le coloris/version spécifique du titre produit"""
     t = title
-    brands = ['Nike', 'Adidas', 'New Balance', 'Asics', 'Puma', 'Reebok', 'UGG', 'Crocs', 'Salomon', 'Birkenstock', 'Vans', 'Converse', 'Saucony', 'Mizuno', 'Hoka', 'Autry']
+    brands = ['Nike', 'Adidas', 'New Balance', 'Asics', 'Puma', 'Reebok', 'UGG', 'Crocs', 'Salomon', 'Birkenstock', 'Vans', 'Converse', 'Saucony', 'Mizuno', 'Hoka', 'Autry', 'On Running', 'On']
     for b in brands:
         if t.startswith(b + ' '):
             t = t[len(b)+1:]
@@ -554,6 +555,10 @@ def extract_colorway(title):
         'Old Skool', 'Sk8-Hi', 'Era', 'Authentic',
         'Chuck Taylor', 'Chuck 70',
         'XT-6 Advanced', 'XT-6 Adv', 'XT-6', 'XT-4', 'ACS Pro',
+        'Cloud 6 Waterproof', 'Cloud 6', 'Cloud 5 Waterproof', 'Cloud 5', 'Cloud X 3', 'Cloud X',
+        'Cloudmonster 2', 'Cloudmonster 1', 'Cloudmonster', 'Cloudtilt', 'Cloudnova Form 2', 'Cloudnova Form', 'Cloudnova',
+        'Cloudsurfer Next', 'Cloudsurfer', 'Cloudswift 3', 'Cloudswift', 'Cloudrunner 2', 'Cloudrunner', 'Cloudaway',
+        'Cloudventure', 'Cloudrock',
         'Medalist Low', 'Medalist Mid', 'Medalist', 'Reelwind Low', 'Reelwind', 'Super Vintage Low', 'Super Vintage', 'Clc Low', 'Clc',
     ]
     
@@ -1284,6 +1289,7 @@ def _inject_collection_links(text, collections, title):
         'vans': 'vans',
         'saucony': 'saucony',
         'autry': 'autry',
+        'on running': 'on',
         'bape': 'bape',
         'dior': 'dior',
         'denim tears': 'denim-tears',

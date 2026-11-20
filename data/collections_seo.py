@@ -13,6 +13,15 @@ _P = '<p style="margin:0 0 16px 0">'
 
 COLLECTION_SEO = {
 
+    'on': {
+        'meta_title': 'On Running - Cloudmonster, Cloud 6, Cloudtilt pour Homme et Femme',
+        'meta_description': "Toutes les On Running sur KP SHOES. Cloudmonster, Cloud 6, Cloudtilt... 100% authentiques. Livraison rapide, retours 14j.",
+        'description': f"{_S}{_H1}On Running</h2>"
+            f"{_P}<strong>On</strong> est une marque suisse de running fondee en 2010 a Zurich. Elle est reconnue pour sa technologie <strong>CloudTec</strong> : une semelle faite de petits elements creux qui amortissent l'impact puis se referment pour une poussee dynamique.</p>"
+            f"{_H2}Du running au quotidien</h2>"
+            f"{_P}Des modeles comme la <strong>Cloudmonster</strong>, la <strong>Cloud 6</strong> ou la <strong>Cloudtilt</strong> sont passes des pistes a la rue grace a leur design epure et leur confort. On collabore aussi avec des maisons de mode comme Loewe.</p>{_E}",
+    },
+
     'autry': {
         'meta_title': 'Autry - Sneakers Medalist & Reelwind pour Homme et Femme',
         'meta_description': "Toutes les Autry sur KP SHOES. Medalist, Reelwind... 100% authentiques. Livraison rapide, retours 14j.",
