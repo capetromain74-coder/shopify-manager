@@ -79,7 +79,7 @@
 <option value="nodesc">Sans description</option>
 <option value="imgfix">Photos &agrave; renommer (alt / nom)</option>
 <option value="nohd">Photos pas toutes en HD</option>
-<option value="fewphotos">Moins de 8 photos</option>
+<option value="fewphotos">Moins de 5 photos</option>
 <option value="onephoto">Une seule photo</option>
 <option value="nosku">Sans SKU</option>
 <option value="nolink">Sans lien interne</option>
@@ -109,7 +109,7 @@
 <label class="opt-radio"><input type="radio" name="goatScope" value="selection" checked> S&eacute;lection uniquement (<span id="goatSel">0</span> coch&eacute;s)</label>
 <label class="opt-radio"><input type="radio" name="goatScope" value="all"> Tous les produits (<span id="goatTotal">0</span>)</label>
 <label class="opt-radio"><input type="radio" name="goatScope" value="incomplete"> R&eacute;parer les incomplets &mdash; moins de
-<input type="number" id="goatThreshold" value="8" min="1" max="12" style="width:48px;padding:2px 4px;margin:0 4px;background:#f2f2f7;color:#1d1d1f;border:1px solid #e5e5ea;border-radius:4px"> photos</label>
+<input type="number" id="goatThreshold" value="5" min="1" max="12" style="width:48px;padding:2px 4px;margin:0 4px;background:#f2f2f7;color:#1d1d1f;border:1px solid #e5e5ea;border-radius:4px"> photos</label>
 <label class="opt-radio" style="color:#0071e3"><input type="checkbox" id="goatSkipDone" checked> Sauter les produits d&eacute;j&agrave; finis (tag goat_hd, ou set complet en haute r&eacute;solution)</label>
 <label class="opt-radio" style="color:#b25000"><input type="checkbox" id="goatTrustTag"> Se fier au tag goat_hd (plus rapide). <b>D&eacute;coch&eacute;</b> = re-v&eacute;rifier TOUT par le nombre r&eacute;el de photos (recommand&eacute; pour un nettoyage final)</label>
 </div>
@@ -276,7 +276,7 @@ function matchFilter(p,f){
         case "nolink": return !p._lk;
         case "imgfix": return !p._img;
         case "nohd": return !p._hd;
-        case "fewphotos": var n=goatImgCount(p);return n>0&&n<8;
+        case "fewphotos": var n=goatImgCount(p);return n>0&&n<5;
         case "onephoto": return goatImgCount(p)===1;
         case "nosku": return !p._sku;
         default: return true;

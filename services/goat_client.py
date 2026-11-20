@@ -382,6 +382,20 @@ def _url_exists(url):
     return False
 
 
+# Photos GOAT non voulues : sur un set de 8 photos ou plus, les vues n°2, 5 et 7
+# font doublon. On les retire partout (accueil, fiche, scanner, correction).
+DROP_POSITIONS = (2, 5, 7)
+DROP_MIN_SET = 8
+
+
+def drop_extra_angles(images):
+    """Retire les photos 2, 5 et 7 (numerotation 1..n) si le set en compte 8 ou plus."""
+    images = list(images or [])
+    if len(images) < DROP_MIN_SET:
+        return images
+    return [u for i, u in enumerate(images, 1) if i not in DROP_POSITIONS]
+
+
 def get_images(sku, title=None, first=False):
     """Récupère les images GOAT pour un SKU. Gère les SKU multiples (ex: 0951301/0951303).
     Stratégie: Algolia pour trouver le produit + découverte d'angles sur le CDN.
@@ -421,6 +435,7 @@ def get_images(sku, title=None, first=False):
                             images.append(url)
                     log.info(f"[GOAT] Total after angle discovery: {len(images)} images")
             
+            images = drop_extra_angles(images)
             if not images: return None
             return {'name': product.get('name', ''), 'sku': product.get('sku', sku), 'images': images, 'multi': False}
         
@@ -440,7 +455,7 @@ def get_images(sku, title=None, first=False):
                             for url in extra:
                                 if url not in images:
                                     images.append(url)
-                    results.append({'name': product.get('name', ''), 'sku': s, 'images': images})
+                    results.append({'name': product.get('name', ''), 'sku': s, 'images': drop_extra_angles(images)})
                 else:
                     results.append({'name': '', 'sku': s, 'images': []})
             except Exception as e:

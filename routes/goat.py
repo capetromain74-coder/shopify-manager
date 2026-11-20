@@ -212,7 +212,8 @@ def api_goat_images_by_slug():
             name = data.get('name', '')
         except:
             pass
-    return jsonify({'name': name, 'slug': slug, 'images': images})
+    from services.goat_client import drop_extra_angles
+    return jsonify({'name': name, 'slug': slug, 'images': drop_extra_angles(images)})
 
 @goat_bp.route('/api/goat/apply', methods=['POST'])
 def api_goat_apply():
@@ -234,7 +235,9 @@ def api_goat_apply():
         # MOINS d'images, c'est très probablement un blocage Cloudflare en cours.
         # On NE casse PAS l'existant : on garde les photos actuelles et on
         # signale au front de retenter ce produit plus tard.
-        if len(old_images) >= 3 and len(images) < len(old_images):
+        # (Un set GOAT de 8 passe a 5 photos apres retrait des vues 2/5/7 :
+        # 8 existantes -> 5 nouvelles n'est donc PAS un blocage.)
+        if len(old_images) >= 3 and len(images) < min(len(old_images), 5):
             log.warning(f"[GOAT Apply] Throttle suspect product {product_id}: "
                         f"GOAT={len(images)} < existant={len(old_images)}, on garde l'existant")
             return jsonify({'success': False, 'skipped_throttle': True,
