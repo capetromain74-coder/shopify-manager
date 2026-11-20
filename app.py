@@ -176,7 +176,7 @@ def api_goat_check_new_images():
                         'images': [], 'collectible': True})
 
     sku_clean = re.sub(r':\d+$', '', sku)
-    result = get_goat_images(sku_clean)
+    result = get_goat_images(sku_clean, first=True)
 
     if not result or not result.get('images'):
         return jsonify({'sku': sku, 'goat_found': False, 'goat_images': 0, 'images': []})

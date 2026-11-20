@@ -452,7 +452,7 @@ function startBulkGoat(){
         addLog("📷 "+p.title+" ("+p.sku+")...");
         updateProgress();
         
-        fetch("/api/goat/images?sku="+encodeURIComponent(p.sku)+"&title="+encodeURIComponent(p.title||""))
+        fetch("/api/goat/images?first=1&sku="+encodeURIComponent(p.sku)+"&title="+encodeURIComponent(p.title||""))
         .then(function(r){return r.json()})
         .then(function(d){
             if(d.error||!d.images||!d.images.length){

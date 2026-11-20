@@ -107,9 +107,24 @@ def _goat_post(url, json_data):
         log.warning(f"[GOAT] subprocess curl POST failed: {e}")
     return None
 
+def _split_skus(sku):
+    """'0660461/0660463' -> ['0660461', '0660463'] (SKU multiples sur une fiche)."""
+    sku = re.sub(r':\d+$', '', (sku or '').strip())
+    parts = [s.strip() for s in re.split(r'[/|]', sku) if s.strip()]
+    return parts or ([sku] if sku else [])
+
+
 def search(sku, title=None):
     """Recherche un produit GOAT via Algolia. Retourne slug + image principale.
-    Si Algolia ne trouve rien et qu'un titre est fourni, tente de deviner le slug."""
+    Si Algolia ne trouve rien et qu'un titre est fourni, tente de deviner le slug.
+    SKU multiples ('A/B') : on essaie chaque SKU dans l'ordre, le premier trouve gagne."""
+    parts = _split_skus(sku)
+    if len(parts) > 1:
+        for s in parts:
+            found = search(s)
+            if found:
+                return found
+        return search(parts[0], title=title) if title else None
     url = f"{GOAT_ALGOLIA_URL}?x-algolia-application-id={GOAT_ALGOLIA_APP_ID}&x-algolia-api-key={GOAT_ALGOLIA_API_KEY}"
     payload = {"requests": [{"indexName": "product_variants_v2", "params": f"distinct=true&maxValuesPerFacet=1&page=0&query={sku}"}]}
     raw = _goat_post(url, payload)
@@ -367,7 +382,7 @@ def _url_exists(url):
     return False
 
 
-def get_images(sku, title=None):
+def get_images(sku, title=None, first=False):
     """Récupère les images GOAT pour un SKU. Gère les SKU multiples (ex: 0951301/0951303).
     Stratégie: Algolia pour trouver le produit + découverte d'angles sur le CDN.
     Pour les vêtements (non trouvés via Algolia), utilise le titre pour deviner le slug.
@@ -376,7 +391,16 @@ def get_images(sku, title=None):
         sku = re.sub(r':\d+$', '', sku.strip())
         skus = [s.strip() for s in sku.replace('/', ' ').replace('|', ' ').split() if s.strip()]
         if not skus: skus = [sku]
-        
+
+        # first=True (accueil, scanner) : on ne demande pas de choisir, on prend
+        # le premier SKU qui a des photos sur GOAT.
+        if first and len(skus) > 1:
+            for s in skus:
+                r = get_images(s)
+                if r and r.get('images'):
+                    return r
+            return get_images(skus[0], title=title)
+
         if len(skus) == 1:
             product = search(skus[0], title=title)
             if not product or not product.get('slug'): return None

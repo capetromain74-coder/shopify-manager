@@ -181,7 +181,8 @@ def api_goat_images():
         return jsonify({'error': 'Produit de collection : non disponible sur GOAT',
                         'collectible': True}), 404
     log.info(f"[GOAT] Searching images for SKU: {sku}" + (f" (title: {title[:40]})" if title else ""))
-    result = get_goat_images(sku, title=title if title else None)
+    first = request.args.get('first') == '1'
+    result = get_goat_images(sku, title=title if title else None, first=first)
     if not result:
         return jsonify({'error': 'Produit non trouve sur GOAT'}), 404
     if result.get('multi'):
