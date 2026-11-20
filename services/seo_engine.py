@@ -168,6 +168,7 @@ def extract_brand(title):
         ('Saucony', ['saucony']),
         ('Mizuno', ['mizuno']),
         ('Hoka', ['hoka']),
+        ('Autry', ['autry']),
     ]
     for brand, kws in brands:
         for kw in kws:
@@ -510,7 +511,7 @@ def _format_release_date(raw):
 def extract_colorway(title):
     """Extrait le coloris/version spécifique du titre produit"""
     t = title
-    brands = ['Nike', 'Adidas', 'New Balance', 'Asics', 'Puma', 'Reebok', 'UGG', 'Crocs', 'Salomon', 'Birkenstock', 'Vans', 'Converse', 'Saucony', 'Mizuno', 'Hoka']
+    brands = ['Nike', 'Adidas', 'New Balance', 'Asics', 'Puma', 'Reebok', 'UGG', 'Crocs', 'Salomon', 'Birkenstock', 'Vans', 'Converse', 'Saucony', 'Mizuno', 'Hoka', 'Autry']
     for b in brands:
         if t.startswith(b + ' '):
             t = t[len(b)+1:]
@@ -553,6 +554,7 @@ def extract_colorway(title):
         'Old Skool', 'Sk8-Hi', 'Era', 'Authentic',
         'Chuck Taylor', 'Chuck 70',
         'XT-6 Advanced', 'XT-6 Adv', 'XT-6', 'XT-4', 'ACS Pro',
+        'Medalist Low', 'Medalist Mid', 'Medalist', 'Reelwind Low', 'Reelwind', 'Super Vintage Low', 'Super Vintage', 'Clc Low', 'Clc',
     ]
     
     colorway = t
@@ -856,7 +858,7 @@ _COLLECTIBLE_KW = [
 _WEARABLE_BRANDS = [
     'adidas', 'nike', 'jordan', 'new balance', 'asics', 'puma', 'reebok',
     'vans', 'converse', 'crocs', 'ugg', 'salomon', 'hoka', 'on running',
-    'yeezy', 'timberland', 'dr. martens', 'birkenstock', 'mizuno', 'saucony',
+    'yeezy', 'timberland', 'dr. martens', 'birkenstock', 'mizuno', 'saucony', 'autry',
     'veja', 'balenciaga', 'supreme', 'stussy', 'st\u00fcssy', 'bape', 'palace',
     'kith', 'off-white', 'fear of god', 'essentials', 'the north face',
 ]
@@ -1281,6 +1283,7 @@ def _inject_collection_links(text, collections, title):
         'timberland': 'timberland',
         'vans': 'vans',
         'saucony': 'saucony',
+        'autry': 'autry',
         'bape': 'bape',
         'dior': 'dior',
         'denim tears': 'denim-tears',

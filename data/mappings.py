@@ -33,7 +33,7 @@ BRAND_COLLECTIONS = {
     'ugg': ['ugg'], 'puma': ['puma'], 'crocs': ['crocs'], 'birkenstock': ['birkenstock'],
     'converse': ['converse'], 'salomon': ['salomon'], 'timberland': ['timberland'],
     'maison-mihara': ['mihara', 'mmy', 'maison mihara'], 'vans': ['vans'],
-    'saucony': ['saucony'], 'patta': ['patta'], 'the-north-face': ['north face'],
+    'saucony': ['saucony'], 'autry': ['autry'], 'patta': ['patta'], 'the-north-face': ['north face'],
     'bape': ['bape', 'bathing ape'], 'dior': ['dior'], 'denim-tears': ['denim tears'],
     'fear-of-god': ['fear of god', 'essentials'],
 }

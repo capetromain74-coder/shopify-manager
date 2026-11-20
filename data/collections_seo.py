@@ -13,6 +13,15 @@ _P = '<p style="margin:0 0 16px 0">'
 
 COLLECTION_SEO = {
 
+    'autry': {
+        'meta_title': 'Autry - Sneakers Medalist & Reelwind pour Homme et Femme',
+        'meta_description': "Toutes les Autry sur KP SHOES. Medalist, Reelwind... 100% authentiques. Livraison rapide, retours 14j.",
+        'description': f"{_S}{_H1}Autry</h2>"
+            f"{_P}<strong>Autry</strong> est une marque americaine nee a Dallas, au Texas, au debut des annees 80. Son modele phare, la <strong>Medalist</strong>, s'inspire des chaussures de tennis et de running de l'epoque, avec une silhouette basse et des finitions en cuir.</p>"
+            f"{_H2}Le style Autry</h2>"
+            f"{_P}Relancee a la fin des annees 2010, Autry mise sur une esthetique vintage et epuree. La <strong>Medalist</strong> et la <strong>Reelwind</strong> se portent facilement au quotidien et se declinent dans de nombreux coloris et matieres.</p>{_E}",
+    },
+
     'saucony': {
         'meta_title': 'Saucony - Sneakers Running & Lifestyle pour Homme et Femme',
         'meta_description': "Toutes les Saucony sur KP SHOES. Shadow 6000, ProGrid Omni, Jazz... 100% authentiques.",
