@@ -171,3 +171,47 @@ def api_fix_all_images():
         'total_fixed': total_fixed,
         'total_images': total_images
     })
+
+
+# ── Retrait des photos 2, 5 et 7 (sets GOAT de 8 photos ou plus) ──
+# Ces vues font doublon (zoom profil, 2e semelle, talon seul). Le tag
+# 'photos_257' marque une fiche deja nettoyee pour ne JAMAIS la retoucher
+# (sinon une fiche a 12 photos -> 9 serait recoupee au passage suivant).
+DROP_TAG = 'photos_257'
+
+
+@images_bp.route('/api/images/drop-extra', methods=['POST'])
+def api_drop_extra_photos():
+    from services.goat_client import DROP_POSITIONS, DROP_MIN_SET
+    data = request.get_json(silent=True) or {}
+    product_id = data.get('product_id')
+    dry_run = bool(data.get('dry_run'))
+    if not product_id:
+        return jsonify({'error': 'product_id requis'}), 400
+    r = shopify_request(f'products/{product_id}.json?fields=id,title,tags,images')
+    if not r or 'product' not in r:
+        return jsonify({'error': 'Produit non trouve'}), 404
+    product = r['product']
+    tags = [t.strip() for t in (product.get('tags') or '').split(',') if t.strip()]
+    images = sorted(product.get('images', []), key=lambda im: im.get('position', 0))
+    if DROP_TAG in tags:
+        return jsonify({'skipped': True, 'reason': 'deja nettoyee', 'count': len(images)})
+    if len(images) < DROP_MIN_SET:
+        return jsonify({'skipped': True, 'reason': f'{len(images)} photos (< {DROP_MIN_SET})', 'count': len(images)})
+    to_drop = [im for i, im in enumerate(images, 1) if i in DROP_POSITIONS]
+    if dry_run:
+        return jsonify({'dry_run': True, 'count': len(images), 'would_remove': [im.get('src') for im in to_drop]})
+    removed = 0
+    for im in to_drop:
+        if shopify_request(f"products/{product_id}/images/{im['id']}.json", 'DELETE'):
+            removed += 1
+        time.sleep(0.3)
+    after = shopify_request(f'products/{product_id}.json?fields=id,images')
+    real = len(after['product'].get('images', [])) if after and 'product' in after else None
+    if removed == len(to_drop):
+        tags.append(DROP_TAG)
+        shopify_request(f'products/{product_id}.json', 'PUT',
+                        {'product': {'id': product_id, 'tags': ', '.join(tags)}})
+    log.info(f"[Drop257] product {product_id}: {len(images)} -> {real} (retirees {removed}/{len(to_drop)})")
+    return jsonify({'success': removed == len(to_drop), 'removed': removed,
+                    'before': len(images), 'after': real})

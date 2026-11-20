@@ -130,6 +130,12 @@
 <div id="bulkGoatLog" style="max-height:200px;overflow-y:auto;margin-top:10px;font-size:11px;color:#6e6e73;font-family:monospace"></div>
 </div>
 
+<div style="margin:0 20px;padding:12px 14px;background:#f5f5f7;border-radius:12px;font-size:13px;color:#1d1d1f;line-height:1.5">
+<b>Nettoyage des photos 2, 5 et 7</b> &mdash; sur les fiches qui ont 8 photos ou plus, retire les vues en doublon (zoom profil, 2e semelle, talon seul). Les fiches d&eacute;j&agrave; nettoy&eacute;es (tag photos_257) sont saut&eacute;es.
+<div id="dropStatus" style="display:none;margin-top:8px"><div class="prog-bar"><div class="prog-fill" id="dropBar"></div></div><div id="dropTxt" style="font-size:12px;color:#6e6e73;margin-top:6px"></div><div id="dropLog" style="max-height:150px;overflow-y:auto;margin-top:6px;font-size:11px;color:#6e6e73;font-family:monospace"></div></div>
+<button class="btn" id="dropBtn" onclick="startDrop257()" style="margin-top:10px;padding:10px 16px;background:#e8e8ed;color:#1d1d1f;border:none;border-radius:980px;cursor:pointer;font-weight:600">Retirer les photos 2, 5 et 7</button>
+</div>
+
 <div style="padding:15px 20px;display:flex;gap:10px">
 <button class="btn btn-p" id="bulkGoatBtn" onclick="startBulkGoat()" style="flex:1;padding:14px;font-size:15px;background:linear-gradient(135deg,#0071e3,#0071e3);color:#ffffff;font-weight:700;border:none;border-radius:8px;cursor:pointer">Lancer le remplacement</button>
 <button class="btn" onclick="closeBulkGoat()" style="padding:14px 20px;background:#e8e8ed;color:#1d1d1f;border:none;border-radius:8px;cursor:pointer">Annuler</button>
@@ -346,6 +352,35 @@ function openBulkGoat(){
     btn.style.background="";
     if(selectedPids.length>0)document.querySelector('input[name="goatScope"][value="selection"]').checked=true;
     else document.querySelector('input[name="goatScope"][value="all"]').checked=true;
+}
+
+// ── Retrait des photos 2/5/7 sur les fiches a 8+ photos ──
+function startDrop257(){
+    var scope=document.querySelector('input[name="goatScope"]:checked').value;
+    var base=(scope==="selection")?P.filter(function(p){return selectedPids.indexOf(p.id)!==-1}):P;
+    var list=base.filter(function(p){return goatImgCount(p)>=8 && !goatHasTag(p,"photos_257")});
+    if(!list.length){toast("Aucune fiche à 8 photos ou plus à nettoyer","error");return;}
+    if(!confirm(list.length+" fiche(s) ont 8 photos ou plus.\n\nLe bot va SUPPRIMER définitivement les photos n°2, 5 et 7 de chacune ("+(list.length*3)+" photos environ).\nCette suppression ne peut pas être annulée.\n\nContinuer ?"))return;
+    var btn=document.getElementById("dropBtn");btn.disabled=true;btn.textContent="En cours...";
+    document.getElementById("dropStatus").style.display="block";
+    var logEl=document.getElementById("dropLog");logEl.innerHTML="";
+    var done=0,ok=0,skip=0,fail=0,total=list.length;
+    function upd(){document.getElementById("dropBar").style.width=Math.round(done/total*100)+"%";
+        document.getElementById("dropTxt").textContent=done+"/"+total+" — "+ok+" nettoyées, "+skip+" sautées, "+fail+" erreurs";}
+    function log(m,c){logEl.innerHTML+="<div style='color:"+(c||"#6e6e73")+"'>"+m+"</div>";logEl.scrollTop=logEl.scrollHeight;}
+    function next(i){
+        if(i>=list.length){btn.textContent="Terminé";log("Terminé : "+ok+" nettoyées, "+skip+" sautées, "+fail+" erreurs","#248a3d");
+            try{sessionStorage.removeItem("kp_cache_v4")}catch(e){}log("Cache vidé — clique « Actualiser ».","#0071a4");return;}
+        var p=list[i];
+        fetch("/api/images/drop-extra",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:p.id})})
+        .then(function(r){return r.json()}).then(function(d){
+            if(d.success){ok++;log(p.title+" : "+d.before+" → "+d.after+" photos");}
+            else if(d.skipped){skip++;log(p.title+" : sautée ("+d.reason+")","#b25000");}
+            else{fail++;log(p.title+" : erreur "+(d.error||(d.removed+"/3 retirées")),"#d70015");}
+        }).catch(function(e){fail++;log(p.title+" : erreur réseau","#d70015");})
+        .then(function(){done++;upd();setTimeout(function(){next(i+1)},400);});
+    }
+    upd();next(0);
 }
 function closeBulkGoat(){document.getElementById("bulkGoatModal").style.display="none"}
 

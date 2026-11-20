@@ -335,7 +335,7 @@ def api_goat_apply():
                 existing_tags = product.get('tags', '') or ''
                 tag_list = [t.strip() for t in existing_tags.split(',') if t.strip()]
                 changed = False
-                for t in ('goat_hd', 'goat_done'):
+                for t in ('goat_hd', 'goat_done', 'photos_257'):
                     if t not in tag_list:
                         tag_list.append(t); changed = True
                 if changed:
