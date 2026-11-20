@@ -201,6 +201,12 @@ def api_drop_extra_photos():
     to_drop = [im for i, im in enumerate(images, 1) if i in DROP_POSITIONS]
     if dry_run:
         return jsonify({'dry_run': True, 'count': len(images), 'would_remove': [im.get('src') for im in to_drop]})
+    # Tag AVANT de supprimer : si le serveur coupe au milieu, la fiche ne sera
+    # jamais recoupee au passage suivant (pas de risque de retirer une bonne photo).
+    tags.append(DROP_TAG)
+    if not shopify_request(f'products/{product_id}.json', 'PUT',
+                           {'product': {'id': product_id, 'tags': ', '.join(tags)}}):
+        return jsonify({'error': 'Impossible de poser le tag, rien supprime'}), 502
     removed = 0
     for im in to_drop:
         if shopify_request(f"products/{product_id}/images/{im['id']}.json", 'DELETE'):
@@ -208,10 +214,6 @@ def api_drop_extra_photos():
         time.sleep(0.3)
     after = shopify_request(f'products/{product_id}.json?fields=id,images')
     real = len(after['product'].get('images', [])) if after and 'product' in after else None
-    if removed == len(to_drop):
-        tags.append(DROP_TAG)
-        shopify_request(f'products/{product_id}.json', 'PUT',
-                        {'product': {'id': product_id, 'tags': ', '.join(tags)}})
     log.info(f"[Drop257] product {product_id}: {len(images)} -> {real} (retirees {removed}/{len(to_drop)})")
     return jsonify({'success': removed == len(to_drop), 'removed': removed,
                     'before': len(images), 'after': real})

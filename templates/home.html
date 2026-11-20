@@ -368,17 +368,25 @@ function startDrop257(){
     function upd(){document.getElementById("dropBar").style.width=Math.round(done/total*100)+"%";
         document.getElementById("dropTxt").textContent=done+"/"+total+" — "+ok+" nettoyées, "+skip+" sautées, "+fail+" erreurs";}
     function log(m,c){logEl.innerHTML+="<div style='color:"+(c||"#6e6e73")+"'>"+m+"</div>";logEl.scrollTop=logEl.scrollHeight;}
-    function next(i){
+    var streak=0;
+    function next(i,attempt){
+        attempt=attempt||0;
+        if(streak>=8){btn.disabled=false;btn.textContent="Reprendre";log("⏸ Pause : 8 erreurs d'affilée (serveur indisponible ?). Attends 1 minute, recharge la page et relance : les fiches faites seront sautées.","#d70015");return;}
         if(i>=list.length){btn.textContent="Terminé";log("Terminé : "+ok+" nettoyées, "+skip+" sautées, "+fail+" erreurs","#248a3d");
             try{sessionStorage.removeItem("kp_cache_v4")}catch(e){}log("Cache vidé — clique « Actualiser ».","#0071a4");return;}
         var p=list[i];
         fetch("/api/images/drop-extra",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({product_id:p.id})})
         .then(function(r){return r.json()}).then(function(d){
+            streak=0;
             if(d.success){ok++;log(p.title+" : "+d.before+" → "+d.after+" photos");}
             else if(d.skipped){skip++;log(p.title+" : sautée ("+d.reason+")","#b25000");}
             else{fail++;log(p.title+" : erreur "+(d.error||(d.removed+"/3 retirées")),"#d70015");}
-        }).catch(function(e){fail++;log(p.title+" : erreur réseau","#d70015");})
-        .then(function(){done++;upd();setTimeout(function(){next(i+1)},400);});
+            done++;upd();setTimeout(function(){next(i+1)},400);
+        }).catch(function(e){
+            // Reseau / serveur qui redemarre : on retente la MEME fiche (3 fois, 5 s, 10 s, 20 s)
+            if(attempt<3){var w=5000*Math.pow(2,attempt);log(p.title+" : serveur injoignable, nouvel essai dans "+(w/1000)+" s","#b25000");setTimeout(function(){next(i,attempt+1)},w);return;}
+            fail++;streak++;log(p.title+" : erreur réseau","#d70015");done++;upd();setTimeout(function(){next(i+1)},1000);
+        });
     }
     upd();next(0);
 }
