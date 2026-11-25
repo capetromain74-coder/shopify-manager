@@ -4,7 +4,7 @@ Sert les templates avec une barre de navigation commune injectee.
 """
 import os
 import re
-from flask import Blueprint
+from flask import Blueprint, request
 
 pages_bp = Blueprint('pages', __name__)
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')
@@ -162,13 +162,27 @@ def _nav(active):
 """
 
 
+# Balises "application installable" : permet d'ajouter l'app au Dock du Mac
+# (Safari : Fichier > Ajouter au Dock ; Chrome : icone Installer dans la barre d'adresse)
+APP_HEAD = (
+    '<link rel="manifest" href="/static/manifest.webmanifest">'
+    '<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">'
+    '<link rel="icon" type="image/png" href="/static/icon-192.png">'
+    '<meta name="application-name" content="KP SHOES">'
+    '<meta name="apple-mobile-web-app-title" content="KP SHOES">'
+    '<meta name="apple-mobile-web-app-capable" content="yes">'
+    '<meta name="mobile-web-app-capable" content="yes">'
+    '<meta name="theme-color" content="#f5f5f7">'
+)
+
+
 def render_page(filename, active=None, title=None, subtitle=None, **replacements):
     """Lit un template, applique les remplacements, et injecte la nav commune
     (en retirant l'ancien header .hd de la page pour eviter les doublons)."""
     html = _read_template(filename)
     for key, val in replacements.items():
         html = html.replace(key, val)
-    html = html.replace('</head>', f'<style>{NAV_CSS}</style></head>', 1)
+    html = html.replace('</head>', f'{APP_HEAD}<style>{NAV_CSS}</style></head>', 1)
     html = re.sub(r'<header class="hd">.*?</header>', '', html, count=1, flags=re.DOTALL)
     head = ''
     if title:
@@ -218,3 +232,12 @@ def product_detail(product_id):
     return render_page('product.html', 'produits',
                        PRODUCT_ID_PLACEHOLDER=str(product_id),
                        SHOP_PLACEHOLDER=SHOP)
+
+
+@pages_bp.route('/apple-touch-icon.png')
+@pages_bp.route('/favicon.ico')
+def app_icon_root():
+    from flask import send_from_directory, current_app
+    import os
+    name = 'apple-touch-icon.png' if 'apple' in request.path else 'icon-192.png'
+    return send_from_directory(os.path.join(current_app.root_path, 'static'), name)

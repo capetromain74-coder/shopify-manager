@@ -66,7 +66,7 @@ def create_app():
 # Routes laissees accessibles sans mot de passe : celles appelees par le cron
 # du price tracker (qui a deja sa propre protection par CRON_TOKEN) et deux
 # routes de lecture seule.
-_PUBLIC_PATHS = ('/health', '/api/price/run', '/api/price/status', '/api/price/last-run')
+_PUBLIC_PATHS = ('/health', '/apple-touch-icon.png', '/favicon.ico', '/api/price/run', '/api/price/status', '/api/price/last-run')
 
 
 def _install_password_protection(app):
@@ -84,7 +84,8 @@ def _install_password_protection(app):
     @app.before_request
     def _require_password():
         password = os.environ.get('APP_PASSWORD', '')
-        if not password or request.path in _PUBLIC_PATHS:
+        # Icones + manifest publics : le Mac doit pouvoir les lire pour installer l'app
+        if not password or request.path in _PUBLIC_PATHS or request.path.startswith('/static/'):
             return None
         auth = request.authorization
         if auth and auth.password and hmac.compare_digest(
