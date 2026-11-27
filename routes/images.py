@@ -198,9 +198,29 @@ def api_drop_extra_photos():
         return jsonify({'skipped': True, 'reason': 'deja nettoyee', 'count': len(images)})
     if len(images) < DROP_MIN_SET:
         return jsonify({'skipped': True, 'reason': f'{len(images)} photos (< {DROP_MIN_SET})', 'count': len(images)})
-    to_drop = [im for i, im in enumerate(images, 1) if i in DROP_POSITIONS]
+    # On demande a GOAT quelles positions sont VRAIMENT les vues 2/5/7 du set.
+    # Si le set GOAT a le meme nombre de photos que la fiche, on suit GOAT
+    # (ex. 'The Zoo' : aucune vue 2/5/7 -> on ne supprime rien).
+    from services.goat_client import positions_to_drop
+    sku = ''
+    vr = shopify_request(f'products/{product_id}/variants.json?fields=sku&limit=1')
+    if vr and vr.get('variants'):
+        sku = (vr['variants'][0].get('sku') or '').strip()
+    plan = positions_to_drop(sku) if sku else None
+    if plan and plan['count'] == len(images):
+        drop_pos = plan['positions']
+        source = 'goat'
+    else:
+        drop_pos = list(DROP_POSITIONS)
+        source = 'position'
+    if not drop_pos:
+        tags.append(DROP_TAG)
+        shopify_request(f'products/{product_id}.json', 'PUT',
+                        {'product': {'id': product_id, 'tags': ', '.join(tags)}})
+        return jsonify({'skipped': True, 'reason': 'set GOAT sans vues 2/5/7, rien a retirer', 'count': len(images)})
+    to_drop = [im for i, im in enumerate(images, 1) if i in drop_pos]
     if dry_run:
-        return jsonify({'dry_run': True, 'count': len(images), 'would_remove': [im.get('src') for im in to_drop]})
+        return jsonify({'dry_run': True, 'count': len(images), 'source': source, 'would_remove': [im.get('src') for im in to_drop]})
     # Tag AVANT de supprimer : si le serveur coupe au milieu, la fiche ne sera
     # jamais recoupee au passage suivant (pas de risque de retirer une bonne photo).
     tags.append(DROP_TAG)
@@ -215,5 +235,5 @@ def api_drop_extra_photos():
     after = shopify_request(f'products/{product_id}.json?fields=id,images')
     real = len(after['product'].get('images', [])) if after and 'product' in after else None
     log.info(f"[Drop257] product {product_id}: {len(images)} -> {real} (retirees {removed}/{len(to_drop)})")
-    return jsonify({'success': removed == len(to_drop), 'removed': removed,
+    return jsonify({'success': removed == len(to_drop), 'removed': removed, 'source': source,
                     'before': len(images), 'after': real})

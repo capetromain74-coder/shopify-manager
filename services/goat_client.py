@@ -388,12 +388,47 @@ DROP_POSITIONS = (2, 5, 7)
 DROP_MIN_SET = 8
 
 
+_ANGLE_RE = re.compile(r'_(\d{2})\.(?:jpe?g|png|webp)', re.I)
+
+
+def goat_angle(url):
+    """Numero de vue GOAT dans l'URL ('..._05.jpg.jpeg' -> 5), ou None."""
+    m = _ANGLE_RE.search((url or '').rsplit('/', 1)[-1])
+    return int(m.group(1)) if m else None
+
+
 def drop_extra_angles(images):
-    """Retire les photos 2, 5 et 7 (numerotation 1..n) si le set en compte 8 ou plus."""
+    """Retire les vues GOAT n°2, 5 et 7 si le set compte 8 photos ou plus.
+    On se base sur le NUMERO DE VUE GOAT (_02, _05, _07) et pas sur la position :
+    certains sets (ex. 'The Zoo' PE : _01,_03,_04,_06,_08,_09,_11,_12) n'ont
+    deja pas ces vues -> on garde tout. Position 2/5/7 seulement si les URLs
+    n'ont pas de numero de vue."""
     images = list(images or [])
     if len(images) < DROP_MIN_SET:
         return images
+    angles = [goat_angle(u) for u in images]
+    if all(a is not None for a in angles):
+        return [u for u, a in zip(images, angles) if a not in DROP_POSITIONS]
     return [u for i, u in enumerate(images, 1) if i not in DROP_POSITIONS]
+
+
+def positions_to_drop(sku):
+    """Pour une fiche Shopify (photos renommees, plus de numero de vue) :
+    demande a GOAT l'ordre de son set et renvoie les positions (1..n) des vues
+    2/5/7, plus le nombre de photos du set GOAT. None si GOAT ne repond pas."""
+    try:
+        product = search(_split_skus(sku)[0]) if sku else None
+        if not product or not product.get('slug'):
+            return None
+        raw = get_product_images(product['slug'])
+        angles = [goat_angle(u) for u in raw]
+        if not raw or any(a is None for a in angles):
+            return None
+        return {'count': len(raw),
+                'positions': [i for i, a in enumerate(angles, 1) if a in DROP_POSITIONS]}
+    except Exception as e:
+        log.warning(f"[GOAT] positions_to_drop({sku}) : {e}")
+        return None
 
 
 def get_images(sku, title=None, first=False):
